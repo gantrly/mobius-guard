@@ -1,0 +1,8 @@
+venv
+.venv
+
+pycache
+
+.env
+.env.*
+!.env.example

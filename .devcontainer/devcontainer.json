@@ -1,16 +1,18 @@
 {
-  "name": "AI Guardrail Security Engine",
-  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "name": "Mobius Guard | AI Firewall & Red-Team Engine",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "moby": false
+    },
     "ghcr.io/devcontainers/features/node:1": {
-      "version": "20"
+      "version": "22"
     },
     "ghcr.io/devcontainers/features/python:1": {
-      "version": "3.11"
+      "version": "3.12"
     }
   },
-  "forwardPorts": [3000, 5432, 6379],
+  "forwardPorts": [3000, 5432, 6379, 4317, 4318],
   "customizations": {
     "vscode": {
       "extensions": [
