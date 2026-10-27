@@ -18,11 +18,28 @@ classifiers = [
   "Topic :: Security",
   "Typing :: Typed",
 ]
-dependencies = []
+dependencies = [
+    "huggingface-hub>=0.26",
+    "mobiusguard-redact",
+    "numpy>=2.0",
+    "pyarrow>=18",
+]
+
+[project.scripts]
+mobiusguard-eval = "mobiusguard_eval.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/gantrly/mobius-guard"
 Issues = "https://github.com/gantrly/mobius-guard/issues"
+
+[project.optional-dependencies]
+sklearn = [
+    "scikit-learn>=1.5",
+]
+hf = [
+    "torch>=2.5",
+    "transformers>=4.46",
+]
 
 [build-system]
 requires = ["hatchling>=1.32.4"]
@@ -30,3 +47,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mobiusguard_eval"]
+
+[tool.uv.sources]
+mobiusguard-redact = { workspace = true }

@@ -8,8 +8,8 @@ is next, and [docs/decisions/](docs/decisions/) before changing anything they co
 
 ## Layout
 
-- `packages/mobiusguard-redact`: streaming redaction. **No runtime dependencies**; keep it
-  that way so gateways can embed it.
+- `packages/mobiusguard-redact`: streaming redaction. **One runtime dependency (`regex`)**;
+  keep it that small so gateways can embed it.
 - `packages/mobiusguard`: the proxy (rules, classifier, decision policy, audit).
 - `packages/mobiusguard-eval`: the evaluation harness.
 - `docs/decisions/NNNN-*.md`: one record per design decision, numbered.

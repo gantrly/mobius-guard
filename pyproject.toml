@@ -19,7 +19,7 @@ mobiusguard-eval = { workspace = true }
 dev = [
   "mobiusguard-redact",
   "mobiusguard",
-  "mobiusguard-eval",
+  "mobiusguard-eval[sklearn]",
   "pytest>=8.3",
   "pytest-cov>=6.0",
   "hypothesis>=6.120",
@@ -50,7 +50,7 @@ select = [
 ignore = ["ANN401"]
 
 [tool.ruff.lint.per-file-ignores]
-"**/tests/**" = ["S101", "ANN"]
+"**/tests/**" = ["S101", "S311", "ANN"]
 
 # ---------------------------------------------------------------- pyright
 [tool.pyright]

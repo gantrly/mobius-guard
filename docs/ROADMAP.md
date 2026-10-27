@@ -8,8 +8,8 @@ Each part is finished, tested and reviewed before the next one starts.
 |---|---|---|
 | 0 | Foundation: uv workspace, CI, community files, decision records, threat model | **done** (2026-10-27) |
 | 1 | `mobiusguard-redact`: streaming redactor, 24 curated + 221 gitleaks patterns, split-at-every-point property tests, latency benchmark | **done** (2026-10-27); keyword prefilter for CPU cost still to do |
-| 2 (next) | `mobiusguard-eval`: provenance ledger, dataset loaders, held-out families, false-positive sets, metrics (recall at fixed FPR, AUC, latency), baselines | planned |
-| 3 | `mobiusguard` proxy: OpenAI-compatible `/v1/chat/completions` (streaming and not), input normalisation, rules layer, pluggable classifier (PIGuard baseline), decision policy, audit log, OpenTelemetry GenAI spans | planned |
+| 2 | `mobiusguard-eval`: provenance ledger (11 pinned sources), suite builder with near-duplicate clusters and obfuscated attack families, recall at fixed FPR from ordinary-traffic thresholds, AUC, CPU latency, 4 baselines (keyword, TF-IDF leave-one-source-out, ProtectAI v2, PIGuard), redactor evaluation | **built** (2026-10-27); first full run in progress |
+| 3 (next) | `mobiusguard` proxy: OpenAI-compatible `/v1/chat/completions` (streaming and not), input normalisation, rules layer, pluggable classifier (PIGuard baseline), decision policy, audit log, OpenTelemetry GenAI spans | planned |
 | 4 | Release v0.1: docs, published numbers from the harness, PyPI release, make the repository public | planned |
 
 ## v0.2: closed loop and our own model

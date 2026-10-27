@@ -1,9 +1,10 @@
 # Architecture
 
-This describes the target for v0.1. Parts not built yet are marked *(planned)*.
+This describes the target for v0.1. Parts not built yet are marked *(planned)*: as of
+2026-10-27 the redactor and the evaluation harness exist; the proxy is Part 3.
 
 ```text
-client ──► POST /v1/chat/completions
+client ──► POST /v1/chat/completions                    (proxy: planned)
              │
              ▼
         ┌─────────────────────────── request path ───────────────────────────┐
@@ -21,7 +22,7 @@ client ──► POST /v1/chat/completions
              ▼
         ┌─────────────────────────── response path ──────────────────────────┐
         │ redactor    rewrites secrets/PII in the stream; holds back only    │
-        │             as many characters as the longest pattern needs        │
+        │             text where a pattern might still be matching           │
         └────────────────────────────────────────────────────────────────────┘
              │
              ▼
@@ -30,12 +31,13 @@ client ──► POST /v1/chat/completions
 
 ## Components
 
-**`mobiusguard-redact`** has no dependencies and is usable without the proxy. Its core is a
-streaming transformer: feed it text chunks, get back text that is safe to emit now. It keeps
-a holdback buffer just long enough that a pattern split across chunks is still seen whole.
-The defining property, tested for every pattern: **the output is the same however the input
-is split into chunks.** The detailed semantics (holdback size, validators such as Luhn for
-card numbers, what happens at end of stream and on errors) are decided in Part 1.
+**`mobiusguard-redact`** depends only on `regex` and is usable without the proxy. Its core
+is a streaming transformer: feed it text chunks, get back text that is safe to emit now. It
+holds back text only from the earliest point where some pattern might still be matching
+(partial matching), so ordinary text passes through with about one word of delay. The
+defining property, tested for every pattern: **the output is the same however the input is
+split into chunks.** Semantics, limits and measured cost are in
+[decision 0007](decisions/0007-streaming-redaction-semantics.md).
 
 **`mobiusguard`** is the proxy. Detectors share one interface (`text → Finding[]` with a
 score and reason), so rules, our classifier and third-party classifiers are interchangeable
@@ -45,7 +47,11 @@ and which detectors block or only log.
 **`mobiusguard-eval`** runs any detector (ours or a baseline) over registered datasets and
 writes per-item results that a person can review, plus the summary metrics. Every dataset
 is registered in a provenance ledger with its source, licence, and which known models were
-trained on it, so contaminated comparisons are visible.
+trained on it, so contaminated comparisons are visible ([datasets.md](datasets.md)).
+It works in three steps that can run on different machines: `build` (fetch pinned data,
+remove duplicates, split, add obfuscated attacks), `score` (one detector, CPU or GPU, one
+score per item) and `report` (thresholds from ordinary traffic, recall per family, false
+positives per benign set, AUC). See [decision 0009](decisions/0009-evaluation-harness-v0.1.md).
 
 ## Principles
 
