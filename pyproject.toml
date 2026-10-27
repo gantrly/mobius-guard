@@ -26,6 +26,7 @@ dev = [
   "ruff>=0.8",
   "pyright>=1.1.390",
   "pre-commit>=4.0",
+  "types-regex>=2026.9.29.20261017",
 ]
 
 # ---------------------------------------------------------------- ruff
@@ -58,10 +59,12 @@ typeCheckingMode = "strict"
 pythonVersion = "3.11"
 venvPath = "."
 venv = ".venv"
+extraPaths = ["packages/mobiusguard-redact/tests"]
 
 # ---------------------------------------------------------------- pytest
 [tool.pytest.ini_options]
 testpaths = ["packages"]
+pythonpath = ["packages/mobiusguard-redact/tests"]
 addopts = ["--strict-markers", "--strict-config", "-ra", "--import-mode=importlib"]
 xfail_strict = true
 

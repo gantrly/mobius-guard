@@ -1,5 +1,5 @@
 # One entry point for local checks. CI runs `make check`.
-.PHONY: install fmt lint typecheck test check build
+.PHONY: install fmt lint typecheck test test-stress check build bench
 
 install:
 	uv sync --locked
@@ -19,7 +19,13 @@ typecheck:
 test:
 	uv run pytest --cov --cov-report=term-missing
 
+test-stress:
+	HYPOTHESIS_PROFILE=stress uv run pytest -q
+
 check: lint typecheck test
+
+bench:
+	uv run python benchmarks/redact_stream.py
 
 build:
 	uv build --all-packages

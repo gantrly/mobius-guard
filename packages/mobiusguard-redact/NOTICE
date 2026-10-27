@@ -2,3 +2,8 @@ Mobius Guard
 Copyright 2026 SK Imtiaj Uddin and the Mobius Guard contributors
 
 This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product includes detection rules from gitleaks
+(https://github.com/gitleaks/gitleaks), Copyright (c) 2019 Zachary Rice,
+licensed under the MIT License. See
+packages/mobiusguard-redact/src/mobiusguard_redact/_gitleaks_rules.py.

@@ -18,7 +18,9 @@ classifiers = [
   "Topic :: Security",
   "Typing :: Typed",
 ]
-dependencies = []
+dependencies = [
+    "regex>=2024.11.6",
+]
 
 [project.urls]
 Homepage = "https://github.com/imtiaj-007/adaptive-llm-firewall"
