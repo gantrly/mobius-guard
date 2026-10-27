@@ -1,0 +1,23 @@
+name: Bug
+description: Something does not work as documented.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The smallest input or config that shows it.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version and Python version
+    validations:
+      required: true

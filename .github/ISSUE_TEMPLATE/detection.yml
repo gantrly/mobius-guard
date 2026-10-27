@@ -1,0 +1,35 @@
+name: Missed attack or false positive
+description: A prompt that got through, a safe prompt that was blocked, or a leak that was not redacted.
+labels: [detection]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - Attack got through (false negative)
+        - Safe prompt was blocked (false positive)
+        - Secret or PII was not redacted
+        - Safe text was redacted
+    validations:
+      required: true
+  - type: textarea
+    id: input
+    attributes:
+      label: The input
+      description: >
+        Paste the prompt or output. Remove real secrets and personal data first.
+        If it is a working bypass you would rather not publish, use private
+        vulnerability reporting instead.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: What Mobius Guard did
+      description: The decision, score and rule that fired, if shown.
+  - type: input
+    id: version
+    attributes:
+      label: Version and detector config
