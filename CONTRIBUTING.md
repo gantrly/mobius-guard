@@ -15,8 +15,8 @@ Thanks for helping. Bug reports, missed attacks, false positives and code are al
 You need [uv](https://docs.astral.sh/uv/).
 
 ```bash
-git clone https://github.com/imtiaj-007/adaptive-llm-firewall
-cd adaptive-llm-firewall
+git clone https://github.com/gantrly/mobius-guard
+cd mobius-guard
 make install
 make check
 ```
@@ -39,8 +39,10 @@ a pull request.
 ## Sign your commits (DCO)
 
 We use the [Developer Certificate of Origin](https://developercertificate.org/) instead of
-a CLA. By signing off you state that you wrote the change or have the right to submit it
-under the project's licence. Add the sign-off with `-s`:
+a CLA. Gantrly's CLA, used by the main Gantrly repository, does not apply here (see
+[decision 0008](docs/decisions/0008-home-in-the-gantrly-org.md)). By signing off you state
+that you wrote the change or have the right to submit it under the project's licence. Add
+the sign-off with `-s`:
 
 ```bash
 git commit -s -m "Redact Stripe keys split across chunks"

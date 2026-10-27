@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Report a security vulnerability in Mobius Guard
-    url: https://github.com/imtiaj-007/adaptive-llm-firewall/security/advisories/new
+    url: https://github.com/gantrly/mobius-guard/security/advisories/new
     about: Please report vulnerabilities privately, not as a public issue.

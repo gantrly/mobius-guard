@@ -4,6 +4,9 @@ An open-source firewall for LLM apps. It sits in front of any OpenAI-compatible 
 screens prompts before they reach the model, and rewrites leaked secrets and personal data
 in the streamed reply **without stopping the stream**.
 
+A [Gantrly](https://github.com/gantrly) project. Gantrly will run its AI agents behind it, but
+Mobius Guard is licensed (Apache-2.0) and built separately, for any LLM app to use.
+
 > **Status: pre-alpha.** Nothing is ready to use yet. This README describes what we are
 > building; [docs/ROADMAP.md](docs/ROADMAP.md) shows what is done.
 
