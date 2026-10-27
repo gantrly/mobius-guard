@@ -21,10 +21,21 @@ def _secret(id_: str, rx: str, desc: str, *, group: int | str | None = 0) -> Pat
 
 
 def _pii(
-    id_: str, rx: str, desc: str, *, validator: Callable[[str], bool] | None = None
+    id_: str,
+    rx: str,
+    desc: str,
+    *,
+    validator: Callable[[str], bool] | None = None,
+    not_after: str = "",
 ) -> Pattern:
     return Pattern(
-        id=id_, category="pii", source="curated", regex=rx, description=desc, validator=validator
+        id=id_,
+        category="pii",
+        source="curated",
+        regex=rx,
+        description=desc,
+        validator=validator,
+        not_after=not_after,
     )
 
 
@@ -129,6 +140,8 @@ CURATED: tuple[Pattern, ...] = (
         "email",
         r"(?<![\w.%+-])[A-Za-z0-9._%+-]{1,64}@(?:[A-Za-z0-9-]{1,63}\.)+[A-Za-z]{2,24}(?![\w-])",
         "Email address",
+        # Not the password in scheme://user:password@host: that is connection_string_password.
+        not_after=r"://[^\s:/@]{1,256}:",
     ),
     _pii(
         "payment_card",
@@ -149,7 +162,8 @@ CURATED: tuple[Pattern, ...] = (
     ),
     _pii(
         "in_aadhaar",
-        r"(?<![\d-])[2-9]\d{3}[ -]?\d{4}[ -]?\d{4}(?![\d-])",
+        # Not a 12-digit block inside a card written 4-4-4-4 (fixed-width lookarounds only).
+        r"(?<![\d-])(?<!\d{4} )[2-9]\d{3}[ -]?\d{4}[ -]?\d{4}(?![\d-])(?! \d{4}(?!\d))",
         "Indian Aadhaar number (Verhoeff check)",
         validator=aadhaar_valid,
     ),

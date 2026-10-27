@@ -97,8 +97,9 @@ class StreamRedactor:
                 if not final and p.could_grow(m):
                     hold = min(hold, m.start())
                     break
-                s0, s1 = p.secret_span(m)
-                candidates.append(_Candidate(m.start(), m.end(), s0, s1, p.accepts(m), p))
+                span = p.accepted_span(m)
+                s0, s1 = span or p.secret_span(m)
+                candidates.append(_Candidate(m.start(), m.end(), s0, s1, span is not None, p))
             if not final:
                 start = p.partial_start(text, base)
                 if start is not None:

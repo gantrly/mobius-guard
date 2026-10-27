@@ -25,6 +25,13 @@ match at 0, which would hold back all text. Lazy and greedy quantifiers accept t
 strings, so each pattern also gets a greedy copy (`_probe.make_greedy`) that is used only to
 find where a match might start; the original pattern still decides what is redacted.
 
+**A second quirk: variable-length lookbehinds.** With one in a pattern, partial
+`fullmatch` can report a finished match as still growing, so everything after it is held
+until the holdback overflows. Found by the evaluation harness on a 23,000-character email
+(2026-10-27), after the email pattern gained `(?<!://[^\s:/@]{1,256}:)`. Patterns must not
+use variable-length lookbehinds; a pattern's `not_after` regex does the same job when a
+match is accepted, outside partial matching. A regression test covers the case.
+
 **Delay is about one word.** gitleaks' keyword rules (`<word>_api_key = …`) can start at
 any word, so the last unfinished word is held. Measured on this repo's docs and code in
 4-character chunks (Apple M1 Pro, Python 3.12, all 245 patterns): output trails input by
