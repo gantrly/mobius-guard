@@ -39,7 +39,8 @@
 <p align="center"><sub>Drawn by <a href="scripts/brand/hero.py"><code>scripts/brand/hero.py</code></a> from the redactor's real output, chunk by chunk, holdback included.</sub></p>
 
 > **Pre-alpha.** Parts 0–2 of the [roadmap](docs/ROADMAP.md) are done: the streaming
-> redactor and the evaluation harness. Next is the proxy. Nothing is on PyPI yet.
+> redactor, the evaluation harness and the proxy, with results in [docs/results](docs/results/).
+> Next is the v0.1 release. Nothing is on PyPI yet.
 
 ## What it does
 
@@ -50,7 +51,7 @@
 | **Proven chunk-safe** | The output is the same however the input is split. Property tests split every test input at every point, one character at a time and at random, for every pattern. |
 | **Honest evaluation** | Detectors are scored as recall at a fixed false-positive rate, with thresholds set on ordinary traffic, never on the sets reported. Datasets are pinned, with their licence and which models trained on them, and those cells are marked. Five obfuscation families (spaced letters, look-alike letters, invisible characters, leetspeak, base64). |
 | **Baselines in every table** | Keyword rules, TF-IDF trained leave-one-source-out, ProtectAI v2 and PIGuard, with CPU latency stated with the hardware. |
-| **The proxy** *(next)* | OpenAI-compatible `/v1/chat/completions` in front of any model: input screening, the redactor on the reply, an audit log and OpenTelemetry spans. |
+| **The proxy** | In front of any model, speaking OpenAI Chat Completions, OpenAI Responses and Anthropic Messages, streamed or not: input clean-up (invisible characters, look-alike and spaced-out letters, leetspeak, base64) and named rules on the way in, the redactor on the way out, an audit log and OpenTelemetry spans. |
 | **A closed loop** *(v0.2)* | Attacks that get through become reviewed rule or threshold changes, gated on a benign canary set; our own small, permissively licensed CPU classifier. |
 
 ## Why another guardrail?
@@ -72,7 +73,7 @@ October 2026, no mature open-source project does well
 ## How it works
 
 ```text
-client ──► POST /v1/chat/completions                          (proxy: next)
+client ──► /v1/chat/completions · /v1/responses · /v1/messages
              │
         request path   normalise → rules + classifier → policy (allow / block, with reasons)
              │
@@ -148,7 +149,7 @@ uv · Ruff · Pyright · pytest.
 ```
 packages/mobiusguard-redact   streaming redaction: patterns, validators, StreamRedactor
 packages/mobiusguard-eval     the evaluation harness: ledger, suite, detectors, metrics, CLI
-packages/mobiusguard          the proxy (next)
+packages/mobiusguard          the proxy: APIs, normalisation, rules, policy, redaction, audit
 scripts/                      gitleaks rule import, brand and README images
 benchmarks/                   redactor latency
 docs/                         roadmap, architecture, threat model, datasets, decision records
@@ -160,7 +161,7 @@ Working notes for contributors and coding agents: [AGENTS.md](AGENTS.md).
 
 Mobius Guard is built by the people behind [Gantrly](https://github.com/gantrly/gantrly),
 open-source project tracking for teams that build. Gantrly's AI agent will run behind it
-once the proxy is ready; Mobius Guard has no dependency on Gantrly and is meant for any LLM
+(the proxy is built; wiring Gantrly to it comes next); Mobius Guard has no dependency on Gantrly and is meant for any LLM
 app. It lives in its own repository with its own licence.
 
 ## Contributing

@@ -1,10 +1,10 @@
 # Architecture
 
-This describes the target for v0.1. Parts not built yet are marked *(planned)*: as of
-2026-10-27 the redactor and the evaluation harness exist; the proxy is Part 3.
+The v0.1 design. As of 2026-10-29 all three parts exist: the redactor, the evaluation harness
+and the proxy ([decision 0010](decisions/0010-proxy-v0.1.md)).
 
 ```text
-client ──► POST /v1/chat/completions                    (proxy: planned)
+client ──► /v1/chat/completions · /v1/responses · /v1/messages
              │
              ▼
         ┌─────────────────────────── request path ───────────────────────────┐
