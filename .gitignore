@@ -30,3 +30,6 @@ htmlcov/
 .DS_Store
 .idea/
 .vscode/
+
+# the proxy's default audit log
+mobiusguard-audit*.jsonl

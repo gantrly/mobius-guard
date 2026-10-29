@@ -18,11 +18,28 @@ classifiers = [
   "Topic :: Security",
   "Typing :: Typed",
 ]
-dependencies = ["mobiusguard-redact"]
+dependencies = [
+    "httpx>=0.28",
+    "mobiusguard-redact",
+    "starlette>=0.46",
+    "uvicorn>=0.34",
+]
+
+[project.scripts]
+mobiusguard = "mobiusguard.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/gantrly/mobius-guard"
 Issues = "https://github.com/gantrly/mobius-guard/issues"
+
+[project.optional-dependencies]
+classifier = [
+    "torch>=2.5",
+    "transformers>=4.46",
+]
+otel = [
+    "opentelemetry-api>=1.28",
+]
 
 [build-system]
 requires = ["hatchling>=1.32.4"]

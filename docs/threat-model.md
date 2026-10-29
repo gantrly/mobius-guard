@@ -17,8 +17,9 @@ A first version, written before the code. It is updated as each part is built.
 - **An adaptive attacker** who can query the firewall many times and change the attack based
   on what gets blocked. We assume they will eventually find prompts the classifier misses.
 - **Content the model reads** (documents, web pages, tool output) that carries injected
-  instructions. *(Screening that content is planned for v0.3; v0.1 covers the user's prompt
-  and the reply.)*
+  instructions. v0.1 checks tool results sent back to the model (indirect injection through
+  tools) as well as user messages; screening documents and web pages before they reach the
+  app is planned for v0.3.
 
 ## What Mobius Guard does not do
 
