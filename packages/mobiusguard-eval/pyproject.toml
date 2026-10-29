@@ -20,6 +20,7 @@ classifiers = [
 ]
 dependencies = [
     "huggingface-hub>=0.26",
+    "mobiusguard",
     "mobiusguard-redact",
     "numpy>=2.0",
     "pyarrow>=18",
@@ -50,3 +51,4 @@ packages = ["src/mobiusguard_eval"]
 
 [tool.uv.sources]
 mobiusguard-redact = { workspace = true }
+mobiusguard = { workspace = true }

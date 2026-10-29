@@ -54,7 +54,7 @@ def score_items(detector: Detector, items: Sequence[Item]) -> list[float]:
 
 
 def get(name: str, *, device: str = "cpu", batch_size: int = 32) -> Detector:
-    """A detector by name: keyword, tfidf, protectai-v2, piguard."""
+    """A detector by name (see NAMES)."""
     factories: dict[str, Callable[[], Detector]] = {}
 
     from .keyword import KeywordDetector
@@ -74,12 +74,37 @@ def get(name: str, *, device: str = "cpu", batch_size: int = 32) -> Detector:
 
         return make
 
+    def rules() -> Detector:
+        from .proxy import RulesDetector
+
+        return RulesDetector()
+
+    def norm(key: str) -> Callable[[], Detector]:
+        def make() -> Detector:
+            from .proxy import NormalizedClassifier
+
+            return NormalizedClassifier(key, device=device, batch_size=batch_size)
+
+        return make
+
     factories["tfidf"] = tfidf
     factories["protectai-v2"] = hf("protectai-v2")
     factories["piguard"] = hf("piguard")
+    factories["mobiusguard-rules"] = rules
+    factories["protectai-v2-norm"] = norm("protectai-v2")
+    factories["piguard-norm"] = norm("piguard")
     if name not in factories:
         raise KeyError(f"unknown detector {name!r}; choose from {sorted(factories)}")
     return factories[name]()
 
 
-NAMES = ("keyword", "tfidf", "protectai-v2", "piguard")
+NAMES = (
+    "keyword",
+    "tfidf",
+    "protectai-v2",
+    "piguard",
+    "mobiusguard-rules",
+    "protectai-v2-norm",
+    "piguard-norm",
+)
+GPU = ("protectai-v2", "piguard", "protectai-v2-norm", "piguard-norm")

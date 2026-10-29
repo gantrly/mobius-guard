@@ -134,6 +134,8 @@ def load_scores(run_dir: Path) -> tuple[dict[str, Any], dict[str, float]]:
 
 
 def _contaminated(detector: str, source: str) -> bool:
+    """Whether the detector's model trained on the source (a "-norm" variant is the same model)."""
+    detector = detector.removesuffix("-norm")
     s = LEDGER.get(source)
     return bool(s and detector in s.trained_on_by)
 

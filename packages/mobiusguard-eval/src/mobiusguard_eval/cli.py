@@ -106,6 +106,21 @@ def step_latency(
         from .detectors.keyword import KeywordDetector
 
         one = KeywordDetector().score_text
+    elif detector == "mobiusguard-rules":
+        from .detectors.proxy import RulesDetector
+
+        one = RulesDetector().score_text
+    elif detector.endswith("-norm"):
+        from mobiusguard.normalize import views
+
+        from .detectors.proxy import NormalizedClassifier
+
+        if not isinstance(det, NormalizedClassifier):
+            raise TypeError(detector)
+        nc = det
+
+        def one(text: str) -> float:  # every view is scored, as the detector does
+            return max(nc.score_texts([v.text for v in views(text)]))
     else:
         from .detectors.hf import HFClassifier
 
@@ -170,7 +185,7 @@ def pipeline(
         ("build", lambda: step_build(suite, force=force))
     ]
     for name in names:
-        dev = device if name in ("protectai-v2", "piguard") else "cpu"
+        dev = device if name in detectors.GPU else "cpu"
         steps.append((f"score {name}", lambda n=name, d=dev: step_score(
             suite, n, scores / n, device=d, batch_size=batch_size, force=force)))  # fmt: skip
     if redaction:
