@@ -34,6 +34,10 @@ from anthropic import Anthropic
 claude = Anthropic(base_url="http://127.0.0.1:8787")
 ```
 
+To try it with a free local model, run Ollama and use
+[`examples/ollama.toml`](https://github.com/gantrly/mobius-guard/blob/main/examples/ollama.toml);
+`scripts/live_check.py` sends every case through all three APIs.
+
 Settings are a TOML file (`mobiusguard serve --config mobiusguard.toml`); see
 `mobiusguard/config.py` for every option, and
 [decision 0010](https://github.com/gantrly/mobius-guard/blob/main/docs/decisions/0010-proxy-v0.1.md)

@@ -1,0 +1,16 @@
+# Mobius Guard in front of a local Ollama, which speaks all three APIs.
+#
+#   docker run -d --gpus all -p 127.0.0.1:11434:11434 ollama/ollama
+#   docker exec <container> ollama pull qwen2.5:3b
+#   mobiusguard serve --config examples/ollama.toml
+#
+# Then point any OpenAI or Anthropic SDK at http://127.0.0.1:8787/v1 (Anthropic: without /v1).
+
+[upstream.openai]
+base_url = "http://127.0.0.1:11434/v1"
+
+[upstream.anthropic]
+base_url = "http://127.0.0.1:11434/v1"
+
+[audit]
+path = "mobiusguard-audit.jsonl"
