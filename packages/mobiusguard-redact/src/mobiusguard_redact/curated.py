@@ -54,7 +54,9 @@ CURATED: tuple[Pattern, ...] = (
     ),
     _secret(
         "github_token",
-        _L + r"(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36}" + _R,
+        # 36 characters or more: a model echoing a token can add characters, and the real
+        # token inside the longer string must still go (seen in the live check).
+        _L + r"(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,255}" + _R,
         "GitHub personal, OAuth, app or refresh token",
     ),
     _secret(
@@ -125,9 +127,10 @@ CURATED: tuple[Pattern, ...] = (
     _secret(
         "connection_string_password",
         r"(?i)\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|redis|rediss|amqps?|mssql)"
-        r"://[^\s:/@]+:([^\s:/@]{3,})@",
-        "Password inside a database or broker URL",
-        group=1,
+        r"://[^\s:/@]+:(?:([^\s:/@]{3,})@|([^\s:/@]*[^\d\s:/@][^\s:/@]*)(?=[/?#\s]))",
+        "Password inside a database or broker URL (also when the @host part is missing: a "
+        "'port' that isn't a number is a password)",
+        group=None,
     ),
     _secret(
         "bearer_token",

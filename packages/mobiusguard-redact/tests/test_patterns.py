@@ -125,3 +125,32 @@ def test_a_trailing_piece_does_not_hide_a_valid_number(text: str, expected: str)
 def test_an_invalid_card_is_not_taken_for_an_aadhaar_number() -> None:
     # Its last 12 digits can pass the Aadhaar check by chance; 4-4-4-4 blocks are a card.
     assert redact("card 4121 5299 1419 9802 x") == "card 4121 5299 1419 9802 x"
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        # Seen in the live check: a model dropped the "@db:5432" and wrote the password on.
+        (
+            "postgres://app:Sup3rS3cret!/db/prod",
+            "postgres://app:[REDACTED:connection_string_password]/db/prod",
+        ),
+        (
+            "postgres://app:Sup3rS3cret!@db:5432/prod",
+            "postgres://app:[REDACTED:connection_string_password]@db:5432/prod",
+        ),
+        (
+            "postgres://localhost:5432/prod",
+            "postgres://localhost:5432/prod",
+        ),  # a port, not a password
+        ("redis://cache:6379 ok", "redis://cache:6379 ok"),
+    ],
+)
+def test_connection_string_passwords(text: str, expected: str) -> None:
+    assert redact(text) == expected
+
+
+def test_a_github_token_with_extra_characters_is_still_redacted() -> None:
+    token = "ghp_" + "Zx9Q" * 9
+    # A model echoing the token added four characters; the real token is a prefix of it.
+    assert redact(f"deploy token {token}Zx9Q") == "deploy token [REDACTED:github_token]"
