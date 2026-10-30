@@ -9,8 +9,8 @@ Each part is finished, tested and reviewed before the next one starts.
 | 0 | Foundation: uv workspace, CI, community files, decision records, threat model | **done** (2026-10-27) |
 | 1 | `mobiusguard-redact`: streaming redactor, 24 curated + 221 gitleaks patterns, split-at-every-point property tests, latency benchmark | **done** (2026-10-27); keyword prefilter for CPU cost still to do |
 | 2 | `mobiusguard-eval`: provenance ledger (11 pinned sources), suite builder with near-duplicate clusters and obfuscated attack families, recall at fixed FPR from ordinary-traffic thresholds, AUC, CPU latency, 4 baselines (keyword, TF-IDF leave-one-source-out, ProtectAI v2, PIGuard), redactor evaluation | **done** (2026-10-27); first results in [results/2026-10-27-baselines.md](results/2026-10-27-baselines.md); checkpointed, resumable runs |
-| 3 | `mobiusguard` proxy: OpenAI Chat Completions, OpenAI Responses and Anthropic Messages (streamed and not), input normalisation, named rules with severities, optional classifier, policy, streaming redaction per API, audit log, OpenTelemetry spans, `mobiusguard serve` / `check` | **done** (2026-10-29); results in [results/2026-10-29-proxy.md](results/2026-10-29-proxy.md) |
-| 4 | Release v0.1: docs, published numbers from the harness, PyPI release, make the repository public | planned |
+| 3 | `mobiusguard` proxy: OpenAI Chat Completions, OpenAI Responses and Anthropic Messages (streamed and not), input normalisation, named rules with severities, optional classifier, policy, streaming redaction per API, audit log, OpenTelemetry spans, `mobiusguard serve` / `check` | **done** (2026-10-29); results in [results/2026-10-29-proxy.md](results/2026-10-29-proxy.md); live check with real SDKs and a real model, 20/20, in [results/2026-10-30-live-check.md](results/2026-10-30-live-check.md) |
+| 4 (next) | Release v0.1: docs, published numbers from the harness, PyPI release, make the repository public | planned |
 
 ## v0.2: closed loop and our own model
 

@@ -38,7 +38,7 @@
 
 <p align="center"><sub>Drawn by <a href="scripts/brand/hero.py"><code>scripts/brand/hero.py</code></a> from the redactor's real output, chunk by chunk, holdback included.</sub></p>
 
-> **Pre-alpha.** Parts 0–2 of the [roadmap](docs/ROADMAP.md) are done: the streaming
+> **Pre-alpha.** Parts 0–3 of the [roadmap](docs/ROADMAP.md) are done: the streaming
 > redactor, the evaluation harness and the proxy, with results in [docs/results](docs/results/).
 > Next is the v0.1 release. Nothing is on PyPI yet.
 
