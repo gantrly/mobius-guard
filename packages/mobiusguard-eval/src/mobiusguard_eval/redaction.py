@@ -292,6 +292,7 @@ def leaked(value: str, output: str, window: int = 8, *, context: str = "") -> bo
 
 
 LEAK_CHECK = 2  # bump when ``leaked`` changes, so saved results are recomputed
+CASES = 2  # bump when how cases are built changes (2: at sentence ends, own line at breaks)
 
 
 def _stream(text: str, rng: random.Random, patterns: Sequence[Pattern]) -> str:
@@ -306,9 +307,19 @@ def _stream(text: str, rng: random.Random, patterns: Sequence[Pattern]) -> str:
     return "".join(out)
 
 
-def _insert(carrier: str, phrase: str, rng: random.Random) -> str:
-    cuts = [i + 1 for i, c in enumerate(carrier) if c in ".!?\n"] or [len(carrier)]
+def insert_phrase(carrier: str, phrase: str, rng: random.Random) -> str:
+    """Put the phrase in at a sentence end: after ".!?" followed by a space or a line
+    break (not inside "3.11"), or as a line of its own at a line break (so that a next line
+    such as "2. ..." does not run on from the value)."""
+    n = len(carrier)
+    cuts = [
+        i + 1
+        for i, c in enumerate(carrier)
+        if c == "\n" or (c in ".!?" and (i + 1 == n or carrier[i + 1].isspace()))
+    ] or [n]
     at = rng.choice(cuts)
+    if at and carrier[at - 1] == "\n":
+        return f"{carrier[:at]}{phrase}\n{carrier[at:]}"
     return f"{carrier[:at]} {phrase} {carrier[at:]}"
 
 
@@ -354,7 +365,7 @@ def synthetic_job(
     for _ in range(per_pattern):
         carrier = rng.choice(carriers)
         value = gen(rng)
-        text = _insert(carrier, rng.choice(phrases).format(value), rng)
+        text = insert_phrase(carrier, rng.choice(phrases).format(value), rng)
         one_shot = redact(text, patterns)
         streamed = _stream(text, rng, patterns)
         if carrier not in base_labels:
@@ -462,6 +473,7 @@ def evaluate(
         "per_pattern": per_pattern,
         "seed": seed,
         "leak_check": LEAK_CHECK,
+        "cases": CASES,
         "jobs": [[pid, kind] for pid, kind, *_ in synthetic_jobs()],
     }
     out.mkdir(parents=True, exist_ok=True)

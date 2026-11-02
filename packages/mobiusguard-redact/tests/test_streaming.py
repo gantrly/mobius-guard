@@ -265,3 +265,15 @@ def test_a_private_key_cut_off_at_the_end_of_the_reply_does_not_leak(cut: int) -
     expected = redact(text, ALL, prefilter=False)
     assert expected == "key:\n[REDACTED:private_key]"
     assert chunked(text, [cut]) == expected
+
+
+def test_the_lines_after_the_word_curl_are_not_held_back() -> None:
+    # The curl rules looked five lines ahead for a header, so several lines after "curl"
+    # were held (benchmark, 2026-11-02). Now only a continued command is followed.
+    text = "Use curl for that.\n" + "Another line of ordinary text here.\n" * 20
+    r = StreamRedactor()
+    r.feed(text[:24])
+    for i in range(24, len(text), 4):
+        r.feed(text[i : i + 4])
+        assert r.held < 40, (i, r.held)
+    r.flush()

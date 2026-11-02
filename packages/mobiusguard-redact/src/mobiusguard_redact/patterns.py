@@ -173,13 +173,39 @@ KEYWORDS_UNSAFE = frozenset(
 )  # fmt: skip
 
 
-# gitleaks rules whose regex is changed for streaming. private-key's body,
+# gitleaks rules whose regex is changed for streaming (decision 0007). private-key's body,
 # [\s\S-]{64,}?, could run on to a later "KEY-----", so everything after a key was held
 # back until the holdback limit and then replaced; the body may not contain "-----END" here.
 STREAMING_FIXES = {
     "private-key": r"(?i)-----BEGIN[ A-Z0-9_-]{0,100}PRIVATE KEY(?: BLOCK)?-----"
     r"(?:(?!-----END)[\s\S]){64,}?-----END[ A-Z0-9_-]{0,100}KEY(?: BLOCK)?-----",
 }
+# The curl rules look up to five lines past "curl" for the header or user option, so the
+# redactor held several lines after the word. A curl command only goes on to the next line
+# after a continuation character (\ in shells, ^ in cmd, ` in PowerShell); only then are
+# later lines looked at. The rest of each regex is gitleaks' own.
+_CONTINUED = r"(?:[^\r\n]*?[\\^\x60][ \t]*\r?\n){0,5}?[^\r\n]*?(?:[ \t]|(?<=\n))"
+STREAMING_PREFIXES = {
+    "curl-auth-header": (
+        r"\bcurl\b(?:.*?|.*?(?:[\r\n]{1,2}.*?){1,5})[ \t\n\r](?:-H|--header)",
+        r"\bcurl\b" + _CONTINUED + r"(?:-H|--header)",
+    ),
+    "curl-auth-user": (
+        r"\bcurl\b(?:.*|.*(?:[\r\n]{1,2}.*){1,5})[ \t\n\r](?:-u|--user)",
+        r"\bcurl\b" + _CONTINUED.replace("*?", "*") + r"(?:-u|--user)",
+    ),
+}
+
+
+def _streaming_regex(rule_id: str, regex: str) -> str:
+    if rule_id in STREAMING_FIXES:
+        return STREAMING_FIXES[rule_id]
+    if rule_id in STREAMING_PREFIXES:
+        old, new = STREAMING_PREFIXES[rule_id]
+        if not regex.startswith(old):
+            raise ValueError(f"{rule_id}: the gitleaks regex changed; review STREAMING_PREFIXES")
+        return new + regex[len(old) :]
+    return regex
 
 
 @cache
@@ -194,7 +220,7 @@ def gitleaks_patterns() -> tuple[Pattern, ...]:
             id=r.id,
             category="secret",
             source="gitleaks",
-            regex=STREAMING_FIXES.get(r.id, r.regex),
+            regex=_streaming_regex(r.id, r.regex),
             description=r.description,
             group=r.secret_group or None,
             min_entropy=r.entropy,

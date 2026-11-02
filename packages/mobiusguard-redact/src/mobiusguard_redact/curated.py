@@ -108,7 +108,7 @@ CURATED: tuple[Pattern, ...] = (
     ),
     _secret(
         "stripe_secret_key",
-        _L + r"(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{24,}" + _R,
+        _L + r"(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{20,}" + _R,  # 24 or more, minus a few
         "Stripe secret or restricted key",
     ),
     _secret(

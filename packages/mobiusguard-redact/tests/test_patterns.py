@@ -194,3 +194,39 @@ def test_garbled_echoes_are_redacted(text: str, secret: str, label: str) -> None
 )
 def test_garbled_echo_fixes_leave_these_alone(text: str) -> None:
     assert redact(text) == text
+
+
+def test_a_shortened_stripe_key_is_labelled_as_stripe() -> None:
+    key = "sk_live_" + "4eC39HqLyjWDarjtT1zd"  # 20 of 24 characters
+    assert redact(f"stripe key {key} ok") == "stripe key [REDACTED:stripe_secret_key] ok"
+
+
+_KEY = "q8Zr2LmX9vB4nT7wK3pY6sD1fG5hJ0cE"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        f"curl https://api.example.com -H 'X-Api-Key: {_KEY}'",
+        f"curl https://api.example.com \\\n  -H 'X-Api-Key: {_KEY}'",
+        f"curl https://api.example.com ^\n  -H 'X-Api-Key: {_KEY}'",
+        f"curl https://api.example.com \\\n  -X POST \\\n  -H 'X-Api-Key: {_KEY}' \\\n  -d '{{}}'",
+    ],
+)
+def test_curl_headers_on_continued_lines_are_redacted(text: str) -> None:
+    out = redact(text)
+    assert _KEY not in out
+    assert "[REDACTED:curl-auth-header]" in out
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "curl -u admin:S3cr3tPassw0rd https://api.example.com",
+        "curl https://api.example.com \\\n  --user admin:S3cr3tPassw0rd",
+    ],
+)
+def test_curl_users_on_continued_lines_are_redacted(text: str) -> None:
+    out = redact(text)
+    assert "S3cr3tPassw0rd" not in out
+    assert "[REDACTED:curl-auth-user]" in out

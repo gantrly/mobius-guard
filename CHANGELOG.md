@@ -19,8 +19,10 @@ The first release.
   entropy, allowlist and keyword checks.
 - Private keys: the block ends at its END line, so the text after a key flows on at once;
   a key cut off before its END line (a model reaching its token limit) is still redacted.
+- gitleaks' curl rules follow a command onto the next line only after a continuation
+  character, so the lines after the word "curl" are no longer held back.
 - Tolerates the ways models garble what they echo: tokens a few characters longer or
-  shorter, values wrapped in quotes or markdown, passwords in URLs without a host.
+  shorter (Stripe keys too), values wrapped in quotes or markdown, passwords in URLs without a host.
 - Keyword prefilter: 177 gitleaks rules run only where one of their keywords is present or
   arriving (same output, checked on every public text in the evaluation).
 

@@ -175,6 +175,29 @@ def test_a_piece_that_is_also_in_the_message_is_not_a_leak() -> None:
     assert leaked(url, f"{carrier} hooks.slack.com", context=carrier)
 
 
+def test_phrases_go_in_at_sentence_ends_not_inside_numbers() -> None:
+    # A phrase put in after the "3." of "Python 3.11" ran into the "11" (2026-11-02).
+    from mobiusguard_eval.redaction import insert_phrase
+
+    rng = random.Random(0)
+    for _ in range(50):
+        text = insert_phrase("Is Python 3.11 faster? Yes, it is.", "X", rng)
+        assert text in (
+            "Is Python 3.11 faster? X  Yes, it is.",
+            "Is Python 3.11 faster? Yes, it is. X ",
+        )
+
+
+def test_a_phrase_at_a_line_break_is_a_line_of_its_own() -> None:
+    # The next line "2. the middle..." ran on from a phone number before it (2026-11-02).
+    from mobiusguard_eval.redaction import insert_phrase
+
+    assert insert_phrase("1. first\n2. second", "phone: +1 524 356", random.Random(0)) in (
+        "1. first\nphone: +1 524 356\n2. second",
+        "1. first\n2. second phone: +1 524 356 ",
+    )
+
+
 def test_garbled_values_are_garbled_as_named() -> None:
     kinds = {kind for _, kind, _, _ in garbled_jobs()}
     assert kinds == {"garbled:wrapped", "garbled:longer", "garbled:shorter", "garbled:context"}

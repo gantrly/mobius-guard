@@ -35,9 +35,15 @@ match is accepted, outside partial matching. A regression test covers the case.
 **Delay is about one word.** gitleaks' keyword rules (`<word>_api_key = …`) can start at
 any word, so the last unfinished word is held. Measured on this repo's docs and code in
 4-character chunks (2026-11-02, AWS g6.xlarge CPU, Python 3.12, all 245 patterns): output
-trails input by 3 characters at P50, 41 at P99. The most, 500 characters, follows the
-word `curl`: gitleaks' `curl-auth-header` and `curl-auth-user` look up to five lines ahead
-for a header, since a curl command can span lines.
+trails input by 3 characters at P50 and 41 at P99.
+
+**The curl rules follow continued lines only (2026-11-02).** gitleaks' `curl-auth-header`
+and `curl-auth-user` looked up to five lines past the word `curl` for the header or user
+option, so the redactor held up to 500 characters after any "curl" in the text. A curl
+command only continues on the next line after a continuation character (`\` in shells, `^`
+in cmd, a backtick in PowerShell), so later lines are now followed only after one; the rest
+of both regexes is gitleaks' own (`STREAMING_PREFIXES` in `patterns.py`). A header on an
+uncontinued next line is still caught by `generic-api-key`.
 
 **The guarantee:** for every shipped pattern, the redacted output is the same however the
 input is split into chunks. This is enforced by property tests that split every test input
@@ -80,7 +86,8 @@ gitleaks') allowed any text in the body, so after a complete key the match could
 to a later END line: everything after a key was held back until the holdback limit and then
 replaced. Found by the benchmark once its input contained a PEM block. The body may no
 longer contain `-----END`; gitleaks' `private-key` regex is changed accordingly
-(`STREAMING_FIXES` in `patterns.py`), the one rule we run differently from gitleaks. Our
+(`STREAMING_FIXES` in `patterns.py`); with the two curl rules below, the only rules we run
+differently from gitleaks. Our
 pattern also ends at the end of the reply, so a key cut off before its END line (a model
 reaching its token limit) is redacted instead of passed on.
 
