@@ -17,8 +17,11 @@ use" a non-question, at the cost of releasing a package that did not change.
 `.github/workflows/release.yml`: the full checks, a check that the tag matches every
 package version, the build, an install of the wheels into a clean environment
 (`scripts/check_dist.sh`), then `uv publish` with PyPI trusted publishing. No PyPI token
-exists anywhere, and the `pypi` GitHub environment requires a person to approve each
-release. Steps in [docs/releasing.md](../releasing.md).
+exists anywhere. PyPI accepts one publisher configuration per project, so each package is
+published by its own job from its own GitHub environment (`pypi-mobiusguard-redact`,
+`pypi-mobiusguard`, `pypi-mobiusguard-eval`); each environment requires a person to
+approve, and the three jobs wait together, so one approval releases all three. Steps in
+[docs/releasing.md](../releasing.md).
 
 **A container image built from source, not published yet.** The `Dockerfile` builds the
 wheels from the checkout, installs the dependencies from `uv.lock` with their hashes on a

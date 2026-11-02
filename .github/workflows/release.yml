@@ -1,8 +1,9 @@
 name: Release
 
 # Runs when a version tag (v0.1.0, ...) is pushed: checks, builds, tests the wheels in a
-# clean environment, then publishes to PyPI with trusted publishing (no stored token).
-# See docs/releasing.md.
+# clean environment, then publishes each package to PyPI with trusted publishing (no stored
+# token). Each package publishes from its own GitHub environment, because PyPI accepts a
+# publisher configuration for one project only. See docs/releasing.md.
 
 on:
   push:
@@ -12,12 +13,8 @@ permissions:
   contents: read
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
-    environment: pypi
-    permissions:
-      contents: read
-      id-token: write # trusted publishing
     steps:
       - uses: actions/checkout@v7
         with:
@@ -35,4 +32,32 @@ jobs:
       - run: uv build --all-packages
       - name: Install the wheels in a clean environment and try them
         run: scripts/check_dist.sh dist
-      - run: uv publish --trusted-publishing always
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      # All three wait for approval at once (one "Review deployments" dialog); if one
+      # upload fails the others stop, and re-running the job skips files already uploaded.
+      matrix:
+        include:
+          - { project: mobiusguard-redact, files: mobiusguard_redact }
+          - { project: mobiusguard, files: mobiusguard }
+          - { project: mobiusguard-eval, files: mobiusguard_eval }
+    environment: pypi-${{ matrix.project }}
+    permissions:
+      contents: read
+      id-token: write # trusted publishing
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      - uses: astral-sh/setup-uv@v7
+      - name: Publish ${{ matrix.project }}
+        run: uv publish --trusted-publishing always dist/${{ matrix.files }}-*
