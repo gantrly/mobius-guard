@@ -6,7 +6,7 @@ Rewrites secrets and PII that are split across chunks, without buffering the who
 from .patterns import Pattern, default_patterns, gitleaks_patterns
 from .redactor import Finding, StreamRedactor, aredact_stream, redact, redact_stream
 
-__version__ = "0.0.0"
+__version__ = "0.1.0"
 
 __all__ = [
     "Finding",

@@ -1,6 +1,6 @@
 [project]
 name = "mobiusguard"
-version = "0.0.0"
+dynamic = ["version"]
 description = "Mobius Guard: an OpenAI-compatible LLM firewall proxy with streaming redaction and an honest, held-out evaluation."
 readme = "README.md"
 license = "Apache-2.0"
@@ -9,7 +9,7 @@ requires-python = ">=3.11"
 authors = [{ name = "SK Imtiaj Uddin" }]
 keywords = ["llm", "security", "prompt-injection", "guardrails", "redaction"]
 classifiers = [
-  "Development Status :: 2 - Pre-Alpha",
+  "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
@@ -20,7 +20,7 @@ classifiers = [
 ]
 dependencies = [
     "httpx>=0.28",
-    "mobiusguard-redact",
+    "mobiusguard-redact>=0.1.0,<0.2",
     "starlette>=0.46",
     "uvicorn>=0.34",
 ]
@@ -44,6 +44,9 @@ otel = [
 [build-system]
 requires = ["hatchling>=1.32.4"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/mobiusguard/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mobiusguard"]

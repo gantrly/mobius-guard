@@ -730,7 +730,6 @@ wheels = [
 
 [[package]]
 name = "mobiusguard"
-version = "0.0.0"
 source = { editable = "packages/mobiusguard" }
 dependencies = [
     { name = "httpx" },
@@ -762,7 +761,6 @@ provides-extras = ["classifier", "otel"]
 
 [[package]]
 name = "mobiusguard-eval"
-version = "0.0.0"
 source = { editable = "packages/mobiusguard-eval" }
 dependencies = [
     { name = "huggingface-hub" },
@@ -793,11 +791,10 @@ requires-dist = [
     { name = "torch", marker = "extra == 'hf'", specifier = ">=2.5" },
     { name = "transformers", marker = "extra == 'hf'", specifier = ">=4.46" },
 ]
-provides-extras = ["sklearn", "hf"]
+provides-extras = ["hf", "sklearn"]
 
 [[package]]
 name = "mobiusguard-redact"
-version = "0.0.0"
 source = { editable = "packages/mobiusguard-redact" }
 dependencies = [
     { name = "regex" },

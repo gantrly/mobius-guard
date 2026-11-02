@@ -25,6 +25,7 @@
   <a href="#what-it-does">What it does</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="#run-it">Run it</a> ·
+  <a href="#documentation">Docs</a> ·
   <a href="docs/ROADMAP.md">Roadmap</a> ·
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
@@ -88,6 +89,19 @@ More in [docs/architecture.md](docs/architecture.md). Every design choice is a n
 record in [docs/decisions/](docs/decisions/): streaming semantics in
 [0007](docs/decisions/0007-streaming-redaction-semantics.md), the evaluation harness in
 [0009](docs/decisions/0009-evaluation-harness-v0.1.md).
+
+## Documentation
+
+| | |
+|---|---|
+| [Quickstart](docs/quickstart.md) | Install, try the check, run the proxy, point an SDK at it |
+| [Configuration](docs/configuration.md) | Every setting; forwarded or held API keys; adding a classifier and choosing its threshold |
+| [Rules](docs/rules.md) | The eight request rules, what they catch and how well |
+| [Redaction](docs/redaction.md) | What is redacted, in streams and on its own, and the limits |
+| [Audit log](docs/audit-log.md) | The one-line-per-request record and how to query it |
+| [Deploy](docs/deploy.md) | The container image, Compose with a local model, production notes |
+| [Results](docs/results/) | Measured numbers, on data the detectors never saw |
+| [Threat model](docs/threat-model.md) | What it protects against and what it does not |
 
 ## Run it
 

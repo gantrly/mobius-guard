@@ -24,4 +24,5 @@ r.findings  # pattern IDs and positions, never the secrets
   checks. Drop any by ID: `default_patterns(exclude={"generic-api-key"})`.
 - Also `redact(text)`, `redact_stream(iterable)` and `aredact_stream(async_iterable)`.
 
-How it works and its limits: [decision 0007](../../docs/decisions/0007-streaming-redaction-semantics.md).
+Guide, pattern list and limits: [docs/redaction.md](https://github.com/gantrly/mobius-guard/blob/main/docs/redaction.md). How it works:
+[decision 0007](https://github.com/gantrly/mobius-guard/blob/main/docs/decisions/0007-streaming-redaction-semantics.md).

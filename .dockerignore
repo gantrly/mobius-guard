@@ -1,0 +1,12 @@
+# Keep the build context to the source: no secrets, runs, environments or caches.
+.gh-token
+.git
+.venv
+runs
+**/__pycache__
+.pytest_cache
+.ruff_cache
+.hypothesis
+.coverage
+dist
+**/*.jsonl

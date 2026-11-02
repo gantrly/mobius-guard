@@ -1,0 +1,27 @@
+# Mobius Guard in front of a local model, both in containers. From the repository root:
+#
+#   docker compose -f examples/docker-compose.yml up -d --build
+#   docker compose -f examples/docker-compose.yml exec ollama ollama pull qwen2.5:3b
+#
+# Then point any OpenAI SDK at http://127.0.0.1:8787/v1 (Anthropic: http://127.0.0.1:8787).
+# For a hosted API instead, drop the ollama service and set the base URLs in the config.
+
+services:
+  mobiusguard:
+    build: ..
+    command: ["--config", "/etc/mobiusguard/mobiusguard.toml"]
+    ports: ["127.0.0.1:8787:8787"]
+    volumes:
+      - ./docker.toml:/etc/mobiusguard/mobiusguard.toml:ro
+      - audit:/data
+    depends_on: [ollama]
+
+  ollama:
+    image: ollama/ollama:0.40.13@sha256:b2f0122c476bc9fe7ce679d8bb4bd555351e25e2554eefb156f61cb0a89cf429
+    volumes: [models:/root/.ollama]
+    # With an NVIDIA GPU, uncomment:
+    # deploy: {resources: {reservations: {devices: [{driver: nvidia, count: all, capabilities: [gpu]}]}}}
+
+volumes:
+  audit:
+  models:

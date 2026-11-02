@@ -40,6 +40,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                                     for h in d.hits]}, indent=2))  # fmt: skip
         return 1 if d.action == "block" else 0
 
+    from .config import warnings
+
+    for w in warnings(cfg):
+        print(f"mobiusguard: warning: {w}", file=sys.stderr)
+
     import uvicorn
 
     from .app import create_app

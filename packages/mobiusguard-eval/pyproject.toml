@@ -1,6 +1,6 @@
 [project]
 name = "mobiusguard-eval"
-version = "0.0.0"
+dynamic = ["version"]
 description = "Evaluation harness for LLM guardrails: held-out attack families, false-positive sets, recall at fixed FPR and CPU latency."
 readme = "README.md"
 license = "Apache-2.0"
@@ -9,7 +9,7 @@ requires-python = ">=3.11"
 authors = [{ name = "SK Imtiaj Uddin" }]
 keywords = ["llm", "security", "prompt-injection", "guardrails", "redaction"]
 classifiers = [
-  "Development Status :: 2 - Pre-Alpha",
+  "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
@@ -20,8 +20,8 @@ classifiers = [
 ]
 dependencies = [
     "huggingface-hub>=0.26",
-    "mobiusguard",
-    "mobiusguard-redact",
+    "mobiusguard>=0.1.0,<0.2",
+    "mobiusguard-redact>=0.1.0,<0.2",
     "numpy>=2.0",
     "pyarrow>=18",
 ]
@@ -45,6 +45,9 @@ hf = [
 [build-system]
 requires = ["hatchling>=1.32.4"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/mobiusguard_eval/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mobiusguard_eval"]

@@ -1,0 +1,10 @@
+# Settings for examples/docker-compose.yml: the model runs in the "ollama" container.
+
+[upstream.openai]
+base_url = "http://ollama:11434/v1"
+
+[upstream.anthropic]
+base_url = "http://ollama:11434/v1"
+
+[audit]
+path = "/data/mobiusguard-audit.jsonl"

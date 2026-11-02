@@ -38,8 +38,9 @@ To try it with a free local model, run Ollama and use
 [`examples/ollama.toml`](https://github.com/gantrly/mobius-guard/blob/main/examples/ollama.toml);
 `scripts/live_check.py` sends every case through all three APIs.
 
-Settings are a TOML file (`mobiusguard serve --config mobiusguard.toml`); see
-`mobiusguard/config.py` for every option, and
-[decision 0010](https://github.com/gantrly/mobius-guard/blob/main/docs/decisions/0010-proxy-v0.1.md)
-for the design. Optional extras: `mobiusguard[classifier]` (PIGuard or ProtectAI v2, about a
+Settings are a TOML file (`mobiusguard serve --config mobiusguard.toml`). Guides:
+[quickstart](https://github.com/gantrly/mobius-guard/blob/main/docs/quickstart.md), [configuration](https://github.com/gantrly/mobius-guard/blob/main/docs/configuration.md),
+[rules](https://github.com/gantrly/mobius-guard/blob/main/docs/rules.md), [audit log](https://github.com/gantrly/mobius-guard/blob/main/docs/audit-log.md) and
+[deploying it](https://github.com/gantrly/mobius-guard/blob/main/docs/deploy.md), including the container image. The design is in
+[decision 0010](https://github.com/gantrly/mobius-guard/blob/main/docs/decisions/0010-proxy-v0.1.md). Optional extras: `mobiusguard[classifier]` (PIGuard or ProtectAI v2, about a
 second per long prompt on a CPU) and `mobiusguard[otel]`.

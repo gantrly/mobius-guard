@@ -1,6 +1,6 @@
 [project]
 name = "mobiusguard-redact"
-version = "0.0.0"
+dynamic = ["version"]
 description = "Streaming redaction for LLM output: rewrites secrets and PII that are split across chunks, without buffering the reply."
 readme = "README.md"
 license = "Apache-2.0"
@@ -9,7 +9,7 @@ requires-python = ">=3.11"
 authors = [{ name = "SK Imtiaj Uddin" }]
 keywords = ["llm", "security", "prompt-injection", "guardrails", "redaction"]
 classifiers = [
-  "Development Status :: 2 - Pre-Alpha",
+  "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
@@ -29,6 +29,9 @@ Issues = "https://github.com/gantrly/mobius-guard/issues"
 [build-system]
 requires = ["hatchling>=1.32.4"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/mobiusguard_redact/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mobiusguard_redact"]

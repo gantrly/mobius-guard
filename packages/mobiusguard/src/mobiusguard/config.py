@@ -148,3 +148,20 @@ def load(path: Path | None = None, env: dict[str, str] | None = None) -> Config:
         ),
         client_tokens=tuple(t.strip() for t in tokens.split(",") if t.strip()),
     )
+
+
+def warnings(cfg: Config, env: dict[str, str] | None = None) -> list[str]:
+    """Settings that work but are probably a mistake; ``serve`` prints them at start."""
+    env = dict(os.environ) if env is None else env
+    out: list[str] = []
+    held = [u for u in (cfg.openai, cfg.anthropic) if u.api_key_env]
+    if held and not cfg.client_tokens:
+        out.append("the proxy holds an upstream key but MOBIUSGUARD_CLIENT_TOKENS is empty: "
+                   "anyone who can reach it can use the key")  # fmt: skip
+    if cfg.client_tokens and len(held) < 2:
+        out.append("MOBIUSGUARD_CLIENT_TOKENS is set but an upstream has no api_key_env: "
+                   "callers' client tokens would be sent to that upstream as API keys")  # fmt: skip
+    for u in held:
+        if not env.get(u.api_key_env):
+            out.append(f"api_key_env names {u.api_key_env}, which is not set")
+    return out
