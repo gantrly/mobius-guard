@@ -1,0 +1,59 @@
+# Development
+
+Requires [uv](https://docs.astral.sh/uv/). Read [CONTRIBUTING.md](../CONTRIBUTING.md) and
+[AGENTS.md](../AGENTS.md) first.
+
+```sh
+make install       # .venv and the pre-commit hook
+make check         # ruff, pyright strict, pytest with coverage: what CI runs
+make test-stress   # property tests with 5,000 examples each (about 6 minutes)
+make bench         # redactor latency per chunk and how much is held back
+uv build --all-packages && scripts/check_dist.sh dist   # the wheels in a clean environment
+```
+
+## The evaluation harness
+
+Scoring can run on a GPU machine and the report anywhere; every step saves its progress and
+skips finished work, so a crash or a fix never means starting over.
+
+```sh
+uv sync --all-packages --all-extras                        # adds scikit-learn, torch, transformers
+uv run mobiusguard-eval sources                            # the provenance ledger
+uv run mobiusguard-eval build --out runs/suite             # fetch pinned data, build the suite
+uv run mobiusguard-eval score --suite runs/suite --detector piguard --device cuda --out runs/piguard
+uv run mobiusguard-eval report --suite runs/suite --runs runs/piguard --out runs/report
+uv run mobiusguard-eval redaction --suite runs/suite --out runs/redaction
+uv run mobiusguard-eval pipeline --out runs --device cuda  # all of it; run again to resume
+```
+
+How it measures: [decision 0009](decisions/0009-evaluation-harness-v0.1.md) and the rules in
+[decision 0006](decisions/0006-evaluation-rules.md). Datasets and their licences:
+[datasets.md](datasets.md).
+
+## Layout
+
+```text
+packages/mobiusguard-redact   streaming redaction: patterns, validators, StreamRedactor
+packages/mobiusguard          the proxy: APIs, normalisation, rules, policy, redaction, audit
+packages/mobiusguard-eval     the evaluation harness: ledger, suite, detectors, metrics, CLI
+scripts/                      gitleaks rule import, live check, wheel check, README images
+benchmarks/                   redactor latency
+examples/                     settings for Ollama, Compose with a local model
+Dockerfile                    the proxy's container image
+docs/                         guides, results, roadmap, architecture, threat model,
+                              datasets, decision records
+```
+
+## README images
+
+`.github/assets/hero*.svg` and the result charts are generated, not drawn by hand:
+`uv run python scripts/brand/hero.py` replays the real redactor chunk by chunk, and
+`uv run python scripts/brand/charts.py` draws the numbers from the dated results pages.
+Change a chart's numbers only together with the results page they come from.
+
+## Built with
+
+[regex](https://pypi.org/project/regex/) (partial matching) · rules from
+[gitleaks](https://github.com/gitleaks/gitleaks) (MIT) · Starlette, httpx and uvicorn ·
+[Hypothesis](https://hypothesis.works) · NumPy and PyArrow · scikit-learn · PyTorch and
+Transformers (baselines and the optional classifier) · uv · Ruff · Pyright · pytest.
