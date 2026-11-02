@@ -1,6 +1,7 @@
 # Threat model
 
-A first version, written before the code. It is updated as each part is built.
+Written before the code and updated as each part was built; this version matches v0.1
+(2026-11-02).
 
 ## What we protect
 
@@ -33,11 +34,11 @@ A first version, written before the code. It is updated as each part is built.
 
 | Boundary | Risk | Mitigation |
 |---|---|---|
-| Client → proxy | Crafted prompts; oversized or malformed requests | Normalise before detection; size limits; strict request parsing; fail closed |
-| Proxy → upstream | Forwarding a blocked request; leaking upstream keys | Single decision point before forwarding; keys only from config/env, never logged |
-| Upstream → client (stream) | Secrets split across chunks; very long tokens that defeat the holdback | Holdback sized to the longest pattern; chunk-invariance tests; bounded buffer with a documented limit |
-| Proxy → audit log | Logs become a second copy of sensitive data | Hashes and IDs by default; text logging is opt-in |
-| Rules and model files | Tampered rule updates or model weights | Hashes checked on load; v0.2 patches require review before applying |
+| Client → proxy | Crafted prompts; oversized or malformed requests; strangers using a proxy that holds the provider key | Normalise before detection; a body size limit (413); JSON parsing with a 400 on anything else; fail closed; client tokens when the proxy holds the key, with a start-up warning if they are missing |
+| Proxy → upstream | Forwarding a blocked request; leaking upstream keys | Single decision point before forwarding; only allowlisted headers forwarded; keys only from the caller or an environment variable, never logged |
+| Upstream → client (stream) | Secrets split across chunks; secrets the model garbles; very long matches that defeat the holdback | Hold back from the earliest possible match start; property tests that the output is the same at every split; patterns that tolerate garbled echoes; at most 8,192 characters held, then the held text is redacted rather than sent |
+| Proxy → audit log | Logs become a second copy of sensitive data | Decisions, rule IDs, counts and a prompt hash by default; text logging is opt-in |
+| Rules and model files | Tampered rules or model weights | Rules ship inside the package and change only through reviewed pull requests; classifier weights are pinned to a model commit and loaded without running downloaded code; releases come from a tag with a person approving the upload; v0.2 rule patches require review before applying |
 
 ## Known limits (to be measured, not hidden)
 
@@ -45,3 +46,9 @@ A first version, written before the code. It is updated as each part is built.
   evaluation harness, including the families we do worst on.
 - Redaction catches only the documented pattern set. Free-form personal data (names,
   addresses) needs an NER model and is out of scope for v0.1.
+- The rules are precise but narrow (no false blocks on 23,221 benign texts, 0–36% of
+  attacks blocked depending on the set). Indirect and adaptive attacks (LLMail-Inject,
+  BIPIA) remain hard for every detector measured, ours included
+  ([results](results/2026-10-29-proxy.md)).
+- A secret the model rewrites beyond recognition (spelled out, translated, split by spaces)
+  is not redacted.

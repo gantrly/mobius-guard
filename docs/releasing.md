@@ -4,11 +4,25 @@ For maintainers. The three packages are released together, with one version, fro
 
 ## Once: PyPI trusted publishing
 
-1. On PyPI, for each of `mobiusguard-redact`, `mobiusguard` and `mobiusguard-eval`, add a
-   *pending publisher* (Account → Publishing): owner `gantrly`, repository `mobius-guard`,
-   workflow `release.yml`, environment `pypi`. The first upload then creates the project.
-2. In the GitHub repository, create the environment `pypi` (Settings → Environments) and
-   require a reviewer, so that every release waits for a person to approve it.
+1. **A PyPI account** at <https://pypi.org/account/register/> with a verified email and
+   two-factor authentication (PyPI requires 2FA to publish).
+2. **Three pending publishers**, one per package, at
+   <https://pypi.org/manage/account/publishing/> → *Add a new pending publisher* → GitHub:
+
+   | Field | Value |
+   |---|---|
+   | PyPI Project Name | `mobiusguard-redact`, then `mobiusguard`, then `mobiusguard-eval` |
+   | Owner | `gantrly` |
+   | Repository name | `mobius-guard` |
+   | Workflow name | `release.yml` |
+   | Environment name | `pypi` |
+
+   A pending publisher reserves nothing: the project is created by the first upload. Upload
+   soon after, or someone else can take the name.
+3. **The `pypi` environment** in the GitHub repository (Settings → Environments → New
+   environment, named `pypi`): tick *Required reviewers* and add yourself, and under
+   *Deployment branches and tags* allow only tags matching `v*`. Every release then waits
+   for a person to approve it.
 
 No PyPI token is stored anywhere: the workflow proves who it is with GitHub's OIDC token.
 

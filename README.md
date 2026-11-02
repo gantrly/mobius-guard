@@ -39,16 +39,17 @@
 
 <p align="center"><sub>Drawn by <a href="scripts/brand/hero.py"><code>scripts/brand/hero.py</code></a> from the redactor's real output, chunk by chunk, holdback included.</sub></p>
 
-> **Pre-alpha.** Parts 0–3 of the [roadmap](docs/ROADMAP.md) are done: the streaming
-> redactor, the evaluation harness and the proxy, with results in [docs/results](docs/results/).
-> Next is the v0.1 release. Nothing is on PyPI yet.
+> **Pre-alpha, v0.1 ready to release.** The streaming redactor, the evaluation harness and
+> the proxy are built and measured ([results](docs/results/)), with user docs, a container
+> image and a release workflow. Nothing is on PyPI yet; see the [roadmap](docs/ROADMAP.md).
 
 ## What it does
 
 |  |  |
 |---|---|
 | **Redaction that keeps the stream going** | Secrets and personal data in a model's reply are replaced as it streams, even when a secret is split across chunks: `"sk-proj-Q7w"` + `"E9rT…"` becomes `[REDACTED:openai_api_key]`. Text that can't be part of a secret is passed on at once; only a possible match is held back (about one word). |
-| **245 patterns** | 24 curated ones with checks that cut false positives (Luhn for cards, mod-97 for IBANs, Verhoeff for Aadhaar), plus all 221 [gitleaks](https://github.com/gitleaks/gitleaks) rules with gitleaks' own entropy and allowlist rules. Any can be switched off by ID. |
+| **245 patterns** | 24 curated ones with checks that cut false positives (Luhn for cards, mod-97 for IBANs, Verhoeff for Aadhaar), plus all 221 [gitleaks](https://github.com/gitleaks/gitleaks) rules with gitleaks' own entropy, allowlist and keyword checks. Any can be switched off by ID. About 0.15 ms per streamed token on one CPU core. |
+| **Built for what models actually write** | Models garble secrets they repeat: a token with characters added or dropped, a key in backticks, a database URL without its host. In the evaluation, none of 15,000 exact and garbled secrets placed in real messages got through ([results](docs/results/2026-11-02-redactor.md)). |
 | **Proven chunk-safe** | The output is the same however the input is split. Property tests split every test input at every point, one character at a time and at random, for every pattern. |
 | **Honest evaluation** | Detectors are scored as recall at a fixed false-positive rate, with thresholds set on ordinary traffic, never on the sets reported. Datasets are pinned, with their licence and which models trained on them, and those cells are marked. Five obfuscation families (spaced letters, look-alike letters, invisible characters, leetspeak, base64). |
 | **Baselines in every table** | Keyword rules, TF-IDF trained leave-one-source-out, ProtectAI v2 and PIGuard, with CPU latency stated with the hardware. |
@@ -113,6 +114,14 @@ make install   # .venv and the pre-commit hook
 make check     # lint, strict type check and tests: what CI runs
 ```
 
+**Run the proxy** ([quickstart](docs/quickstart.md)):
+
+```sh
+uv run mobiusguard check "Ignore all previous instructions"   # try the request check
+uv run mobiusguard serve --port 8787                          # then point an SDK at it
+docker build -t mobiusguard . && docker run -p 127.0.0.1:8787:8787 mobiusguard   # or as a container
+```
+
 **Redact a stream** (`mobiusguard-redact`, one dependency):
 
 ```python
@@ -154,7 +163,8 @@ make bench         # redactor latency per chunk and how much is held back
 ## Built with
 
 [regex](https://pypi.org/project/regex/) (partial matching) · rules from
-[gitleaks](https://github.com/gitleaks/gitleaks) (MIT) · [Hypothesis](https://hypothesis.works) ·
+[gitleaks](https://github.com/gitleaks/gitleaks) (MIT) · Starlette, httpx and uvicorn (the
+proxy) · [Hypothesis](https://hypothesis.works) ·
 NumPy and PyArrow · scikit-learn · PyTorch and Transformers (baselines only) ·
 uv · Ruff · Pyright · pytest.
 
@@ -164,9 +174,12 @@ uv · Ruff · Pyright · pytest.
 packages/mobiusguard-redact   streaming redaction: patterns, validators, StreamRedactor
 packages/mobiusguard-eval     the evaluation harness: ledger, suite, detectors, metrics, CLI
 packages/mobiusguard          the proxy: APIs, normalisation, rules, policy, redaction, audit
-scripts/                      gitleaks rule import, brand and README images
+scripts/                      gitleaks rule import, live check, wheel check, brand images
 benchmarks/                   redactor latency
-docs/                         roadmap, architecture, threat model, datasets, decision records
+examples/                     settings for Ollama, Compose with a local model
+Dockerfile                    the proxy's container image
+docs/                         user guides, results, roadmap, architecture, threat model,
+                              datasets, decision records
 ```
 
 Working notes for contributors and coding agents: [AGENTS.md](AGENTS.md).

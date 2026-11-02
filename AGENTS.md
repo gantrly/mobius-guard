@@ -14,6 +14,10 @@ is next, and [docs/decisions/](docs/decisions/) before changing anything they co
 - `packages/mobiusguard-eval`: the evaluation harness.
 - `docs/decisions/NNNN-*.md`: one record per design decision, numbered.
 - `docs/research/`: dated research notes with sources.
+- `docs/results/`: dated measurements from the harness, with hardware.
+- User guides: `docs/quickstart.md`, `configuration.md`, `rules.md`, `redaction.md`,
+  `audit-log.md`, `deploy.md`; maintainers: `docs/releasing.md`. Keep them true when you
+  change behaviour, settings or numbers.
 - Each package carries a copy of `LICENSE` and `NOTICE` (wheels must include them). If you
   change the root files, change the copies too.
 
@@ -23,6 +27,9 @@ is next, and [docs/decisions/](docs/decisions/) before changing anything they co
 make check      # lint + strict type check + tests (what CI runs)
 make fmt        # format and auto-fix
 uv run pytest packages/mobiusguard-redact -q
+make test-stress   # property tests with 5,000 examples each; run after changing a pattern
+make bench         # redactor latency and holdback
+uv build --all-packages && scripts/check_dist.sh dist   # wheels in a clean environment
 ```
 
 ## Rules
@@ -40,5 +47,22 @@ uv run pytest packages/mobiusguard-redact -q
   ledger with its licence and which known models trained on it.
 - **Commits:** sign off (`git commit -s`), with a clear message about what changed and why.
   Push only when asked.
+- **Releases** follow [docs/releasing.md](docs/releasing.md): the three packages share one
+  version, set in each `__init__.py`; a test fails if the versions or the ranges between
+  the packages disagree. Add a `CHANGELOG.md` entry for anything users notice.
 - `make check` must pass before saying something is done. Say plainly what was and wasn't
   tested.
+
+## Redactor traps
+
+- **Streaming changes what a regex may do.** No variable-length lookbehinds (use
+  `not_after`); a body that can run on to a later terminator holds back everything after a
+  match (private keys did; the body may not contain `-----END`). gitleaks rules changed for
+  streaming live in `STREAMING_FIXES` / `STREAMING_PREFIXES` in `patterns.py`; say why in
+  decision 0007.
+- **The keyword prefilter** skips a gitleaks rule until one of its keywords arrives. A rule
+  whose match needs text before its keyword, or whose secret starts before it, must be in
+  `KEYWORDS_UNSAFE`; `test_keywords_are_a_safe_filter` checks every rule. After changing
+  patterns or upgrading gitleaks, run the stress profile: it found the one such leak so far.
+- **Ruff formats Python code blocks inside Markdown**, so run `make fmt` after editing docs,
+  or `make check` fails at lint before the tests run.
