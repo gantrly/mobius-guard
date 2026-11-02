@@ -38,6 +38,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\bA3-[A-Z0-9]{6}-(?:(?:[A-Z0-9]{11})|(?:[A-Z0-9]{6}-[A-Z0-9]{5}))-[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}\\b',
         entropy=3.8,
         secret_group=0,
+        keywords=('a3-',),
         allowlists=(),
     ),
     RuleData(
@@ -46,6 +47,7 @@ RULES: tuple[RuleData, ...] = (
         regex='ops_eyJ[a-zA-Z0-9+/]{250,}={0,3}',
         entropy=4.0,
         secret_group=0,
+        keywords=('ops_',),
         allowlists=(),
     ),
     RuleData(
@@ -54,6 +56,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:adafruit)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9_-]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('adafruit',),
         allowlists=(),
     ),
     RuleData(
@@ -62,6 +65,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:adobe)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-f0-9]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('adobe',),
         allowlists=(),
     ),
     RuleData(
@@ -70,6 +74,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(p8e-(?i)[a-z0-9]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('p8e-',),
         allowlists=(),
     ),
     RuleData(
@@ -78,6 +83,7 @@ RULES: tuple[RuleData, ...] = (
         regex='AGE-SECRET-KEY-1[QPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L]{58}',
         entropy=0.0,
         secret_group=0,
+        keywords=('age-secret-key-1',),
         allowlists=(),
     ),
     RuleData(
@@ -86,6 +92,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:airtable)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{17})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('airtable',),
         allowlists=(),
     ),
     RuleData(
@@ -94,6 +101,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(pat[[:alnum:]]{14}\\.[a-f0-9]{64})\\b',
         entropy=0.0,
         secret_group=0,
+        keywords=('airtable',),
         allowlists=(),
     ),
     RuleData(
@@ -102,6 +110,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:algolia)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('algolia',),
         allowlists=(),
     ),
     RuleData(
@@ -110,6 +119,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(LTAI(?i)[a-z0-9]{20})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('ltai',),
         allowlists=(),
     ),
     RuleData(
@@ -118,6 +128,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:alibaba)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{30})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('alibaba',),
         allowlists=(),
     ),
     RuleData(
@@ -126,6 +137,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(sk-ant-admin01-[a-zA-Z0-9_\\-]{93}AA)(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('sk-ant-admin01',),
         allowlists=(),
     ),
     RuleData(
@@ -134,6 +146,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(sk-ant-api03-[a-zA-Z0-9_\\-]{93}AA)(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('sk-ant-api03',),
         allowlists=(),
     ),
     RuleData(
@@ -142,6 +155,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\bAKCp[A-Za-z0-9]{69}\\b',
         entropy=4.5,
         secret_group=0,
+        keywords=('akcp',),
         allowlists=(),
     ),
     RuleData(
@@ -150,6 +164,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\bcmVmd[A-Za-z0-9]{59}\\b',
         entropy=4.5,
         secret_group=0,
+        keywords=('cmvmd',),
         allowlists=(),
     ),
     RuleData(
@@ -158,6 +173,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:asana)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([0-9]{16})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('asana',),
         allowlists=(),
     ),
     RuleData(
@@ -166,6 +182,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:asana)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('asana',),
         allowlists=(),
     ),
     RuleData(
@@ -174,6 +191,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:(?-i:ATLASSIAN|[Aa]tlassian)|(?-i:CONFLUENCE|[Cc]onfluence)|(?-i:JIRA|[Jj]ira))(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{20}[a-f0-9]{4})(?:[\\x60\'"\\s;]|\\\\[nr]|$)|\\b(ATATT3[A-Za-z0-9_\\-=]{186})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.5,
         secret_group=0,
+        keywords=('atlassian', 'confluence', 'jira', 'atatt3'),
         allowlists=(),
     ),
     RuleData(
@@ -182,6 +200,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b((?:sc|ext|scauth|authress)_(?i)[a-z0-9]{5,30}\\.[a-z0-9]{4,6}\\.(?-i:acc)[_-][a-z0-9-]{10,32}\\.[a-z0-9+/_=-]{30,120})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('sc_', 'ext_', 'scauth_', 'authress_'),
         allowlists=(),
     ),
     RuleData(
@@ -190,6 +209,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b((?:A3T[A-Z0-9]|AKIA|ASIA|ABIA|ACCA)[A-Z2-7]{16})\\b',
         entropy=3.0,
         secret_group=0,
+        keywords=('a3t', 'akia', 'asia', 'abia', 'acca'),
         allowlists=(Allowlist(target='secret', regexes=('.+EXAMPLE$',), stopwords=(), require_all=False),),
     ),
     RuleData(
@@ -198,6 +218,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(ABSK[A-Za-z0-9+/]{109,269}={0,2})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('absk',),
         allowlists=(),
     ),
     RuleData(
@@ -206,6 +227,7 @@ RULES: tuple[RuleData, ...] = (
         regex='bedrock-api-key-YmVkcm9jay5hbWF6b25hd3MuY29t',
         entropy=3.0,
         secret_group=0,
+        keywords=('bedrock-api-key-',),
         allowlists=(),
     ),
     RuleData(
@@ -214,6 +236,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?:^|[\\\\\'"\\x60\\s>=:(,)])([a-zA-Z0-9_~.]{3}\\dQ~[a-zA-Z0-9_~.-]{31,34})(?:$|[\\\\\'"\\x60\\s<),])',
         entropy=3.0,
         secret_group=0,
+        keywords=('q~',),
         allowlists=(),
     ),
     RuleData(
@@ -222,6 +245,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:beamer)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}(b_[a-z0-9=_\\-]{44})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('beamer',),
         allowlists=(),
     ),
     RuleData(
@@ -230,6 +254,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:bitbucket)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('bitbucket',),
         allowlists=(),
     ),
     RuleData(
@@ -238,6 +263,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:bitbucket)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9=_\\-]{64})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('bitbucket',),
         allowlists=(),
     ),
     RuleData(
@@ -246,6 +272,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:bittrex)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('bittrex',),
         allowlists=(),
     ),
     RuleData(
@@ -254,6 +281,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:bittrex)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('bittrex',),
         allowlists=(),
     ),
     RuleData(
@@ -262,6 +290,7 @@ RULES: tuple[RuleData, ...] = (
         regex='[\\w.-]{0,50}?(?i:[\\w.-]{0,50}?(?:(?-i:[Mm]eraki|MERAKI))(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([0-9a-f]{40})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('meraki',),
         allowlists=(),
     ),
     RuleData(
@@ -270,6 +299,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(4b1d[A-Za-z0-9]{38})\\b',
         entropy=3.0,
         secret_group=0,
+        keywords=('4b1d',),
         allowlists=(),
     ),
     RuleData(
@@ -278,6 +308,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)CLOJARS_[a-z0-9]{60}',
         entropy=2.0,
         secret_group=0,
+        keywords=('clojars_',),
         allowlists=(),
     ),
     RuleData(
@@ -286,6 +317,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:cloudflare)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9_-]{40})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('cloudflare',),
         allowlists=(),
     ),
     RuleData(
@@ -294,6 +326,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:cloudflare)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-f0-9]{37})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('cloudflare',),
         allowlists=(),
     ),
     RuleData(
@@ -302,6 +335,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(v1\\.0-[a-f0-9]{24}-[a-f0-9]{146})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('cloudflare', 'v1.0-'),
         allowlists=(),
     ),
     RuleData(
@@ -310,6 +344,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:codecov)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('codecov',),
         allowlists=(),
     ),
     RuleData(
@@ -318,6 +353,7 @@ RULES: tuple[RuleData, ...] = (
         regex='[\\w.-]{0,50}?(?i:[\\w.-]{0,50}?(?:cohere|CO_API_KEY)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-zA-Z0-9]{40})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=4.0,
         secret_group=0,
+        keywords=('cohere', 'co_api_key'),
         allowlists=(),
     ),
     RuleData(
@@ -326,6 +362,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:coinbase)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9_-]{64})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('coinbase',),
         allowlists=(),
     ),
     RuleData(
@@ -334,6 +371,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:confluent)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{16})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('confluent',),
         allowlists=(),
     ),
     RuleData(
@@ -342,6 +380,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:confluent)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{64})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('confluent',),
         allowlists=(),
     ),
     RuleData(
@@ -350,6 +389,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:contentful)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9=_\\-]{43})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('contentful',),
         allowlists=(),
     ),
     RuleData(
@@ -358,6 +398,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\bcurl\\b(?:.*?|.*?(?:[\\r\\n]{1,2}.*?){1,5})[ \\t\\n\\r](?:-H|--header)(?:=|[ \\t]{0,5})(?:"(?i)(?:Authorization:[ \\t]{0,5}(?:Basic[ \\t]([a-z0-9+/]{8,}={0,3})|(?:Bearer|(?:Api-)?Token)[ \\t]([\\w=~@.+/-]{8,})|([\\w=~@.+/-]{8,}))|(?:(?:X-(?:[a-z]+-)?)?(?:Api-?)?(?:Key|Token)):[ \\t]{0,5}([\\w=~@.+/-]{8,}))"|\'(?i)(?:Authorization:[ \\t]{0,5}(?:Basic[ \\t]([a-z0-9+/]{8,}={0,3})|(?:Bearer|(?:Api-)?Token)[ \\t]([\\w=~@.+/-]{8,})|([\\w=~@.+/-]{8,}))|(?:(?:X-(?:[a-z]+-)?)?(?:Api-?)?(?:Key|Token)):[ \\t]{0,5}([\\w=~@.+/-]{8,}))\')(?:\\B|\\s|\\z)',
         entropy=2.75,
         secret_group=0,
+        keywords=('curl',),
         allowlists=(),
     ),
     RuleData(
@@ -366,6 +407,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\bcurl\\b(?:.*|.*(?:[\\r\\n]{1,2}.*){1,5})[ \\t\\n\\r](?:-u|--user)(?:=|[ \\t]{0,5})("(:[^"]{3,}|[^:"]{3,}:|[^:"]{3,}:[^"]{3,})"|\'([^:\']{3,}:[^\']{3,})\'|((?:"[^"]{3,}"|\'[^\']{3,}\'|[\\w$@.-]+):(?:"[^"]{3,}"|\'[^\']{3,}\'|[\\w${}@.-]+)))(?:\\s|\\z)',
         entropy=2.0,
         secret_group=0,
+        keywords=('curl',),
         allowlists=(Allowlist(target='secret', regexes=('[^:]+:(?:change(?:it|me)|pass(?:word)?|pwd|test|token|\\*+|x+)', '[\'"]?<[^>]+>[\'"]?:[\'"]?<[^>]+>|<[^:]+:[^>]+>[\'"]?', '[^:]+:\\[[^]]+]', '[\'"]?[^:]+[\'"]?:[\'"]?\\$(?:\\d|\\w+|\\{(?:\\d|\\w+)})[\'"]?', '\\$\\([^)]+\\):\\$\\([^)]+\\)', '[\'"]?\\$?{{[^}]+}}[\'"]?:[\'"]?\\$?{{[^}]+}}[\'"]?'), stopwords=(), require_all=False),),
     ),
     RuleData(
@@ -374,6 +416,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(dapi[a-f0-9]{32}(?:-\\d)?)(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('dapi',),
         allowlists=(),
     ),
     RuleData(
@@ -382,6 +425,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:datadog)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{40})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('datadog',),
         allowlists=(),
     ),
     RuleData(
@@ -390,6 +434,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:dnkey)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}(dnkey-[a-z0-9=_\\-]{26}-[a-z0-9=_\\-]{52})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('dnkey',),
         allowlists=(),
     ),
     RuleData(
@@ -398,6 +443,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(doo_v1_[a-f0-9]{64})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('doo_v1_',),
         allowlists=(),
     ),
     RuleData(
@@ -406,6 +452,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(dop_v1_[a-f0-9]{64})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('dop_v1_',),
         allowlists=(),
     ),
     RuleData(
@@ -414,6 +461,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)\\b(dor_v1_[a-f0-9]{64})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('dor_v1_',),
         allowlists=(),
     ),
     RuleData(
@@ -422,6 +470,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:discord)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-f0-9]{64})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('discord',),
         allowlists=(),
     ),
     RuleData(
@@ -430,6 +479,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:discord)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([0-9]{18})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('discord',),
         allowlists=(),
     ),
     RuleData(
@@ -438,6 +488,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:discord)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9=_\\-]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('discord',),
         allowlists=(),
     ),
     RuleData(
@@ -446,6 +497,7 @@ RULES: tuple[RuleData, ...] = (
         regex='dp\\.pt\\.(?i)[a-z0-9]{43}',
         entropy=2.0,
         secret_group=0,
+        keywords=('dp.pt.',),
         allowlists=(),
     ),
     RuleData(
@@ -454,6 +506,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:droneci)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('droneci',),
         allowlists=(),
     ),
     RuleData(
@@ -462,6 +515,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:dropbox)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{15})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('dropbox',),
         allowlists=(),
     ),
     RuleData(
@@ -470,6 +524,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:dropbox)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{11}(AAAAAAAAAA)[a-z0-9\\-_=]{43})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('dropbox',),
         allowlists=(),
     ),
     RuleData(
@@ -478,6 +533,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:dropbox)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}(sl\\.[a-z0-9\\-=_]{135})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('dropbox',),
         allowlists=(),
     ),
     RuleData(
@@ -486,6 +542,7 @@ RULES: tuple[RuleData, ...] = (
         regex='duffel_(?:test|live)_(?i)[a-z0-9_\\-=]{43}',
         entropy=2.0,
         secret_group=0,
+        keywords=('duffel_',),
         allowlists=(),
     ),
     RuleData(
@@ -494,6 +551,7 @@ RULES: tuple[RuleData, ...] = (
         regex='dt0c01\\.(?i)[a-z0-9]{24}\\.[a-z0-9]{64}',
         entropy=4.0,
         secret_group=0,
+        keywords=('dt0c01.',),
         allowlists=(),
     ),
     RuleData(
@@ -502,6 +560,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\bEZAK(?i)[a-z0-9]{54}\\b',
         entropy=2.0,
         secret_group=0,
+        keywords=('ezak',),
         allowlists=(),
     ),
     RuleData(
@@ -510,6 +569,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\bEZTK(?i)[a-z0-9]{54}\\b',
         entropy=2.0,
         secret_group=0,
+        keywords=('eztk',),
         allowlists=(),
     ),
     RuleData(
@@ -518,6 +578,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:(?-i:ETSY|[Ee]tsy))(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{24})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('etsy',),
         allowlists=(),
     ),
     RuleData(
@@ -526,6 +587,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)\\b(\\d{15,16}(\\||%)[0-9a-z\\-_]{27,40})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('facebook',),
         allowlists=(),
     ),
     RuleData(
@@ -534,6 +596,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(EAA[MC](?i)[a-z0-9]{100,})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=4.0,
         secret_group=0,
+        keywords=('eaam', 'eaac'),
         allowlists=(),
     ),
     RuleData(
@@ -542,6 +605,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:facebook)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-f0-9]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('facebook',),
         allowlists=(),
     ),
     RuleData(
@@ -550,6 +614,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:fastly)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9=_\\-]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('fastly',),
         allowlists=(),
     ),
     RuleData(
@@ -558,6 +623,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:finicity)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-f0-9]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('finicity',),
         allowlists=(),
     ),
     RuleData(
@@ -566,6 +632,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:finicity)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{20})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('finicity',),
         allowlists=(),
     ),
     RuleData(
@@ -574,6 +641,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:finnhub)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{20})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('finnhub',),
         allowlists=(),
     ),
     RuleData(
@@ -582,6 +650,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:flickr)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('flickr',),
         allowlists=(),
     ),
     RuleData(
@@ -590,6 +659,7 @@ RULES: tuple[RuleData, ...] = (
         regex='FLWSECK_TEST-(?i)[a-h0-9]{12}',
         entropy=2.0,
         secret_group=0,
+        keywords=('flwseck_test',),
         allowlists=(),
     ),
     RuleData(
@@ -598,6 +668,7 @@ RULES: tuple[RuleData, ...] = (
         regex='FLWPUBK_TEST-(?i)[a-h0-9]{32}-X',
         entropy=2.0,
         secret_group=0,
+        keywords=('flwpubk_test',),
         allowlists=(),
     ),
     RuleData(
@@ -606,6 +677,7 @@ RULES: tuple[RuleData, ...] = (
         regex='FLWSECK_TEST-(?i)[a-h0-9]{32}-X',
         entropy=2.0,
         secret_group=0,
+        keywords=('flwseck_test',),
         allowlists=(),
     ),
     RuleData(
@@ -614,6 +686,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b((?:fo1_[\\w-]{43}|fm1[ar]_[a-zA-Z0-9+\\/]{100,}={0,3}|fm2_[a-zA-Z0-9+\\/]{100,}={0,3}))(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=4.0,
         secret_group=0,
+        keywords=('fo1_', 'fm1', 'fm2_'),
         allowlists=(),
     ),
     RuleData(
@@ -622,6 +695,7 @@ RULES: tuple[RuleData, ...] = (
         regex='fio-u-(?i)[a-z0-9\\-_=]{64}',
         entropy=0.0,
         secret_group=0,
+        keywords=('fio-u-',),
         allowlists=(),
     ),
     RuleData(
@@ -630,6 +704,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)["\']secret_key["\']\\s*=>\\s*["\'](sk_[\\S]{29})["\']',
         entropy=0.0,
         secret_group=0,
+        keywords=('secret_key',),
         allowlists=(),
     ),
     RuleData(
@@ -638,6 +713,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:freshbooks)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{64})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('freshbooks',),
         allowlists=(),
     ),
     RuleData(
@@ -646,6 +722,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(AIza[\\w-]{35})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=4.0,
         secret_group=0,
+        keywords=('aiza',),
         allowlists=(Allowlist(target='secret', regexes=('AIzaSyabcdefghijklmnopqrstuvwxyz1234567', 'AIzaSyAnLA7NfeLquW1tJFpx_eQCxoX-oo6YyIs', 'AIzaSyCkEhVjf3pduRDt6d1yKOMitrUEke8agEM', 'AIzaSyDMAScliyLx7F0NPDEJi1QmyCgHIAODrlU', 'AIzaSyD3asb-2pEZVqMkmL6M9N6nHZRR_znhrh0', 'AIzayDNSXIbFmlXbIE6mCzDLQAqITYefhixbX4A', 'AIzaSyAdOS2zB6NCsk1pCdZ4-P6GBdi_UUPwX7c', 'AIzaSyASWm6HmTMdYWpgMnjRBjxcQ9CKctWmLd4', 'AIzaSyANUvH9H9BsUccjsu2pCmEkOPjjaXeDQgY', 'AIzaSyA5_iVawFQ8ABuTZNUdcwERLJv_a_p4wtM', 'AIzaSyA4UrcGxgwQFTfaI3no3t7Lt1sjmdnP5sQ', 'AIzaSyDSb51JiIcB6OJpwwMicseKRhhrOq1cS7g', 'AIzaSyBF2RrAIm4a0mO64EShQfqfd2AFnzAvvuU', 'AIzaSyBcE-OOIbhjyR83gm4r2MFCu4MJmprNXsw', 'AIzaSyB8qGxt4ec15vitgn44duC5ucxaOi4FmqE', 'AIzaSyA8vmApnrHNFE0bApF4hoZ11srVL_n0nvY'), stopwords=(), require_all=False),),
     ),
     RuleData(
@@ -654,6 +731,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:access|auth|(?-i:[Aa]pi|API)|credential|creds|key|passw(?:or)?d|secret|token)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([\\w.=-]{10,150}|[a-z0-9][a-z0-9+/]{11,}={0,3})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.5,
         secret_group=0,
+        keywords=('access', 'api', 'auth', 'key', 'credential', 'creds', 'passwd', 'password', 'secret', 'token'),
         allowlists=(Allowlist(target='secret', regexes=('^[a-zA-Z_.-]+$',), stopwords=(), require_all=False), Allowlist(target='match', regexes=('(?i)(?:access(?:ibility|or)|access[_.-]?id|random[_.-]?access|api[_.-]?(?:id|name|version)|rapid|capital|[a-z0-9-]*?api[a-z0-9-]*?:jar:|author|X-MS-Exchange-Organization-Auth|Authentication-Results|(?:credentials?[_.-]?id|withCredentials)|(?:bucket|foreign|hot|idx|natural|primary|pub(?:lic)?|schema|sequence)[_.-]?key|(?:turkey)|key[_.-]?(?:alias|board|code|frame|id|length|mesh|name|pair|press(?:ed)?|ring|selector|signature|size|stone|storetype|word|up|down|left|right)|key[_.-]?vault[_.-]?(?:id|name)|keyVaultToStoreSecrets|key(?:store|tab)[_.-]?(?:file|path)|issuerkeyhash|(?-i:[DdMm]onkey|[DM]ONKEY)|keying|(?:secret)[_.-]?(?:length|name|size)|UserSecretsId|(?:csrf)[_.-]?token|(?:io\\.jsonwebtoken[ \\t]?:[ \\t]?[\\w-]+)|(?:api|credentials|token)[_.-]?(?:endpoint|ur[il])|public[_.-]?token|(?:key|token)[_.-]?file|(?-i:(?:[A-Z_]+=\\n[A-Z_]+=|[a-z_]+=\\n[a-z_]+=)(?:\\n|\\z))|(?-i:(?:[A-Z.]+=\\n[A-Z.]+=|[a-z.]+=\\n[a-z.]+=)(?:\\n|\\z)))',), stopwords=('000000', '6fe4476ee5a1832882e326b506d14126', '_ec2_', 'aaaaaa', 'about', 'abstract', 'academy', 'acces', 'account', 'act-', 'act.', 'act_', 'action', 'active', 'actively', 'activity', 'adapter', 'add-', 'add-on', 'add.', 'add_', 'addon', 'addres', 'admin', 'adobe', 'advanced', 'adventure', 'agent', 'agile', 'air-', 'air.', 'air_', 'ajax', 'akka', 'alert', 'alfred', 'algorithm', 'all-', 'all.', 'all_', 'alloy', 'alpha', 'amazon', 'amqp', 'analysi', 'analytic', 'analyzer', 'android', 'angular', 'angularj', 'animate', 'animation', 'another', 'ansible', 'answer', 'ant-', 'ant.', 'ant_', 'any-', 'any.', 'any_', 'apache', 'app-', 'app.', 'app_', 'apple', 'arch', 'archive', 'archived', 'arduino', 'array', 'art-', 'art.', 'art_', 'article', 'asp-', 'asp.', 'asp_', 'asset', 'async', 'atom', 'attention', 'audio', 'audit', 'aura', 'auth', 'author', 'authorize', 'auto', 'automated', 'automatic', 'awesome', 'aws_', 'azure', 'back', 'backbone', 'backend', 'backup', 'bar-', 'bar.', 'bar_', 'base', 'based', 'bash', 'basic', 'batch', 'been', 'beer', 'behavior', 'being', 'benchmark', 'best', 'beta', 'better', 'big-', 'big.', 'big_', 'binary', 'binding', 'bit-', 'bit.', 'bit_', 'bitcoin', 'block', 'blog', 'board', 'book', 'bookmark', 'boost', 'boot', 'bootstrap', 'bosh', 'bot-', 'bot.', 'bot_', 'bower', 'box-', 'box.', 'box_', 'boxen', 'bracket', 'branch', 'bridge', 'browser', 'brunch', 'buffer', 'bug-', 'bug.', 'bug_', 'build', 'builder', 'building', 'buildout', 'buildpack', 'built', 'bundle', 'busines', 'but-', 'but.', 'but_', 'button', 'cache', 'caching', 'cakephp', 'calendar', 'call', 'camera', 'campfire', 'can-', 'can.', 'can_', 'canva', 'captcha', 'capture', 'card', 'carousel', 'case', 'cassandra', 'cat-', 'cat.', 'cat_', 'category', 'center', 'cento', 'challenge', 'change', 'changelog', 'channel', 'chart', 'chat', 'cheat', 'check', 'checker', 'chef', 'ches', 'chinese', 'chosen', 'chrome', 'ckeditor', 'clas', 'classe', 'classic', 'clean', 'cli-', 'cli.', 'cli_', 'client', 'clojure', 'clone', 'closure', 'cloud', 'club', 'cluster', 'cms-', 'cms_', 'coco', 'code', 'coding', 'coffee', 'color', 'combination', 'combo', 'command', 'commander', 'comment', 'commit', 'common', 'community', 'compas', 'compiler', 'complete', 'component', 'composer', 'computer', 'computing', 'con-', 'con.', 'con_', 'concept', 'conf', 'config', 'connect', 'connector', 'console', 'contact', 'container', 'contao', 'content', 'contest', 'context', 'control', 'convert', 'converter', "conway'", 'cookbook', 'cookie', 'cool', 'copy', 'cordova', 'core', 'couchbase', 'couchdb', 'countdown', 'counter', 'course', 'craft', 'crawler', 'create', 'creating', 'creator', 'credential', 'crm-', 'crm.', 'crm_', 'cros', 'crud', 'csv-', 'csv.', 'csv_', 'cube', 'cucumber', 'cuda', 'current', 'currently', 'custom', 'daemon', 'dark', 'dart', 'dash', 'dashboard', 'data', 'database', 'date', 'day-', 'day.', 'day_', 'dead', 'debian', 'debug', 'debugger', 'deck', 'define', 'del-', 'del.', 'del_', 'delete', 'demo', 'deploy', 'design', 'designer', 'desktop', 'detection', 'detector', 'dev-', 'dev.', 'dev_', 'develop', 'developer', 'device', 'devise', 'diff', 'digital', 'directive', 'directory', 'discovery', 'display', 'django', 'dns-', 'dns_', 'doc-', 'doc.', 'doc_', 'docker', 'docpad', 'doctrine', 'document', 'doe-', 'doe.', 'doe_', 'dojo', 'dom-', 'dom.', 'dom_', 'domain', "don't", 'done', 'dot-', 'dot.', 'dot_', 'dotfile', 'download', 'draft', 'drag', 'drill', 'drive', 'driven', 'driver', 'drop', 'dropbox', 'drupal', 'dsl-', 'dsl.', 'dsl_', 'dynamic', 'easy', 'ecdsa', 'eclipse', 'edit', 'editing', 'edition', 'editor', 'element', 'emac', 'email', 'embed', 'embedded', 'ember', 'emitter', 'emulator', 'encoding', 'endpoint', 'engine', 'english', 'enhanced', 'entity', 'entry', 'env_', 'episode', 'erlang', 'error', 'espresso', 'event', 'evented', 'example', 'exchange', 'exercise', 'experiment', 'expire', 'exploit', 'explorer', 'export', 'exporter', 'expres', 'ext-', 'ext.', 'ext_', 'extended', 'extension', 'external', 'extra', 'extractor', 'fabric', 'facebook', 'factory', 'fake', 'fast', 'feature', 'feed', 'fewfwef', 'ffmpeg', 'field', 'file', 'filter', 'find', 'finder', 'firefox', 'firmware', 'first', 'fish', 'fix-', 'fix_', 'flash', 'flask', 'flat', 'flex', 'flexible', 'flickr', 'flow', 'fluent', 'fluentd', 'fluid', 'folder', 'font', 'force', 'foreman', 'fork', 'form', 'format', 'formatter', 'forum', 'foundry', 'framework', 'free', 'friend', 'friendly', 'front-end', 'frontend', 'ftp-', 'ftp.', 'ftp_', 'fuel', 'full', 'fun-', 'fun.', 'fun_', 'func', 'future', 'gaia', 'gallery', 'game', 'gateway', 'gem-', 'gem.', 'gem_', 'gen-', 'gen.', 'gen_', 'general', 'generator', 'generic', 'genetic', 'get-', 'get.', 'get_', 'getenv', 'getting', 'ghost', 'gist', 'git-', 'git.', 'git_', 'github', 'gitignore', 'gitlab', 'glas', 'gmail', 'gnome', 'gnu-', 'gnu.', 'gnu_', 'goal', 'golang', 'gollum', 'good', 'google', 'gpu-', 'gpu.', 'gpu_', 'gradle', 'grail', 'graph', 'graphic', 'great', 'grid', 'groovy', 'group', 'grunt', 'guard', 'gui-', 'gui.', 'gui_', 'guide', 'guideline', 'gulp', 'gwt-', 'gwt.', 'gwt_', 'hack', 'hackathon', 'hacker', 'hacking', 'hadoop', 'haml', 'handler', 'hardware', 'has-', 'has_', 'hash', 'haskell', 'have', 'haxe', 'hello', 'help', 'helper', 'here', 'hero', 'heroku', 'high', 'hipchat', 'history', 'home', 'homebrew', 'homepage', 'hook', 'host', 'hosting', 'hot-', 'hot.', 'hot_', 'house', 'how-', 'how.', 'how_', 'html', 'http', 'hub-', 'hub.', 'hub_', 'hubot', 'human', 'icon', 'ide-', 'ide.', 'ide_', 'idea', 'identity', 'idiomatic', 'image', 'impact', 'import', 'important', 'importer', 'impres', 'index', 'infinite', 'info', 'injection', 'inline', 'input', 'inside', 'inspector', 'instagram', 'install', 'installer', 'instant', 'intellij', 'interface', 'internet', 'interview', 'into', 'intro', 'ionic', 'iphone', 'ipython', 'irc-', 'irc_', 'iso-', 'iso.', 'iso_', 'issue', 'jade', 'jasmine', 'java', 'jbos', 'jekyll', 'jenkin', 'jetbrains', 'job-', 'job.', 'job_', 'joomla', 'jpa-', 'jpa.', 'jpa_', 'jquery', 'json', 'just', 'kafka', 'karma', 'kata', 'kernel', 'keyboard', 'kindle', 'kit-', 'kit.', 'kit_', 'kitchen', 'knife', 'koan', 'kohana', 'lab-', 'lab.', 'lab_', 'lambda', 'lamp', 'language', 'laravel', 'last', 'latest', 'latex', 'launcher', 'layer', 'layout', 'lazy', 'ldap', 'leaflet', 'league', 'learn', 'learning', 'led-', 'led.', 'led_', 'leetcode', 'les-', 'les.', 'les_', 'level', 'leveldb', 'lib-', 'lib.', 'lib_', 'librarie', 'library', 'license', 'life', 'liferay', 'light', 'lightbox', 'like', 'line', 'link', 'linked', 'linkedin', 'linux', 'lisp', 'list', 'lite', 'little', 'load', 'loader', 'local', 'location', 'lock', 'log-', 'log.', 'log_', 'logger', 'logging', 'logic', 'login', 'logstash', 'longer', 'look', 'love', 'lua-', 'lua.', 'lua_', 'mac-', 'mac.', 'mac_', 'machine', 'made', 'magento', 'magic', 'mail', 'make', 'maker', 'making', 'man-', 'man.', 'man_', 'manage', 'manager', 'manifest', 'manual', 'map-', 'map.', 'map_', 'mapper', 'mapping', 'markdown', 'markup', 'master', 'math', 'matrix', 'maven', 'md5', 'mean', 'media', 'mediawiki', 'meetup', 'memcached', 'memory', 'menu', 'merchant', 'message', 'messaging', 'meta', 'metadata', 'meteor', 'method', 'metric', 'micro', 'middleman', 'migration', 'minecraft', 'miner', 'mini', 'minimal', 'mirror', 'mit-', 'mit.', 'mit_', 'mobile', 'mocha', 'mock', 'mod-', 'mod.', 'mod_', 'mode', 'model', 'modern', 'modular', 'module', 'modx', 'money', 'mongo', 'mongodb', 'mongoid', 'mongoose', 'monitor', 'monkey', 'more', 'motion', 'moved', 'movie', 'mozilla', 'mqtt', 'mule', 'multi', 'multiple', 'music', 'mustache', 'mvc-', 'mvc.', 'mvc_', 'mysql', 'nagio', 'name', 'native', 'need', 'neo-', 'neo.', 'neo_', 'nest', 'nested', 'net-', 'net.', 'net_', 'nette', 'network', 'new-', 'new.', 'new_', 'next', 'nginx', 'ninja', 'nlp-', 'nlp.', 'nlp_', 'node', 'nodej', 'nosql', 'not-', 'not.', 'not_', 'note', 'notebook', 'notepad', 'notice', 'notifier', 'now-', 'now.', 'now_', 'number', 'oauth', 'object', 'objective', 'obsolete', 'ocaml', 'octopres', 'official', 'old-', 'old.', 'old_', 'onboard', 'online', 'only', 'open', 'opencv', 'opengl', 'openshift', 'openwrt', 'option', 'oracle', 'org-', 'org.', 'org_', 'origin', 'original', 'orm-', 'orm.', 'orm_', 'osx-', 'osx_', 'our-', 'our.', 'our_', 'out-', 'out.', 'out_', 'output', 'over', 'overview', 'own-', 'own.', 'own_', 'pack', 'package', 'packet', 'page', 'panel', 'paper', 'paperclip', 'para', 'parallax', 'parallel', 'parse', 'parser', 'parsing', 'particle', 'party', 'password', 'patch', 'path', 'pattern', 'payment', 'paypal', 'pdf-', 'pdf.', 'pdf_', 'pebble', 'people', 'perl', 'personal', 'phalcon', 'phoenix', 'phone', 'phonegap', 'photo', 'php-', 'php.', 'php_', 'physic', 'picker', 'pipeline', 'platform', 'play', 'player', 'please', 'plu-', 'plu.', 'plu_', 'plug-in', 'plugin', 'plupload', 'png-', 'png.', 'png_', 'poker', 'polyfill', 'polymer', 'pool', 'pop-', 'pop.', 'pop_', 'popcorn', 'popup', 'port', 'portable', 'portal', 'portfolio', 'post', 'power', 'powered', 'powerful', 'prelude', 'pretty', 'preview', 'principle', 'print', 'pro-', 'pro.', 'pro_', 'problem', 'proc', 'product', 'profile', 'profiler', 'program', 'progres', 'project', 'protocol', 'prototype', 'provider', 'proxy', 'public', 'pull', 'puppet', 'pure', 'purpose', 'push', 'pusher', 'pyramid', 'python', 'quality', 'query', 'queue', 'quick', 'rabbitmq', 'rack', 'radio', 'rail', 'railscast', 'random', 'range', 'raspberry', 'rdf-', 'rdf.', 'rdf_', 'react', 'reactive', 'read', 'reader', 'readme', 'ready', 'real', 'real-time', 'reality', 'realtime', 'recipe', 'recorder', 'red-', 'red.', 'red_', 'reddit', 'redi', 'redmine', 'reference', 'refinery', 'refresh', 'registry', 'related', 'release', 'remote', 'rendering', 'repo', 'report', 'request', 'require', 'required', 'requirej', 'research', 'resource', 'response', 'resque', 'rest', 'restful', 'resume', 'reveal', 'reverse', 'review', 'riak', 'rich', 'right', 'ring', 'robot', 'role', 'room', 'router', 'routing', 'rpc-', 'rpc.', 'rpc_', 'rpg-', 'rpg.', 'rpg_', 'rspec', 'ruby-', 'ruby.', 'ruby_', 'rule', 'run-', 'run.', 'run_', 'runner', 'running', 'runtime', 'rust', 'rvm-', 'rvm.', 'rvm_', 'salt', 'sample', 'sandbox', 'sas-', 'sas.', 'sas_', 'sbt-', 'sbt.', 'sbt_', 'scala', 'scalable', 'scanner', 'schema', 'scheme', 'school', 'science', 'scraper', 'scratch', 'screen', 'script', 'scroll', 'scs-', 'scs.', 'scs_', 'sdk-', 'sdk.', 'sdk_', 'sdl-', 'sdl.', 'sdl_', 'search', 'secure', 'security', 'see-', 'see.', 'see_', 'seed', 'select', 'selector', 'selenium', 'semantic', 'sencha', 'send', 'sentiment', 'serie', 'server', 'service', 'session', 'set-', 'set.', 'set_', 'setting', 'setup', 'sha1', 'sha2', 'sha256', 'share', 'shared', 'sharing', 'sheet', 'shell', 'shield', 'shipping', 'shop', 'shopify', 'shortener', 'should', 'show', 'showcase', 'side', 'silex', 'simple', 'simulator', 'single', 'site', 'skeleton', 'sketch', 'skin', 'slack', 'slide', 'slider', 'slim', 'small', 'smart', 'smtp', 'snake', 'snapshot', 'snippet', 'soap', 'social', 'socket', 'software', 'solarized', 'solr', 'solution', 'solver', 'some', 'soon', 'source', 'space', 'spark', 'spatial', 'spec', 'sphinx', 'spine', 'spotify', 'spree', 'spring', 'sprite', 'sql-', 'sql.', 'sql_', 'sqlite', 'ssh-', 'ssh.', 'ssh_', 'stack', 'staging', 'standard', 'stanford', 'start', 'started', 'starter', 'startup', 'stat', 'statamic', 'state', 'static', 'statistic', 'statsd', 'statu', 'steam', 'step', 'still', 'stm-', 'stm.', 'stm_', 'storage', 'store', 'storm', 'story', 'strategy', 'stream', 'streaming', 'string', 'stripe', 'structure', 'studio', 'study', 'stuff', 'style', 'sublime', 'sugar', 'suite', 'summary', 'super', 'support', 'supported', 'svg-', 'svg.', 'svg_', 'svn-', 'svn.', 'svn_', 'swagger', 'swift', 'switch', 'switcher', 'symfony', 'symphony', 'sync', 'synopsi', 'syntax', 'system', 'tab-', 'tab.', 'tab_', 'table', 'tag-', 'tag.', 'tag_', 'talk', 'target', 'task', 'tcp-', 'tcp.', 'tcp_', 'tdd-', 'tdd.', 'tdd_', 'team', 'tech', 'template', 'term', 'terminal', 'testing', 'tetri', 'text', 'textmate', 'theme', 'theory', 'three', 'thrift', 'time', 'timeline', 'timer', 'tiny', 'tinymce', 'tip-', 'tip.', 'tip_', 'title', 'todo', 'todomvc', 'token', 'tool', 'toolbox', 'toolkit', 'top-', 'top.', 'top_', 'tornado', 'touch', 'tower', 'tracker', 'tracking', 'traffic', 'training', 'transfer', 'translate', 'transport', 'tree', 'trello', 'try-', 'try.', 'try_', 'tumblr', 'tut-', 'tut.', 'tut_', 'tutorial', 'tweet', 'twig', 'twitter', 'type', 'typo', 'ubuntu', 'uiview', 'ultimate', 'under', 'unit', 'unity', 'universal', 'unix', 'update', 'updated', 'upgrade', 'upload', 'uploader', 'uri-', 'uri.', 'uri_', 'url-', 'url.', 'url_', 'usage', 'usb-', 'usb.', 'usb_', 'use-', 'use.', 'use_', 'used', 'useful', 'user', 'using', 'util', 'utilitie', 'utility', 'vagrant', 'validator', 'value', 'variou', 'varnish', 'version', 'via-', 'via.', 'via_', 'video', 'view', 'viewer', 'vim-', 'vim.', 'vim_', 'vimrc', 'virtual', 'vision', 'visual', 'vpn', 'want', 'warning', 'watch', 'watcher', 'wave', 'way-', 'way.', 'way_', 'weather', 'web-', 'web_', 'webapp', 'webgl', 'webhook', 'webkit', 'webrtc', 'website', 'websocket', 'welcome', 'what', "what'", 'when', 'where', 'which', 'why-', 'why.', 'why_', 'widget', 'wifi', 'wiki', 'win-', 'win.', 'win_', 'window', 'wip-', 'wip.', 'wip_', 'within', 'without', 'wizard', 'word', 'wordpres', 'work', 'worker', 'workflow', 'working', 'workshop', 'world', 'wrapper', 'write', 'writer', 'writing', 'written', 'www-', 'www.', 'www_', 'xamarin', 'xcode', 'xml-', 'xml.', 'xml_', 'xmpp', 'xxxxxx', 'yahoo', 'yaml', 'yandex', 'yeoman', 'yet-', 'yet.', 'yet_', 'yii-', 'yii.', 'yii_', 'youtube', 'yui-', 'yui.', 'yui_', 'zend', 'zero', 'zip-', 'zip.', 'zip_', 'zsh-', 'zsh.', 'zsh_'), require_all=False), Allowlist(target='match', regexes=('--mount=type=secret,', 'import[ \\t]+{[ \\t\\w,]+}[ \\t]+from[ \\t]+[\'"][^\'"]+[\'"]'), stopwords=(), require_all=False),),
     ),
     RuleData(
@@ -662,6 +740,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?:ghu|ghs)_[0-9a-zA-Z]{36}',
         entropy=3.0,
         secret_group=0,
+        keywords=('ghu_', 'ghs_'),
         allowlists=(),
     ),
     RuleData(
@@ -670,6 +749,7 @@ RULES: tuple[RuleData, ...] = (
         regex='github_pat_\\w{82}',
         entropy=3.0,
         secret_group=0,
+        keywords=('github_pat_',),
         allowlists=(),
     ),
     RuleData(
@@ -678,6 +758,7 @@ RULES: tuple[RuleData, ...] = (
         regex='gho_[0-9a-zA-Z]{36}',
         entropy=3.0,
         secret_group=0,
+        keywords=('gho_',),
         allowlists=(),
     ),
     RuleData(
@@ -686,6 +767,7 @@ RULES: tuple[RuleData, ...] = (
         regex='ghp_[0-9a-zA-Z]{36}',
         entropy=3.0,
         secret_group=0,
+        keywords=('ghp_',),
         allowlists=(),
     ),
     RuleData(
@@ -694,6 +776,7 @@ RULES: tuple[RuleData, ...] = (
         regex='ghr_[0-9a-zA-Z]{36}',
         entropy=3.0,
         secret_group=0,
+        keywords=('ghr_',),
         allowlists=(),
     ),
     RuleData(
@@ -702,6 +785,7 @@ RULES: tuple[RuleData, ...] = (
         regex='glcbt-[0-9a-zA-Z]{1,5}_[0-9a-zA-Z_-]{20}',
         entropy=3.0,
         secret_group=0,
+        keywords=('glcbt-',),
         allowlists=(),
     ),
     RuleData(
@@ -710,6 +794,7 @@ RULES: tuple[RuleData, ...] = (
         regex='gldt-[0-9a-zA-Z_\\-]{20}',
         entropy=3.0,
         secret_group=0,
+        keywords=('gldt-',),
         allowlists=(),
     ),
     RuleData(
@@ -718,6 +803,7 @@ RULES: tuple[RuleData, ...] = (
         regex='glffct-[0-9a-zA-Z_\\-]{20}',
         entropy=3.0,
         secret_group=0,
+        keywords=('glffct-',),
         allowlists=(),
     ),
     RuleData(
@@ -726,6 +812,7 @@ RULES: tuple[RuleData, ...] = (
         regex='glft-[0-9a-zA-Z_\\-]{20}',
         entropy=3.0,
         secret_group=0,
+        keywords=('glft-',),
         allowlists=(),
     ),
     RuleData(
@@ -734,6 +821,7 @@ RULES: tuple[RuleData, ...] = (
         regex='glimt-[0-9a-zA-Z_\\-]{25}',
         entropy=3.0,
         secret_group=0,
+        keywords=('glimt-',),
         allowlists=(),
     ),
     RuleData(
@@ -742,6 +830,7 @@ RULES: tuple[RuleData, ...] = (
         regex='glagent-[0-9a-zA-Z_\\-]{50}',
         entropy=3.0,
         secret_group=0,
+        keywords=('glagent-',),
         allowlists=(),
     ),
     RuleData(
@@ -750,6 +839,7 @@ RULES: tuple[RuleData, ...] = (
         regex='gloas-[0-9a-zA-Z_\\-]{64}',
         entropy=3.0,
         secret_group=0,
+        keywords=('gloas-',),
         allowlists=(),
     ),
     RuleData(
@@ -758,6 +848,7 @@ RULES: tuple[RuleData, ...] = (
         regex='glpat-[\\w-]{20}',
         entropy=3.0,
         secret_group=0,
+        keywords=('glpat-',),
         allowlists=(),
     ),
     RuleData(
@@ -766,6 +857,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\bglpat-[0-9a-zA-Z_-]{27,300}\\.[0-9a-z]{2}[0-9a-z]{7}\\b',
         entropy=4.0,
         secret_group=0,
+        keywords=('glpat-',),
         allowlists=(),
     ),
     RuleData(
@@ -774,6 +866,7 @@ RULES: tuple[RuleData, ...] = (
         regex='glptt-[0-9a-f]{40}',
         entropy=3.0,
         secret_group=0,
+        keywords=('glptt-',),
         allowlists=(),
     ),
     RuleData(
@@ -782,6 +875,7 @@ RULES: tuple[RuleData, ...] = (
         regex='GR1348941[\\w-]{20}',
         entropy=3.0,
         secret_group=0,
+        keywords=('gr1348941',),
         allowlists=(),
     ),
     RuleData(
@@ -790,6 +884,7 @@ RULES: tuple[RuleData, ...] = (
         regex='glrt-[0-9a-zA-Z_\\-]{20}',
         entropy=3.0,
         secret_group=0,
+        keywords=('glrt-',),
         allowlists=(),
     ),
     RuleData(
@@ -798,6 +893,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\bglrt-t\\d_[0-9a-zA-Z_\\-]{27,300}\\.[0-9a-z]{2}[0-9a-z]{7}\\b',
         entropy=4.0,
         secret_group=0,
+        keywords=('glrt-',),
         allowlists=(),
     ),
     RuleData(
@@ -806,6 +902,7 @@ RULES: tuple[RuleData, ...] = (
         regex='glsoat-[0-9a-zA-Z_\\-]{20}',
         entropy=3.0,
         secret_group=0,
+        keywords=('glsoat-',),
         allowlists=(),
     ),
     RuleData(
@@ -814,6 +911,7 @@ RULES: tuple[RuleData, ...] = (
         regex='_gitlab_session=[0-9a-z]{32}',
         entropy=3.0,
         secret_group=0,
+        keywords=('_gitlab_session=',),
         allowlists=(),
     ),
     RuleData(
@@ -822,6 +920,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:gitter)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9_-]{40})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('gitter',),
         allowlists=(),
     ),
     RuleData(
@@ -830,6 +929,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:gocardless)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}(live_(?i)[a-z0-9\\-_=]{40})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('live_', 'gocardless'),
         allowlists=(),
     ),
     RuleData(
@@ -838,6 +938,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)\\b(eyJrIjoi[A-Za-z0-9]{70,400}={0,3})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('eyjrijoi',),
         allowlists=(),
     ),
     RuleData(
@@ -846,6 +947,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)\\b(glc_[A-Za-z0-9+/]{32,400}={0,3})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('glc_',),
         allowlists=(),
     ),
     RuleData(
@@ -854,6 +956,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)\\b(glsa_[A-Za-z0-9]{32}_[A-Fa-f0-9]{8})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('glsa_',),
         allowlists=(),
     ),
     RuleData(
@@ -862,6 +965,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?:pat|sat)\\.[a-zA-Z0-9_-]{22}\\.[a-zA-Z0-9]{24}\\.[a-zA-Z0-9]{20}',
         entropy=0.0,
         secret_group=0,
+        keywords=('pat.', 'sat.'),
         allowlists=(),
     ),
     RuleData(
@@ -870,6 +974,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[a-z0-9]{14}\\.(?-i:atlasv1)\\.[a-z0-9\\-_=]{60,70}',
         entropy=3.5,
         secret_group=0,
+        keywords=('atlasv1',),
         allowlists=(),
     ),
     RuleData(
@@ -878,6 +983,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:administrator_login_password|password)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}("[a-z0-9=_\\-]{8,20}")(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('administrator_login_password', 'password'),
         allowlists=(),
     ),
     RuleData(
@@ -886,6 +992,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:heroku)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('heroku',),
         allowlists=(),
     ),
     RuleData(
@@ -894,6 +1001,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b((HRKU-AA[0-9a-zA-Z_-]{58}))(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=4.0,
         secret_group=0,
+        keywords=('hrku-aa',),
         allowlists=(),
     ),
     RuleData(
@@ -902,6 +1010,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:hubspot)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('hubspot',),
         allowlists=(),
     ),
     RuleData(
@@ -910,6 +1019,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(hf_(?i:[a-z]{34}))(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('hf_',),
         allowlists=(),
     ),
     RuleData(
@@ -918,6 +1028,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(api_org_(?i:[a-z]{34}))(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('api_org_',),
         allowlists=(),
     ),
     RuleData(
@@ -926,6 +1037,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(ico-[a-zA-Z0-9]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('ico-',),
         allowlists=(),
     ),
     RuleData(
@@ -934,6 +1046,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:intercom)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9=_\\-]{60})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('intercom',),
         allowlists=(),
     ),
     RuleData(
@@ -942,6 +1055,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(s-s4t2(?:ud|af)-(?i)[abcdef0123456789]{64})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('intra', 's-s4t2ud-', 's-s4t2af-'),
         allowlists=(),
     ),
     RuleData(
@@ -950,6 +1064,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:jfrog|artifactory|bintray|xray)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{73})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('jfrog', 'artifactory', 'bintray', 'xray'),
         allowlists=(),
     ),
     RuleData(
@@ -958,6 +1073,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:jfrog|artifactory|bintray|xray)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{64})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('jfrog', 'artifactory', 'bintray', 'xray'),
         allowlists=(),
     ),
     RuleData(
@@ -966,6 +1082,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(ey[a-zA-Z0-9]{17,}\\.ey[a-zA-Z0-9\\/\\\\_-]{17,}\\.(?:[a-zA-Z0-9\\/\\\\_-]{10,}={0,2})?)(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('ey',),
         allowlists=(),
     ),
     RuleData(
@@ -974,6 +1091,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\bZXlK(?:(?P<alg>aGJHY2lPaU)|(?P<apu>aGNIVWlPaU)|(?P<apv>aGNIWWlPaU)|(?P<aud>aGRXUWlPaU)|(?P<b64>aU5qUWlP)|(?P<crit>amNtbDBJanBi)|(?P<cty>amRIa2lPaU)|(?P<epk>bGNHc2lPbn)|(?P<enc>bGJtTWlPaU)|(?P<jku>cWEzVWlPaU)|(?P<jwk>cWQyc2lPb)|(?P<iss>cGMzTWlPaU)|(?P<iv>cGRpSTZJ)|(?P<kid>cmFXUWlP)|(?P<key_ops>clpYbGZiM0J6SWpwY)|(?P<kty>cmRIa2lPaUp)|(?P<nonce>dWIyNWpaU0k2)|(?P<p2c>d01tTWlP)|(?P<p2s>d01uTWlPaU)|(?P<ppt>d2NIUWlPaU)|(?P<sub>emRXSWlPaU)|(?P<svt>emRuUWlP)|(?P<tag>MFlXY2lPaU)|(?P<typ>MGVYQWlPaUp)|(?P<url>MWNtd2l)|(?P<use>MWMyVWlPaUp)|(?P<ver>MlpYSWlPaU)|(?P<version>MlpYSnphVzl1SWpv)|(?P<x>NElqb2)|(?P<x5c>NE5XTWlP)|(?P<x5t>NE5YUWlPaU)|(?P<x5ts256>NE5YUWpVekkxTmlJNkl)|(?P<x5u>NE5YVWlPaU)|(?P<zip>NmFYQWlPaU))[a-zA-Z0-9\\/\\\\_+\\-\\r\\n]{40,}={0,2}',
         entropy=2.0,
         secret_group=0,
+        keywords=('zxlk',),
         allowlists=(),
     ),
     RuleData(
@@ -982,6 +1100,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:kraken)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9\\/=_\\+\\-]{80,90})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('kraken',),
         allowlists=(),
     ),
     RuleData(
@@ -990,6 +1109,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)(?:\\bkind:[ \\t]*["\']?\\bsecret\\b["\']?(?s:.){0,200}?\\bdata:(?s:.){0,100}?\\s+([\\w.-]+:(?:[ \\t]*(?:\\||>[-+]?)\\s+)?[ \\t]*(?:["\']?[a-z0-9+/]{10,}={0,3}["\']?|\\{\\{[ \\t\\w"|$:=,.-]+}}|""|\'\'))|\\bdata:(?s:.){0,100}?\\s+([\\w.-]+:(?:[ \\t]*(?:\\||>[-+]?)\\s+)?[ \\t]*(?:["\']?[a-z0-9+/]{10,}={0,3}["\']?|\\{\\{[ \\t\\w"|$:=,.-]+}}|""|\'\'))(?s:.){0,200}?\\bkind:[ \\t]*["\']?\\bsecret\\b["\']?)',
         entropy=0.0,
         secret_group=0,
+        keywords=('secret',),
         allowlists=(Allowlist(target='secret', regexes=('[\\w.-]+:(?:[ \\t]*(?:\\||>[-+]?)\\s+)?[ \\t]*(?:\\{\\{[ \\t\\w"|$:=,.-]+}}|""|\'\')',), stopwords=(), require_all=False), Allowlist(target='match', regexes=('(kind:(?s:.)+\\n---\\n(?s:.)+\\bdata:|data:(?s:.)+\\n---\\n(?s:.)+\\bkind:)',), stopwords=(), require_all=False),),
     ),
     RuleData(
@@ -998,6 +1118,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:kucoin)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-f0-9]{24})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('kucoin',),
         allowlists=(),
     ),
     RuleData(
@@ -1006,6 +1127,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:kucoin)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('kucoin',),
         allowlists=(),
     ),
     RuleData(
@@ -1014,6 +1136,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:launchdarkly)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9=_\\-]{40})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('launchdarkly',),
         allowlists=(),
     ),
     RuleData(
@@ -1022,6 +1145,7 @@ RULES: tuple[RuleData, ...] = (
         regex='lin_api_(?i)[a-z0-9]{40}',
         entropy=2.0,
         secret_group=0,
+        keywords=('lin_api_',),
         allowlists=(),
     ),
     RuleData(
@@ -1030,6 +1154,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:linear)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-f0-9]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('linear',),
         allowlists=(),
     ),
     RuleData(
@@ -1038,6 +1163,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:linked[_-]?in)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{14})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('linkedin', 'linked_in', 'linked-in'),
         allowlists=(),
     ),
     RuleData(
@@ -1046,6 +1172,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:linked[_-]?in)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{16})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('linkedin', 'linked_in', 'linked-in'),
         allowlists=(),
     ),
     RuleData(
@@ -1054,6 +1181,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:lob)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}((live|test)_[a-f0-9]{35})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('test_', 'live_'),
         allowlists=(),
     ),
     RuleData(
@@ -1062,6 +1190,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:lob)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}((test|live)_pub_[a-f0-9]{31})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('test_pub', 'live_pub', '_pub'),
         allowlists=(),
     ),
     RuleData(
@@ -1070,6 +1199,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:looker)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{20})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('looker',),
         allowlists=(),
     ),
     RuleData(
@@ -1078,6 +1208,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:looker)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{24})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('looker',),
         allowlists=(),
     ),
     RuleData(
@@ -1086,6 +1217,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:MailchimpSDK.initialize|mailchimp)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-f0-9]{32}-us\\d\\d)(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('mailchimp',),
         allowlists=(),
     ),
     RuleData(
@@ -1094,6 +1226,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:mailgun)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}(key-[a-f0-9]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('mailgun',),
         allowlists=(),
     ),
     RuleData(
@@ -1102,6 +1235,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:mailgun)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}(pubkey-[a-f0-9]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('mailgun',),
         allowlists=(),
     ),
     RuleData(
@@ -1110,6 +1244,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:mailgun)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-h0-9]{32}-[a-h0-9]{8}-[a-h0-9]{8})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('mailgun',),
         allowlists=(),
     ),
     RuleData(
@@ -1118,6 +1253,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:mapbox)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}(pk\\.[a-z0-9]{60}\\.[a-z0-9]{22})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('mapbox',),
         allowlists=(),
     ),
     RuleData(
@@ -1126,6 +1262,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:mattermost)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{26})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('mattermost',),
         allowlists=(),
     ),
     RuleData(
@@ -1134,6 +1271,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b([A-Za-z0-9]{6}_[A-Za-z0-9]{29}_mmk)(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=4.0,
         secret_group=0,
+        keywords=('_mmk',),
         allowlists=(),
     ),
     RuleData(
@@ -1142,6 +1280,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:message[_-]?bird)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{25})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('messagebird', 'message-bird', 'message_bird'),
         allowlists=(),
     ),
     RuleData(
@@ -1150,6 +1289,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:message[_-]?bird)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('messagebird', 'message-bird', 'message_bird'),
         allowlists=(),
     ),
     RuleData(
@@ -1158,6 +1298,7 @@ RULES: tuple[RuleData, ...] = (
         regex='https://[a-z0-9]+\\.webhook\\.office\\.com/webhookb2/[a-z0-9]{8}-([a-z0-9]{4}-){3}[a-z0-9]{12}@[a-z0-9]{8}-([a-z0-9]{4}-){3}[a-z0-9]{12}/IncomingWebhook/[a-z0-9]{32}/[a-z0-9]{8}-([a-z0-9]{4}-){3}[a-z0-9]{12}',
         entropy=0.0,
         secret_group=0,
+        keywords=('webhook.office.com', 'webhookb2', 'incomingwebhook'),
         allowlists=(),
     ),
     RuleData(
@@ -1166,6 +1307,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:netlify)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9=_\\-]{40,46})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('netlify',),
         allowlists=(),
     ),
     RuleData(
@@ -1174,6 +1316,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:new-relic|newrelic|new_relic)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}(NRJS-[a-f0-9]{19})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('nrjs-',),
         allowlists=(),
     ),
     RuleData(
@@ -1182,6 +1325,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:new-relic|newrelic|new_relic)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}(NRII-[a-z0-9-]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('nrii-',),
         allowlists=(),
     ),
     RuleData(
@@ -1190,6 +1334,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:new-relic|newrelic|new_relic)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{64})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('new-relic', 'newrelic', 'new_relic'),
         allowlists=(),
     ),
     RuleData(
@@ -1198,6 +1343,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:new-relic|newrelic|new_relic)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}(NRAK-[a-z0-9]{27})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('nrak',),
         allowlists=(),
     ),
     RuleData(
@@ -1206,6 +1352,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(ntn_[0-9]{11}[A-Za-z0-9]{32}[A-Za-z0-9]{3})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=4.0,
         secret_group=0,
+        keywords=('ntn_',),
         allowlists=(),
     ),
     RuleData(
@@ -1214,6 +1361,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)\\b(npm_[a-z0-9]{36})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('npm_',),
         allowlists=(),
     ),
     RuleData(
@@ -1222,6 +1370,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)<add key=\\"(?:(?:ClearText)?Password)\\"\\s*value=\\"(.{8,})\\"\\s*/>',
         entropy=1.0,
         secret_group=0,
+        keywords=('<add key=',),
         allowlists=(Allowlist(target='secret', regexes=('33f!!lloppa', 'hal\\+9ooo_da!sY', '^\\%\\S.*\\%$'), stopwords=(), require_all=False),),
     ),
     RuleData(
@@ -1230,6 +1379,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:nytimes|new-york-times,|newyorktimes)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9=_\\-]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('nytimes', 'new-york-times', 'newyorktimes'),
         allowlists=(),
     ),
     RuleData(
@@ -1238,6 +1388,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(API-[A-Z0-9]{26})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('api-',),
         allowlists=(),
     ),
     RuleData(
@@ -1246,6 +1397,7 @@ RULES: tuple[RuleData, ...] = (
         regex='[\\w.-]{0,50}?(?i:[\\w.-]{0,50}?(?:(?-i:[Oo]kta|OKTA))(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}(00[\\w=\\-]{40})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=4.0,
         secret_group=0,
+        keywords=('okta',),
         allowlists=(),
     ),
     RuleData(
@@ -1254,6 +1406,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(sk-(?:proj|svcacct|admin)-(?:[A-Za-z0-9_-]{74}|[A-Za-z0-9_-]{58})T3BlbkFJ(?:[A-Za-z0-9_-]{74}|[A-Za-z0-9_-]{58})\\b|sk-[a-zA-Z0-9]{20}T3BlbkFJ[a-zA-Z0-9]{20})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('t3blbkfj',),
         allowlists=(),
     ),
     RuleData(
@@ -1262,6 +1415,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(sha256~[\\w-]{43})(?:[^\\w-]|\\z)',
         entropy=3.5,
         secret_group=0,
+        keywords=('sha256~',),
         allowlists=(),
     ),
     RuleData(
@@ -1270,6 +1424,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(pplx-[a-zA-Z0-9]{48})(?:[\\x60\'"\\s;]|\\\\[nr]|$|\\b)',
         entropy=4.0,
         secret_group=0,
+        keywords=('pplx-',),
         allowlists=(),
     ),
     RuleData(
@@ -1278,6 +1433,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:plaid)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}(access-(?:sandbox|development|production)-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('plaid',),
         allowlists=(),
     ),
     RuleData(
@@ -1286,6 +1442,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:plaid)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{24})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.5,
         secret_group=0,
+        keywords=('plaid',),
         allowlists=(),
     ),
     RuleData(
@@ -1294,6 +1451,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:plaid)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{30})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.5,
         secret_group=0,
+        keywords=('plaid',),
         allowlists=(),
     ),
     RuleData(
@@ -1302,6 +1460,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(pscale_tkn_(?i)[\\w=\\.-]{32,64})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('pscale_tkn_',),
         allowlists=(),
     ),
     RuleData(
@@ -1310,6 +1469,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(pscale_oauth_[\\w=\\.-]{32,64})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('pscale_oauth_',),
         allowlists=(),
     ),
     RuleData(
@@ -1318,6 +1478,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)\\b(pscale_pw_(?i)[\\w=\\.-]{32,64})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('pscale_pw_',),
         allowlists=(),
     ),
     RuleData(
@@ -1326,6 +1487,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(PMAK-(?i)[a-f0-9]{24}\\-[a-f0-9]{34})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('pmak-',),
         allowlists=(),
     ),
     RuleData(
@@ -1334,6 +1496,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(pnu_[a-zA-Z0-9]{36})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('pnu_',),
         allowlists=(),
     ),
     RuleData(
@@ -1342,6 +1505,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)-----BEGIN[ A-Z0-9_-]{0,100}PRIVATE KEY(?: BLOCK)?-----[\\s\\S-]{64,}?KEY(?: BLOCK)?-----',
         entropy=0.0,
         secret_group=0,
+        keywords=('-----begin',),
         allowlists=(),
     ),
     RuleData(
@@ -1350,6 +1514,7 @@ RULES: tuple[RuleData, ...] = (
         regex='[\\w.-]{0,50}?(?i:[\\w.-]{0,50}?(?:private[_-]?ai)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{32})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('privateai', 'private_ai', 'private-ai'),
         allowlists=(),
     ),
     RuleData(
@@ -1358,6 +1523,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(pul-[a-f0-9]{40})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('pul-',),
         allowlists=(),
     ),
     RuleData(
@@ -1366,6 +1532,7 @@ RULES: tuple[RuleData, ...] = (
         regex='pypi-AgEIcHlwaS5vcmc[\\w-]{50,1000}',
         entropy=3.0,
         secret_group=0,
+        keywords=('pypi-ageichlwas5vcmc',),
         allowlists=(),
     ),
     RuleData(
@@ -1374,6 +1541,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:rapidapi)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9_-]{50})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('rapidapi',),
         allowlists=(),
     ),
     RuleData(
@@ -1382,6 +1550,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(rdme_[a-z0-9]{70})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('rdme_',),
         allowlists=(),
     ),
     RuleData(
@@ -1390,6 +1559,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(rubygems_[a-f0-9]{48})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('rubygems_',),
         allowlists=(),
     ),
     RuleData(
@@ -1398,6 +1568,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(tk-us-[\\w-]{48})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('tk-us-',),
         allowlists=(),
     ),
     RuleData(
@@ -1406,6 +1577,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:sendbird)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('sendbird',),
         allowlists=(),
     ),
     RuleData(
@@ -1414,6 +1586,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:sendbird)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-f0-9]{40})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('sendbird',),
         allowlists=(),
     ),
     RuleData(
@@ -1422,6 +1595,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(SG\\.(?i)[a-z0-9=_\\-\\.]{66})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('sg.',),
         allowlists=(),
     ),
     RuleData(
@@ -1430,6 +1604,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(xkeysib-[a-f0-9]{64}\\-(?i)[a-z0-9]{16})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('xkeysib-',),
         allowlists=(),
     ),
     RuleData(
@@ -1438,6 +1613,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:sentry)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-f0-9]{64})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('sentry',),
         allowlists=(),
     ),
     RuleData(
@@ -1446,6 +1622,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\bsntrys_eyJpYXQiO[a-zA-Z0-9+/]{10,200}(?:LCJyZWdpb25fdXJs|InJlZ2lvbl91cmwi|cmVnaW9uX3VybCI6)[a-zA-Z0-9+/]{10,200}={0,2}_[a-zA-Z0-9+/]{43}(?:[^a-zA-Z0-9+/]|\\z)',
         entropy=4.5,
         secret_group=0,
+        keywords=('sntrys_eyjpyxqio',),
         allowlists=(),
     ),
     RuleData(
@@ -1454,6 +1631,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(sntryu_[a-f0-9]{64})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.5,
         secret_group=0,
+        keywords=('sntryu_',),
         allowlists=(),
     ),
     RuleData(
@@ -1462,6 +1640,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(sm_aat_[a-zA-Z0-9]{16})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('sm_aat',),
         allowlists=(),
     ),
     RuleData(
@@ -1470,6 +1649,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(sm_pat_[a-zA-Z0-9]{16})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('sm_pat',),
         allowlists=(),
     ),
     RuleData(
@@ -1478,6 +1658,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(sm_sat_[a-zA-Z0-9]{16})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('sm_sat',),
         allowlists=(),
     ),
     RuleData(
@@ -1486,6 +1667,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(shippo_(?:live|test)_[a-fA-F0-9]{40})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('shippo_',),
         allowlists=(),
     ),
     RuleData(
@@ -1494,6 +1676,7 @@ RULES: tuple[RuleData, ...] = (
         regex='shpat_[a-fA-F0-9]{32}',
         entropy=2.0,
         secret_group=0,
+        keywords=('shpat_',),
         allowlists=(),
     ),
     RuleData(
@@ -1502,6 +1685,7 @@ RULES: tuple[RuleData, ...] = (
         regex='shpca_[a-fA-F0-9]{32}',
         entropy=2.0,
         secret_group=0,
+        keywords=('shpca_',),
         allowlists=(),
     ),
     RuleData(
@@ -1510,6 +1694,7 @@ RULES: tuple[RuleData, ...] = (
         regex='shppa_[a-fA-F0-9]{32}',
         entropy=2.0,
         secret_group=0,
+        keywords=('shppa_',),
         allowlists=(),
     ),
     RuleData(
@@ -1518,6 +1703,7 @@ RULES: tuple[RuleData, ...] = (
         regex='shpss_[a-fA-F0-9]{32}',
         entropy=2.0,
         secret_group=0,
+        keywords=('shpss_',),
         allowlists=(),
     ),
     RuleData(
@@ -1526,6 +1712,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:BUNDLE_ENTERPRISE__CONTRIBSYS__COM|BUNDLE_GEMS__CONTRIBSYS__COM)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-f0-9]{8}:[a-f0-9]{8})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('bundle_enterprise__contribsys__com', 'bundle_gems__contribsys__com'),
         allowlists=(),
     ),
     RuleData(
@@ -1534,6 +1721,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)\\bhttps?://([a-f0-9]{8}:[a-f0-9]{8})@(?:gems.contribsys.com|enterprise.contribsys.com)(?:[\\/|\\#|\\?|:]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('gems.contribsys.com', 'enterprise.contribsys.com'),
         allowlists=(),
     ),
     RuleData(
@@ -1542,6 +1730,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)xapp-\\d-[A-Z0-9]+-\\d+-[a-z0-9]+',
         entropy=2.0,
         secret_group=0,
+        keywords=('xapp',),
         allowlists=(),
     ),
     RuleData(
@@ -1550,6 +1739,7 @@ RULES: tuple[RuleData, ...] = (
         regex='xoxb-[0-9]{10,13}-[0-9]{10,13}[a-zA-Z0-9-]*',
         entropy=3.0,
         secret_group=0,
+        keywords=('xoxb',),
         allowlists=(),
     ),
     RuleData(
@@ -1558,6 +1748,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)xoxe.xox[bp]-\\d-[A-Z0-9]{163,166}',
         entropy=2.0,
         secret_group=0,
+        keywords=('xoxe.xoxb-', 'xoxe.xoxp-'),
         allowlists=(),
     ),
     RuleData(
@@ -1566,6 +1757,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)xoxe-\\d-[A-Z0-9]{146}',
         entropy=2.0,
         secret_group=0,
+        keywords=('xoxe-',),
         allowlists=(),
     ),
     RuleData(
@@ -1574,6 +1766,7 @@ RULES: tuple[RuleData, ...] = (
         regex='xoxb-[0-9]{8,14}-[a-zA-Z0-9]{18,26}',
         entropy=2.0,
         secret_group=0,
+        keywords=('xoxb',),
         allowlists=(),
     ),
     RuleData(
@@ -1582,6 +1775,7 @@ RULES: tuple[RuleData, ...] = (
         regex='xox[os]-\\d+-\\d+-\\d+-[a-fA-F\\d]+',
         entropy=2.0,
         secret_group=0,
+        keywords=('xoxo', 'xoxs'),
         allowlists=(),
     ),
     RuleData(
@@ -1590,6 +1784,7 @@ RULES: tuple[RuleData, ...] = (
         regex='xox[ar]-(?:\\d-)?[0-9a-zA-Z]{8,48}',
         entropy=2.0,
         secret_group=0,
+        keywords=('xoxa', 'xoxr'),
         allowlists=(),
     ),
     RuleData(
@@ -1598,6 +1793,7 @@ RULES: tuple[RuleData, ...] = (
         regex='xox[pe](?:-[0-9]{10,13}){3}-[a-zA-Z0-9-]{28,34}',
         entropy=2.0,
         secret_group=0,
+        keywords=('xoxp-', 'xoxe-'),
         allowlists=(),
     ),
     RuleData(
@@ -1606,6 +1802,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?:https?://)?hooks.slack.com/(?:services|workflows|triggers)/[A-Za-z0-9+/]{43,56}',
         entropy=0.0,
         secret_group=0,
+        keywords=('hooks.slack.com',),
         allowlists=(),
     ),
     RuleData(
@@ -1614,6 +1811,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:snyk[_.-]?(?:(?:api|oauth)[_.-]?)?(?:key|token))(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('snyk',),
         allowlists=(),
     ),
     RuleData(
@@ -1622,6 +1820,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:sonar[_.-]?(login|token))(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}((?:squ_|sqp_|sqa_)?[a-z0-9=_\\-]{40})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=2,
+        keywords=('sonar',),
         allowlists=(),
     ),
     RuleData(
@@ -1630,6 +1829,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)\\b(\\b(sgp_(?:[a-fA-F0-9]{16}|local)_[a-fA-F0-9]{40}|sgp_[a-fA-F0-9]{40}|[a-fA-F0-9]{40})\\b)(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('sgp_', 'sourcegraph'),
         allowlists=(),
     ),
     RuleData(
@@ -1638,6 +1838,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b((?:EAAA|sq0atp-)[\\w-]{22,60})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('sq0atp-', 'eaaa'),
         allowlists=(),
     ),
     RuleData(
@@ -1646,6 +1847,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:squarespace)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('squarespace',),
         allowlists=(),
     ),
     RuleData(
@@ -1654,6 +1856,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b((?:sk|rk)_(?:test|live|prod)_[a-zA-Z0-9]{10,99})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=2.0,
         secret_group=0,
+        keywords=('sk_test', 'sk_live', 'sk_prod', 'rk_test', 'rk_live', 'rk_prod'),
         allowlists=(),
     ),
     RuleData(
@@ -1662,6 +1865,7 @@ RULES: tuple[RuleData, ...] = (
         regex='[\\w.-]{0,50}?(?i:[\\w.-]{0,50}?(?:(?-i:[Ss]umo|SUMO))(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3})(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}(su[a-zA-Z0-9]{12})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('sumo',),
         allowlists=(),
     ),
     RuleData(
@@ -1670,6 +1874,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:(?-i:[Ss]umo|SUMO))(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{64})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.0,
         secret_group=0,
+        keywords=('sumo',),
         allowlists=(),
     ),
     RuleData(
@@ -1678,6 +1883,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:telegr)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([0-9]{5,16}:(?-i:A)[a-z0-9_\\-]{34})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('telegr',),
         allowlists=(),
     ),
     RuleData(
@@ -1686,6 +1892,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:travis)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{22})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('travis',),
         allowlists=(),
     ),
     RuleData(
@@ -1694,6 +1901,7 @@ RULES: tuple[RuleData, ...] = (
         regex='SK[0-9a-fA-F]{32}',
         entropy=3.0,
         secret_group=0,
+        keywords=('sk',),
         allowlists=(),
     ),
     RuleData(
@@ -1702,6 +1910,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:twitch)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{30})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('twitch',),
         allowlists=(),
     ),
     RuleData(
@@ -1710,6 +1919,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:twitter)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{45})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('twitter',),
         allowlists=(),
     ),
     RuleData(
@@ -1718,6 +1928,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:twitter)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([0-9]{15,25}-[a-zA-Z0-9]{20,40})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('twitter',),
         allowlists=(),
     ),
     RuleData(
@@ -1726,6 +1937,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:twitter)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{25})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('twitter',),
         allowlists=(),
     ),
     RuleData(
@@ -1734,6 +1946,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:twitter)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{50})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('twitter',),
         allowlists=(),
     ),
     RuleData(
@@ -1742,6 +1955,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:twitter)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}(A{22}[a-zA-Z0-9%]{80,100})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('twitter',),
         allowlists=(),
     ),
     RuleData(
@@ -1750,6 +1964,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:typeform)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}(tfp_[a-z0-9\\-_\\.=]{59})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('tfp_',),
         allowlists=(),
     ),
     RuleData(
@@ -1758,6 +1973,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b(hvb\\.[\\w-]{138,300})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=4.0,
         secret_group=0,
+        keywords=('hvb.',),
         allowlists=(),
     ),
     RuleData(
@@ -1766,6 +1982,7 @@ RULES: tuple[RuleData, ...] = (
         regex='\\b((?:hvs\\.[\\w-]{90,120}|s\\.(?i:[a-z0-9]{24})))(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=3.5,
         secret_group=0,
+        keywords=('hvs.', 's.'),
         allowlists=(Allowlist(target='secret', regexes=('s\\.[A-Za-z]{24}',), stopwords=(), require_all=False),),
     ),
     RuleData(
@@ -1774,6 +1991,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:yandex)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}(t1\\.[A-Z0-9a-z_-]+[=]{0,2}\\.[A-Z0-9a-z_-]{86}[=]{0,2})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('yandex',),
         allowlists=(),
     ),
     RuleData(
@@ -1782,6 +2000,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:yandex)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}(AQVN[A-Za-z0-9_\\-]{35,38})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('yandex',),
         allowlists=(),
     ),
     RuleData(
@@ -1790,6 +2009,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:yandex)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}(YC[a-zA-Z0-9_\\-]{38})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('yandex',),
         allowlists=(),
     ),
     RuleData(
@@ -1798,6 +2018,7 @@ RULES: tuple[RuleData, ...] = (
         regex='(?i)[\\w.-]{0,50}?(?:zendesk)(?:[ \\t\\w.-]{0,20})[\\s\'"]{0,3}(?:=|>|:{1,3}=|\\|\\||:|=>|\\?=|,)[\\x60\'"\\s=]{0,5}([a-z0-9]{40})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
         entropy=0.0,
         secret_group=0,
+        keywords=('zendesk',),
         allowlists=(),
     ),
 )

@@ -34,8 +34,10 @@ match is accepted, outside partial matching. A regression test covers the case.
 
 **Delay is about one word.** gitleaks' keyword rules (`<word>_api_key = …`) can start at
 any word, so the last unfinished word is held. Measured on this repo's docs and code in
-4-character chunks (Apple M1 Pro, Python 3.12, all 245 patterns): output trails input by
-3 characters at P50, 25 at P99, 65 at most.
+4-character chunks (2026-11-02, AWS g6.xlarge CPU, Python 3.12, all 245 patterns): output
+trails input by 3 characters at P50, 41 at P99. The most, 500 characters, follows the
+word `curl`: gitleaks' `curl-auth-header` and `curl-auth-user` look up to five lines ahead
+for a header, since a curl command can span lines.
 
 **The guarantee:** for every shipped pattern, the redacted output is the same however the
 input is split into chunks. This is enforced by property tests that split every test input
@@ -62,6 +64,26 @@ Many gitleaks rules were built for scanning code, so some will fire on chat text
 false-positive rate on benign text is measured in the evaluation harness (Part 2), and
 any rule can be switched off by ID.
 
+**Garbled echoes (2026-11-02).** Models do not repeat a secret exactly: the live check saw
+a token with four characters added and a connection string with its host dropped, and the
+redactor evaluation's garbled families (wrapped in quotes or markdown, 1-4 characters
+added, 1-3 dropped, other surroundings) found more. Curated token patterns therefore accept
+a few characters more or less than the exact length (`ghp_` + 30 or more instead of 36,
+AWS key IDs 12-24 after the prefix, ...), the AWS secret key also follows a plain "secret
+key" label and brackets, a bearer token is found without its `Authorization:` header, and a
+connection string may have an empty user (`redis://:password@host`). These changes were made
+after seeing those results; their false-positive cost is measured on the public texts,
+which they were not tuned on.
+
+**Private keys end at their END line (2026-11-02).** Both private-key patterns (ours and
+gitleaks') allowed any text in the body, so after a complete key the match could still run on
+to a later END line: everything after a key was held back until the holdback limit and then
+replaced. Found by the benchmark once its input contained a PEM block. The body may no
+longer contain `-----END`; gitleaks' `private-key` regex is changed accordingly
+(`STREAMING_FIXES` in `patterns.py`), the one rule we run differently from gitleaks. Our
+pattern also ends at the end of the reply, so a key cut off before its END line (a model
+reaching its token limit) is redacted instead of passed on.
+
 **What gets replaced.** Only the secret, not the surrounding match: `api_key = sk_live_…`
 becomes `api_key = [REDACTED:stripe_secret_key]`. Overlapping secrets are merged into one
 replacement, labelled by the leftmost, longest match (curated first). The label format is
@@ -77,11 +99,19 @@ configurable.
 **Findings** record the pattern ID, category, source and the position in the input
 stream, never the secret itself.
 
-**CPU cost (to improve).** Same run: 0.34 ms per chunk at P50 and 1.2 ms at P99 with all
-patterns, 0.03 ms with the curated set alone (`benchmarks/redact_stream.py`). Fine for one
-stream, but a proxy with many concurrent streams needs less. Next step: skip a gitleaks
-rule unless one of its keywords (or the start of one, at the end of the buffer) is in the
-unemitted text.
+**CPU cost: a keyword prefilter (2026-11-02).** Running every pattern on every chunk cost
+0.44 ms per chunk at P50 and 2.1 ms at P99 (same run). gitleaks runs a rule only when one
+of its keywords is in the text; the redactor now does the same on text it has not sent:
+a rule runs while one of its keywords is in that text, or the text ends with the start of
+one (a keyword may be arriving). That is safe only when every match contains a keyword, the
+secret does not start before it, and the rule still finds the same secret when the text
+before the keyword has already been sent. `test_keywords_are_a_safe_filter` checks these on
+200 generated matches per rule; the 44 rules that fail or cannot be generated always run
+(`KEYWORDS_UNSAFE`, among them `lob-api-key`, which needs "lob" before its keyword and
+leaked in a stress run until it was listed). Result: 0.15 ms per chunk at P50 and 0.40 ms at
+P99 (3x and 5x faster; curated set alone 0.04 ms), and the same output with and without the
+prefilter on all 57,064 public texts of the evaluation. The index of keywords is built once
+per pattern set.
 
 ## Considered
 

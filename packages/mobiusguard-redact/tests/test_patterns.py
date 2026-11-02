@@ -154,3 +154,43 @@ def test_a_github_token_with_extra_characters_is_still_redacted() -> None:
     token = "ghp_" + "Zx9Q" * 9
     # A model echoing the token added four characters; the real token is a prefix of it.
     assert redact(f"deploy token {token}Zx9Q") == "deploy token [REDACTED:github_token]"
+
+
+_AWS_SK = "Xs1eXCAaoPR/lahiu6tE9/ZL2H55KkPuw98aj+7p"
+_BEARER = "pYmGG-Xeh1wpLV8hbkKBp5xaJfaDPe_P2ms3TLVg"
+
+
+# Garbled echoes (redactor evaluation, 2026-11-02): models wrap, shorten or lengthen what
+# they repeat, or drop the label around it.
+@pytest.mark.parametrize(
+    ("text", "secret", "label"),
+    [
+        ("key AKIAQWERTYUIOPASD ok", "AKIAQWERTYUIOPASD", "aws_access_key_id"),  # 3 dropped
+        ("key AKIAQWERTYUIOPASDFGHJK ok", "AKIAQWERTYUIOPASDFGHJK", "aws_access_key_id"),
+        (f"AWS secret key: <{_AWS_SK}>", _AWS_SK, "aws_secret_access_key"),
+        (f"secret key {_AWS_SK}", _AWS_SK, "aws_secret_access_key"),
+        (f"Bearer {_BEARER}", _BEARER, "bearer_token"),
+        (f'"Authorization": "Bearer {_BEARER}"', _BEARER, "bearer_token"),
+        (f"Authorization: Bearer `{_BEARER}`", _BEARER, "bearer_token"),
+        ("redis://:rbN#G603P!73Ih@cache:6379/0", "rbN#G603P!73Ih", "connection_string_password"),
+        ("token ghp_" + "Zx9Q" * 8 + " ok", "ghp_" + "Zx9Q" * 8, "github_token"),  # 32
+        ("key AIza" + "Ab3_" * 8 + " ok", "AIza" + "Ab3_" * 8, "google_api_key"),  # 32
+        ("glpat-" + "Ab3d" * 4 + " ok", "glpat-" + "Ab3d" * 4, "gitlab_token"),  # 16
+    ],
+)
+def test_garbled_echoes_are_redacted(text: str, secret: str, label: str) -> None:
+    out = redact(text)
+    assert secret not in out, out
+    assert f"[REDACTED:{label}]" in out, out
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "AKIA12345 is not a key",  # too short, even for a garbled key
+        "a bearer of good news",
+        "the bearer bonds were sold",
+    ],
+)
+def test_garbled_echo_fixes_leave_these_alone(text: str) -> None:
+    assert redact(text) == text

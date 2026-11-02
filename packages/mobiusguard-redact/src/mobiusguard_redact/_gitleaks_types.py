@@ -23,4 +23,5 @@ class RuleData:
     regex: str
     entropy: float  # 0.0 = no entropy check
     secret_group: int  # 0 = first non-empty capture group, else the whole match
+    keywords: tuple[str, ...]  # lower-case; gitleaks runs the rule only if one is present
     allowlists: tuple[Allowlist, ...]

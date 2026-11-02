@@ -30,6 +30,11 @@ class Pattern:
     the 300 characters before it). It does the job of a variable-length lookbehind, which
     the ``regex`` library's partial matching gets wrong: a match can be reported as still
     growing, which would hold back everything after it (decision 0007).
+
+    ``keywords`` (lower-case) let the redactor skip the pattern while none of them is in
+    the text it has not sent yet, nor started at its end. Only give keywords when every
+    match contains one and the secret never starts before it; otherwise leave them empty
+    and the pattern always runs.
     """
 
     id: str
@@ -43,6 +48,7 @@ class Pattern:
     allowlists: tuple[Allowlist, ...] = ()
     priority: int = 0  # lower wins when two matches cover the same text
     not_after: str = ""
+    keywords: tuple[str, ...] = ()
     compiled: regex.Pattern[str] = field(init=False, repr=False, compare=False)
     probe: regex.Pattern[str] = field(init=False, repr=False, compare=False)
 
@@ -140,20 +146,61 @@ def _allowed(a: Allowlist, secret: str, match: str) -> bool:
     return all(checks) if a.require_all else any(checks)
 
 
+# gitleaks rules whose keywords are not a safe filter, so they always run. Checked by
+# test_keywords_are_a_safe_filter, which generates matches for every rule.
+KEYWORDS_UNSAFE = frozenset(
+    {
+        # a match can lack the keyword, or the secret can start before it
+        # (openai-api-key: the key starts with "sk-", its keyword "t3blbkfj" is inside)
+        "azure-ad-client-secret", "facebook-access-token", "hashicorp-tf-api-token",
+        "kubernetes-secret-yaml", "maxmind-license-key", "openai-api-key",
+        "sidekiq-sensitive-url", "slack-config-access-token", "slack-webhook-url",
+        "sourcegraph-access-token", "typeform-api-token",
+        # the match needs text before the keyword ("lob" in "lob=live_..."), which may have
+        # been sent before the keyword arrived
+        "freemius-secret-key", "lob-api-key", "lob-pub-api-key", "microsoft-teams-webhook",
+        "new-relic-browser-api-token", "new-relic-insert-key", "new-relic-user-api-key",
+        # not checkable: Hypothesis cannot generate from these regexes
+        "adobe-client-secret", "airtable-personnal-access-token", "alibaba-access-key-id",
+        "authress-service-client-access-key", "curl-auth-header", "curl-auth-user",
+        "doppler-api-token", "duffel-api-token", "dynatrace-api-token", "easypost-api-token",
+        "easypost-test-api-token", "facebook-page-access-token", "flutterwave-encryption-key",
+        "flutterwave-public-key", "flutterwave-secret-key", "frameio-api-token",
+        "gocardless-api-token", "intra42-client-secret", "linear-api-key",
+        "openshift-user-token", "planetscale-api-token", "planetscale-password",
+        "postman-api-token", "sendgrid-api-token", "sendinblue-api-token", "sentry-org-token",
+    }
+)  # fmt: skip
+
+
+# gitleaks rules whose regex is changed for streaming. private-key's body,
+# [\s\S-]{64,}?, could run on to a later "KEY-----", so everything after a key was held
+# back until the holdback limit and then replaced; the body may not contain "-----END" here.
+STREAMING_FIXES = {
+    "private-key": r"(?i)-----BEGIN[ A-Z0-9_-]{0,100}PRIVATE KEY(?: BLOCK)?-----"
+    r"(?:(?!-----END)[\s\S]){64,}?-----END[ A-Z0-9_-]{0,100}KEY(?: BLOCK)?-----",
+}
+
+
+@cache
 def gitleaks_patterns() -> tuple[Pattern, ...]:
-    """All gitleaks regex rules, with gitleaks' entropy and allowlist semantics."""
+    """All gitleaks regex rules, with gitleaks' entropy, allowlist and keyword semantics.
+
+    Built once; patterns are immutable, so every caller shares the same objects.
+    """
     global_allow = (GLOBAL_ALLOWLIST,) if GLOBAL_ALLOWLIST else ()
     return tuple(
         Pattern(
             id=r.id,
             category="secret",
             source="gitleaks",
-            regex=r.regex,
+            regex=STREAMING_FIXES.get(r.id, r.regex),
             description=r.description,
             group=r.secret_group or None,
             min_entropy=r.entropy,
             allowlists=global_allow + r.allowlists,
             priority=10,
+            keywords=() if r.id in KEYWORDS_UNSAFE else r.keywords,
         )
         for r in RULES
     )

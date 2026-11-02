@@ -9,6 +9,8 @@ from __future__ import annotations
 from collections.abc import AsyncIterable, AsyncIterator, Iterable, Iterator, Sequence
 from dataclasses import dataclass
 
+import regex
+
 from .patterns import Category, Pattern, default_patterns
 
 DEFAULT_LABEL = "[REDACTED:{id}]"
@@ -45,6 +47,10 @@ class StreamRedactor:
     Call :meth:`feed` with each chunk and send what it returns; call :meth:`flush` once at the
     end and send that too. The concatenated output is the same however the input was split
     (for the shipped patterns; see decision 0007). One instance handles one stream.
+
+    With ``prefilter`` (the default), a pattern that has keywords runs only while one of
+    them is in the text not yet sent, or the text ends with the start of one. Patterns
+    without keywords always run.
     """
 
     def __init__(
@@ -54,8 +60,10 @@ class StreamRedactor:
         label: str = DEFAULT_LABEL,
         max_holdback: int = 8192,
         context: int = 1024,
+        prefilter: bool = True,
     ) -> None:
         self._patterns = tuple(default_patterns() if patterns is None else patterns)
+        self._keywords = _keywords_for(self._patterns) if prefilter else None
         self._label = label
         self._max_holdback = max_holdback
         self._context = context
@@ -92,7 +100,10 @@ class StreamRedactor:
 
         hold = n
         candidates: list[_Candidate] = []
-        for p in self._patterns:
+        skip = self._keywords.skipped(text[base:], final=final) if self._keywords else ()
+        for i, p in enumerate(self._patterns):
+            if i in skip:
+                continue
             for m in p.compiled.finditer(text, pos=base):
                 if not final and p.could_grow(m):
                     hold = min(hold, m.start())
@@ -159,11 +170,66 @@ class StreamRedactor:
         return "".join(out)
 
 
+class _Keywords:
+    """Which patterns with keywords can be skipped for a piece of text."""
+
+    def __init__(self, patterns: Sequence[Pattern]) -> None:
+        keyed = {i: p.keywords for i, p in enumerate(patterns) if p.keywords}
+        self._keyed = frozenset(keyed)
+        words = sorted({k for ks in keyed.values() for k in ks}, key=len, reverse=True)
+        # Longest first, so at each position the regex finds the longest keyword there;
+        # every keyword inside it is present too.
+        self._find = regex.compile("|".join(map(regex.escape, words))) if words else None
+        self._present = {
+            w: frozenset(i for i, ks in keyed.items() if any(k in w for k in ks)) for w in words
+        }
+        self._starts: dict[str, set[int]] = {}
+        for i, ks in keyed.items():
+            for k in ks:
+                for n in range(1, len(k)):
+                    self._starts.setdefault(k[:n], set()).add(i)
+        self._longest = max(map(len, words), default=0)
+
+    def skipped(self, text: str, *, final: bool) -> frozenset[int]:
+        if self._find is None:
+            return frozenset()
+        low = text.lower()
+        run: set[int] = set()
+        for m in self._find.finditer(low, overlapped=True):
+            run |= self._present[m.group()]
+        if not final:  # a keyword may be arriving: its start is at the end of the text
+            for n in range(1, min(self._longest, len(low) + 1)):
+                run |= self._starts.get(low[-n:], set())
+        return self._keyed - run
+
+
+_KEYWORDS: dict[tuple[int, ...], tuple[tuple[Pattern, ...], _Keywords]] = {}
+
+
+def _keywords_for(patterns: tuple[Pattern, ...]) -> _Keywords:
+    """The keyword index for a pattern set, built once (it takes about 10 ms).
+
+    Keyed by the patterns' identities; the entry keeps the patterns alive, so an identity
+    cannot be reused while it is cached.
+    """
+    key = tuple(map(id, patterns))
+    hit = _KEYWORDS.get(key)
+    if hit is None:
+        if len(_KEYWORDS) >= 32:
+            _KEYWORDS.clear()
+        hit = _KEYWORDS[key] = (patterns, _Keywords(patterns))
+    return hit[1]
+
+
 def redact(
-    text: str, patterns: Sequence[Pattern] | None = None, *, label: str = DEFAULT_LABEL
+    text: str,
+    patterns: Sequence[Pattern] | None = None,
+    *,
+    label: str = DEFAULT_LABEL,
+    prefilter: bool = True,
 ) -> str:
     """Redact a complete string."""
-    r = StreamRedactor(patterns, label=label)
+    r = StreamRedactor(patterns, label=label, prefilter=prefilter)
     return r.feed(text) + r.flush()
 
 

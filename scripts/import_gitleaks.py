@@ -51,7 +51,7 @@ HEADER = """\
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 # fmt: off
-# ruff: noqa: E501, RUF001
+# ruff: noqa: E501
 
 from __future__ import annotations
 
@@ -104,6 +104,7 @@ def main() -> int:
                 "regex": r["regex"],
                 "entropy": float(r.get("entropy", 0.0)),
                 "secret_group": int(r.get("secretGroup", 0)),
+                "keywords": tuple(k.lower() for k in r.get("keywords", ())),
                 "allowlists": allowlists,
             }
         )
@@ -126,6 +127,7 @@ def main() -> int:
             f"        regex={r['regex']!r},\n"
             f"        entropy={r['entropy']!r},\n"
             f"        secret_group={r['secret_group']!r},\n"
+            f"        keywords={r['keywords']!r},\n"
             f"        allowlists=({allows}{',' if r['allowlists'] else ''}),\n"
             "    ),\n"
         )

@@ -43,30 +43,33 @@ CURATED: tuple[Pattern, ...] = (
     # ------------------------------------------------------------------ cloud and APIs
     _secret(
         "aws_access_key_id",
-        r"(?<![A-Z0-9])(?:AKIA|ASIA|ABIA|ACCA)[A-Z2-7]{16}(?![A-Z0-9])",
+        # 16 characters after the prefix; 12 to 24 are taken because a model repeating a key
+        # can drop or add a few, and most of the key would still go out (garbled echoes).
+        r"(?<![A-Z0-9])(?:AKIA|ASIA|ABIA|ACCA)[A-Z2-7]{12,24}(?![A-Z0-9])",
         "AWS access key ID",
     ),
     _secret(
         "aws_secret_access_key",
-        r"(?i)aws.{0,20}?(?:secret|sk).{0,20}?[\s'\"=:]{1,5}([A-Za-z0-9/+=]{40})(?![A-Za-z0-9/+=])",
-        "AWS secret access key next to an AWS label",
+        r"(?i)(?:aws.{0,20}?(?:secret|sk)|secret[ _-]?(?:access[ _-]?)?key).{0,20}?"
+        r"[\s'\"=:`*(<\[]{1,6}([A-Za-z0-9/+=]{40})(?![A-Za-z0-9/+=])",
+        "AWS secret access key next to an AWS or secret-key label",
         group=1,
     ),
     _secret(
         "github_token",
-        # 36 characters or more: a model echoing a token can add characters, and the real
-        # token inside the longer string must still go (seen in the live check).
-        _L + r"(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,255}" + _R,
+        # 36 characters; 30 or more are taken: a model echoing a token can add or drop
+        # characters, and the rest of the token must still go (live check, garbled echoes).
+        _L + r"(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{30,255}" + _R,
         "GitHub personal, OAuth, app or refresh token",
     ),
     _secret(
         "github_fine_grained_token",
-        _L + r"github_pat_[A-Za-z0-9_]{82}" + _R,
+        _L + r"github_pat_[A-Za-z0-9_]{76,255}" + _R,  # 82, give or take
         "GitHub fine-grained personal access token",
     ),
     _secret(
         "gitlab_token",
-        _L + r"glpat-[A-Za-z0-9_-]{20,}" + _R,
+        _L + r"glpat-[A-Za-z0-9_-]{16,}" + _R,  # 20 or more, minus a few
         "GitLab personal access token",
     ),
     _secret(
@@ -85,12 +88,12 @@ CURATED: tuple[Pattern, ...] = (
     ),
     _secret(
         "google_api_key",
-        _L + r"AIza[0-9A-Za-z_-]{35}" + _R,
+        _L + r"AIza[0-9A-Za-z_-]{30,45}" + _R,  # 35, give or take
         "Google API key",
     ),
     _secret(
         "huggingface_token",
-        _L + r"hf_[A-Za-z0-9]{34,}" + _R,
+        _L + r"hf_[A-Za-z0-9]{30,}" + _R,  # 34 or more, minus a few
         "Hugging Face access token",
     ),
     _secret(
@@ -110,7 +113,7 @@ CURATED: tuple[Pattern, ...] = (
     ),
     _secret(
         "npm_token",
-        _L + r"npm_[A-Za-z0-9]{36}" + _R,
+        _L + r"npm_[A-Za-z0-9]{30,}" + _R,  # 36, give or take
         "npm access token",
     ),
     _secret(
@@ -120,22 +123,26 @@ CURATED: tuple[Pattern, ...] = (
     ),
     _secret(
         "private_key",
-        r"-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY(?: BLOCK)?-----[\s\S]{1,8000}?"
-        r"-----END (?:[A-Z0-9]+ )*PRIVATE KEY(?: BLOCK)?-----",
-        "PEM private key block",
+        # The body may not contain "-----END": the block ends at the first END line, so the
+        # text after it is not held back waiting for a later one. With no END line, it ends
+        # with the reply (a model cut off mid-key); mid-reply it is held until the holdback
+        # limit and then redacted (decision 0007).
+        r"-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY(?: BLOCK)?-----(?:(?!-----END)[\s\S])+"
+        r"(?:-----END (?:[A-Z0-9]+ )*PRIVATE KEY(?: BLOCK)?-----|\Z)",
+        "PEM private key block, also one cut off before its END line",
     ),
     _secret(
         "connection_string_password",
         r"(?i)\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|redis|rediss|amqps?|mssql)"
-        r"://[^\s:/@]+:(?:([^\s:/@]{3,})@|([^\s:/@]*[^\d\s:/@][^\s:/@]*)(?=[/?#\s]))",
+        r"://[^\s:/@]*:(?:([^\s:/@]{3,})@|([^\s:/@]*[^\d\s:/@][^\s:/@]*)(?=[/?#\s]))",
         "Password inside a database or broker URL (also when the @host part is missing: a "
         "'port' that isn't a number is a password)",
         group=None,
     ),
     _secret(
         "bearer_token",
-        r"(?i)\bauthorization\s*:\s*bearer\s+([A-Za-z0-9._~+/-]{20,}=*)",
-        "Bearer token in an Authorization header",
+        r"(?i)\bbearer\s+[`'\"<(\[*]{0,2}([A-Za-z0-9._~+/-]{20,}=*)",
+        "Bearer token (in an Authorization header or written on its own)",
         group=1,
     ),
     # ------------------------------------------------------------------ personal data

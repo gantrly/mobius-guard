@@ -5,7 +5,8 @@ Usage:  uv run python benchmarks/redact_stream.py [--chunk 4] [--repeat 3]
 The input is this repository's own Markdown and Python (real prose and code), with fake
 secrets inserted, streamed in fixed-size chunks the way an LLM streams tokens. Reported:
 
-- time spent in ``feed()`` per chunk (P50/P95/P99/max), for curated-only and all patterns;
+- time spent in ``feed()`` per chunk (P50/P95/P99/max), for curated-only and all patterns,
+  and all patterns without the keyword prefilter;
 - characters held back after each chunk (how far output lags input), P50/P95/P99/max;
 - overall throughput.
 
@@ -52,8 +53,10 @@ def pct(values: Sequence[float], q: float) -> float:
     return s[min(len(s) - 1, int(q * len(s)))]
 
 
-def run(text: str, patterns: Sequence[Pattern], chunk: int) -> tuple[list[float], list[int], float]:
-    r = StreamRedactor(patterns)
+def run(
+    text: str, patterns: Sequence[Pattern], chunk: int, *, prefilter: bool = True
+) -> tuple[list[float], list[int], float]:
+    r = StreamRedactor(patterns, prefilter=prefilter)
     times: list[float] = []
     held: list[int] = []
     t_all = time.perf_counter()
@@ -77,17 +80,22 @@ def main() -> int:
     print(f"python  : {sys.version.split()[0]} | regex {regex.__version__}")
     print(f"input   : {len(text):,} chars, {len(text) // args.chunk:,} chunks of {args.chunk}\n")
 
-    sets = {"curated": CURATED, "all": default_patterns()}
+    sets = {
+        "curated": (CURATED, True),
+        "all": (default_patterns(), True),
+        "all, no prefilter": (default_patterns(), False),
+    }
     print(
-        f"{'patterns':<9} {'n':>4} | feed ms: {'p50':>6} {'p95':>6} {'p99':>6} {'max':>7}"
+        f"{'patterns':<17} {'n':>4} | feed ms: {'p50':>6} {'p95':>6} {'p99':>6} {'max':>7}"
         f" | held chars: {'p50':>4} {'p95':>4} {'p99':>5} {'max':>5} | {'MB/s':>5}"
     )
-    for name, pats in sets.items():
-        runs = [run(text, pats, args.chunk) for _ in range(max(1, args.repeat))]
+    for name, (pats, prefilter) in sets.items():
+        n = max(1, args.repeat)
+        runs = [run(text, pats, args.chunk, prefilter=prefilter) for _ in range(n)]
         times, held, total = min(runs, key=lambda r: r[2])  # fastest of the repeats
         ms = [t * 1000 for t in times]
         print(
-            f"{name:<9} {len(pats):>4} | {'':8} {statistics.median(ms):6.3f} {pct(ms, 0.95):6.3f}"
+            f"{name:<17} {len(pats):>4} | {'':8} {statistics.median(ms):6.3f} {pct(ms, 0.95):6.3f}"
             f" {pct(ms, 0.99):6.3f} {max(ms):7.2f} | {'':11} {pct(held, 0.5):4d}"
             f" {pct(held, 0.95):4d} {pct(held, 0.99):5d} {max(held):5d}"
             f" | {len(text) / total / 1e6:5.2f}"

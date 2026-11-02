@@ -40,7 +40,7 @@ def chunked(text: str, cuts: Sequence[int], patterns: Sequence[Pattern] = ALL) -
 @pytest.mark.parametrize(("pattern_id", "text", "secret"), POSITIVES)
 def test_every_two_way_split_matches_one_shot(pattern_id: str, text: str, secret: str) -> None:
     sentence = f"Here it is: {text}. Thanks!"
-    expected = redact(sentence, ALL)
+    expected = redact(sentence, ALL, prefilter=False)
     assert secret not in expected
     for cut in range(1, len(sentence)):
         assert chunked(sentence, [cut]) == expected, (pattern_id, cut)
@@ -49,7 +49,8 @@ def test_every_two_way_split_matches_one_shot(pattern_id: str, text: str, secret
 @pytest.mark.parametrize(("pattern_id", "text", "secret"), POSITIVES)
 def test_one_character_chunks_match_one_shot(pattern_id: str, text: str, secret: str) -> None:
     sentence = f"> {text}\nnext line"
-    assert chunked(sentence, range(len(sentence))) == redact(sentence, ALL), pattern_id
+    expected = redact(sentence, ALL, prefilter=False)
+    assert chunked(sentence, range(len(sentence))) == expected, pattern_id
 
 
 # Fragments the property tests build text from: plain words, separators and secrets.
@@ -67,6 +68,11 @@ _WORDS = [
     "+91",
     "@",
     "-----BEGIN",
+    "glpat-",
+    "xoxb-",
+    "twilio",
+    "adafruit_key",
+    "secret",
 ]
 _SEPS = [" ", "\n", ", ", '"', "'", "`", ". ", "\t", " = ", ": "]
 
@@ -83,7 +89,8 @@ fragments = st.lists(
 
 @given(text=fragments, cuts=st.lists(st.integers(min_value=1, max_value=400), max_size=12))
 def test_random_splits_match_one_shot(text: str, cuts: list[int]) -> None:
-    assert chunked(text, cuts) == redact(text, ALL)
+    # One-shot without the keyword prefilter is the reference.
+    assert chunked(text, cuts) == redact(text, ALL, prefilter=False)
 
 
 def _regex_samples() -> list[tuple[Pattern, st.SearchStrategy[str]]]:
@@ -156,7 +163,7 @@ def test_generated_matches_split_anywhere(data: st.DataObject) -> None:
         + data.draw(st.sampled_from(["", " y", ".", "\n", '"']))
     )
     cuts = data.draw(st.lists(st.integers(min_value=1, max_value=max(1, len(text))), max_size=8))
-    assert chunked(text, cuts) == redact(text, ALL), pattern.id
+    assert chunked(text, cuts) == redact(text, ALL, prefilter=False), pattern.id
 
 
 # ---------------------------------------------------------------- behaviour
@@ -221,3 +228,40 @@ def test_iterator_helpers() -> None:
         return "".join([c async for c in aredact_stream(gen(), CURATED)])
 
     assert asyncio.run(collect()) == "mail [REDACTED:email] now"
+
+
+_PEM = (
+    "-----BEGIN RSA PRIVATE KEY-----\n"
+    + "\n".join(["MIIEow" + "A" * 58] * 6)
+    + "\n-----END RSA PRIVATE KEY-----"
+)
+
+
+def test_text_after_a_private_key_is_not_held_back() -> None:
+    # Found by the benchmark (2026-11-02): both private-key patterns could run on to a
+    # later END line, so everything after a key was held until the holdback limit.
+    text = f"here:\n{_PEM}\n" + "The reply goes on. " * 600
+    r = StreamRedactor()
+    out = [r.feed(text[: len(_PEM) + 40])]
+    for i in range(len(_PEM) + 40, len(text), 4):
+        out.append(r.feed(text[i : i + 4]))
+        assert r.held < 40, (i, r.held)
+    out.append(r.flush())
+    assert "".join(out) == redact(text, ALL, prefilter=False)
+    assert "".join(out).startswith("here:\n[REDACTED:private_key]\nThe reply")
+
+
+def test_a_private_key_without_its_end_line_does_not_leak() -> None:
+    text = "key:\n" + _PEM[:200] + "\n" + "more text. " * 900
+    r = StreamRedactor()
+    out = "".join(r.feed(text[i : i + 4]) for i in range(0, len(text), 4)) + r.flush()
+    assert "MIIEow" not in out
+
+
+@pytest.mark.parametrize("cut", [1, 5, 40, 100, 300])
+def test_a_private_key_cut_off_at_the_end_of_the_reply_does_not_leak(cut: int) -> None:
+    # A model that hits its token limit mid-key: no END line, then the stream ends.
+    text = "key:\n" + _PEM[:200]
+    expected = redact(text, ALL, prefilter=False)
+    assert expected == "key:\n[REDACTED:private_key]"
+    assert chunked(text, [cut]) == expected
