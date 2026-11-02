@@ -14,6 +14,12 @@ Two measurements:
    streamed output equals the one-shot output, and which label replaced it. Near misses
    (bad check digit, too short) check that the validators hold. Synthetic values measure
    matching in context, not how often real secrets look like this.
+3. **Recall on garbled values.** Models do not repeat a secret exactly (live check,
+   2026-10-30): they wrap it in backticks or quotes, add or drop a few characters, or change
+   what surrounds it. Each garbling is its own family, so a gap shows where it is.
+
+The keyword prefilter is checked on the way: every public text is redacted with and
+without it, and any difference is reported.
 """
 
 from __future__ import annotations
@@ -210,14 +216,82 @@ NEAR_MISSES: dict[str, Gen] = {
     ),
     "in_aadhaar": lambda r: (lambda c: c[:-1] + str((int(c[-1]) + 1) % 10))(_aadhaar(r)),
     "phone_international": lambda r: f"+1 {_s(r, string.digits, 3)} {_s(r, string.digits, 3)}",
-    "aws_access_key_id": lambda r: "AKIA" + _s(r, B32, 15),
+    # Too short to be a key, even one with a few characters dropped.
+    "aws_access_key_id": lambda r: "AKIA" + _s(r, B32, 8),
 }
 
 
-def leaked(value: str, output: str, window: int = 8) -> bool:
+# Patterns whose values are tokens with a fixed prefix: a model may add or drop characters.
+TOKENS = (
+    "aws_access_key_id", "github_token", "github_fine_grained_token", "gitlab_token",
+    "openai_api_key", "anthropic_api_key", "google_api_key", "huggingface_token",
+    "slack_token", "stripe_secret_key", "npm_token", "json_web_token",
+)  # fmt: skip
+WRAPS = ("`{}`", '"{}"', "'{}'", "({})", "{}.", "{},", "**{}**", "<{}>", "{}:", "[{}]")
+# Other surroundings a model writes for patterns that depend on context.
+CONTEXTS: dict[str, tuple[str, ...]] = {
+    "connection_string_password": (
+        "postgres://app:{}/db/prod",  # the host dropped, as in the live check
+        "postgresql://app:{}@localhost/prod",
+        "redis://:{}@cache:6379/0",
+        "mysql://root:{}@10.0.0.5/app",
+    ),
+    "aws_secret_access_key": ("secret key {}", "AWS secret: {}", "SecretAccessKey: {}"),
+    "bearer_token": ("Bearer {}", "authorization: bearer {}", '"Authorization": "Bearer {}"'),
+}
+
+
+# Values that sit inside a URL: the model wraps the whole URL, not the password.
+WRAP_PHRASE = frozenset({"connection_string_password"})
+
+
+def _wrapped(gen: Gen) -> Gen:
+    return lambda r: r.choice(WRAPS).format(gen(r))
+
+
+def _wrapped_phrases(phrases: tuple[str, ...]) -> tuple[str, ...]:
+    return tuple(w.replace("{}", p) for p in phrases for w in WRAPS)
+
+
+def _longer(gen: Gen) -> Gen:
+    def g(r: random.Random) -> str:
+        v = gen(r)
+        return v + "".join(r.choice(v[-10:]) for _ in range(r.randint(1, 4)))
+
+    return g
+
+
+def _shorter(gen: Gen) -> Gen:
+    return lambda r: gen(r)[: -r.randint(1, 3)]
+
+
+def garbled_jobs() -> list[tuple[str, str, Gen, tuple[str, ...]]]:
+    jobs = [
+        (pid, "garbled:wrapped", g, _wrapped_phrases(ph))
+        if pid in WRAP_PHRASE
+        else (pid, "garbled:wrapped", _wrapped(g), ph)
+        for pid, (g, ph) in GENERATORS.items()
+    ]
+    for pid in TOKENS:
+        g, ph = GENERATORS[pid]
+        jobs += [(pid, "garbled:longer", _longer(g), ph), (pid, "garbled:shorter", _shorter(g), ph)]
+    jobs += [(pid, "garbled:context", GENERATORS[pid][0], ph) for pid, ph in CONTEXTS.items()]
+    return jobs
+
+
+def leaked(value: str, output: str, window: int = 8, *, context: str = "") -> bool:
+    """Whether any ``window``-character piece of ``value`` reached ``output``.
+
+    Pieces that also occur in ``context`` (the message the value was put into) are not
+    counted: "services" in a webhook URL is not a leak when the message says "services".
+    """
     if len(value) <= window:
         return value in output
-    return any(value[i : i + window] in output for i in range(len(value) - window + 1))
+    pieces = {value[i : i + window] for i in range(len(value) - window + 1)}
+    return any(p in output and p not in context for p in pieces)
+
+
+LEAK_CHECK = 2  # bump when ``leaked`` changes, so saved results are recomputed
 
 
 def _stream(text: str, rng: random.Random, patterns: Sequence[Pattern]) -> str:
@@ -241,7 +315,7 @@ def _insert(carrier: str, phrase: str, rng: random.Random) -> str:
 @dataclass(frozen=True, slots=True)
 class SyntheticResult:
     pattern_id: str
-    kind: str  # "positive" or "near_miss"
+    kind: str  # "positive", "near_miss" or "garbled:<how>"
     leaked: bool
     labels: tuple[str, ...]  # labels in the output that were not in the carrier's output
     stream_equal: bool
@@ -253,7 +327,7 @@ def synthetic_jobs() -> list[tuple[str, str, Gen, tuple[str, ...]]]:
         (pid, "positive", gen, phrases) for pid, (gen, phrases) in GENERATORS.items()
     ]
     jobs += [(pid, "near_miss", gen, GENERATORS[pid][1]) for pid, gen in NEAR_MISSES.items()]
-    return jobs
+    return jobs + garbled_jobs()
 
 
 def synthetic_job(
@@ -290,7 +364,7 @@ def synthetic_job(
             SyntheticResult(
                 pattern_id=pid,
                 kind=kind,
-                leaked=leaked(value, one_shot),
+                leaked=leaked(value, one_shot, context=carrier),
                 labels=tuple(sorted(new)),
                 stream_equal=one_shot == streamed,
             )
@@ -313,14 +387,17 @@ def synthetic(
 
 def firing(
     items: Sequence[Item], patterns: Sequence[Pattern]
-) -> tuple[Counter[str], list[dict[str, str]]]:
-    """Per pattern, the number of items it fired on; and every finding with its context."""
+) -> tuple[Counter[str], list[dict[str, str]], list[str]]:
+    """Per pattern, the number of items it fired on; every finding with its context; and
+    the items whose output changes without the keyword prefilter (should be none)."""
     per_pattern: Counter[str] = Counter()
     findings: list[dict[str, str]] = []
+    differs: list[str] = []
     for it in items:
         r = StreamRedactor(patterns)
-        r.feed(it.text)
-        r.flush()
+        out = r.feed(it.text) + r.flush()
+        if out != redact(it.text, patterns, prefilter=False):
+            differs.append(it.id)
         for pid in {f.pattern_id for f in r.findings}:
             per_pattern[pid] += 1
         for f in r.findings:
@@ -333,7 +410,7 @@ def firing(
                     "context": it.text[max(0, f.start - 40) : f.end + 40],
                 }
             )
-    return per_pattern, findings
+    return per_pattern, findings, differs
 
 
 FIRING_CHUNK = 2000
@@ -349,6 +426,7 @@ def patterns_key(patterns: Sequence[Pattern]) -> str:
                 str(p.group),
                 p.min_entropy,
                 p.not_after,
+                list(p.keywords),
                 p.priority,
                 getattr(p.validator, "__name__", ""),
                 [[a.target, a.regexes, a.stopwords, a.require_all] for a in p.allowlists],
@@ -383,6 +461,7 @@ def evaluate(
         "texts": fingerprint([it.id for it in texts]),
         "per_pattern": per_pattern,
         "seed": seed,
+        "leak_check": LEAK_CHECK,
         "jobs": [[pid, kind] for pid, kind, *_ in synthetic_jobs()],
     }
     out.mkdir(parents=True, exist_ok=True)
@@ -395,8 +474,8 @@ def evaluate(
         unit = f"firing-{start // FIRING_CHUNK:05d}"
         if unit in ckpt:
             continue
-        fired, found = firing(texts[start : start + FIRING_CHUNK], patterns)
-        ckpt.add(unit, {"fired": dict(fired), "findings": found})
+        fired, found, differs = firing(texts[start : start + FIRING_CHUNK], patterns)
+        ckpt.add(unit, {"fired": dict(fired), "findings": found, "prefilter_differs": differs})
         log(f"redaction: {unit} done")
     for pid, kind, gen, phrases in synthetic_jobs():
         unit = f"synthetic-{pid}/{kind}"
@@ -409,11 +488,13 @@ def evaluate(
 
     fired_all: Counter[str] = Counter()
     findings: list[dict[str, str]] = []
+    differs_all: list[str] = []
     groups: dict[tuple[str, str], list[SyntheticResult]] = defaultdict(list)
     for unit, data in sorted(ckpt.units.items()):
         if unit.startswith("firing-"):
             fired_all.update(data["fired"])
             findings.extend(data["findings"])
+            differs_all.extend(data["prefilter_differs"])
         else:
             pid, kind = unit.removeprefix("synthetic-").split("/")
             for leak, labels, equal in data:
@@ -443,6 +524,8 @@ def evaluate(
     summary: dict[str, Any] = {
         "texts": len(texts),
         "patterns": len(patterns),
+        "patterns_with_keywords": sum(bool(p.keywords) for p in patterns),
+        "prefilter_differs": differs_all,
         "firing": {
             pid: {
                 "items": n,
@@ -481,19 +564,51 @@ def render_redaction(summary: dict[str, Any]) -> str:
         "Near misses (bad check digit, too short): *redacted* should be 0 for the named "
         "pattern's label.",
         "",
+    ]
+    head = [
         "| Pattern | Kind | n | Redacted % | Expected label % | Stream = one-shot % "
         "| Other labels |",
         "|---|---|---:|---:|---:|---:|---|",
     ]
-    for key, s in summary["synthetic"].items():
-        pid, kind = key.split("/")
-        n = s["n"]
-        redacted = n - s["leaked"] if kind == "positive" else s["expected_label"]
-        others = ", ".join(f"{k} {v}" for k, v in sorted(s["other_labels"].items())) or "-"
-        lines.append(
-            f"| {pid} | {kind} | {n} | {100 * redacted / n:.1f} | "
-            f"{100 * s['expected_label'] / n:.1f} | {100 * s['stream_equal'] / n:.1f} | {others} |"
-        )
+
+    def rows(garbled: bool) -> list[str]:
+        out: list[str] = []
+        for key, s in summary["synthetic"].items():
+            pid, kind = key.split("/")
+            if kind.startswith("garbled:") != garbled:
+                continue
+            n = s["n"]
+            redacted = s["expected_label"] if kind == "near_miss" else n - s["leaked"]
+            others = ", ".join(f"{k} {v}" for k, v in sorted(s["other_labels"].items())) or "-"
+            out.append(
+                f"| {pid} | {kind.removeprefix('garbled:')} | {n} | {100 * redacted / n:.1f} | "
+                f"{100 * s['expected_label'] / n:.1f} | {100 * s['stream_equal'] / n:.1f} "
+                f"| {others} |"
+            )
+        return out
+
+    lines += [*head, *rows(False)]
+    lines += [
+        "",
+        "## Values garbled the way models repeat them",
+        "",
+        "*wrapped*: in backticks, quotes, brackets or bold, or followed by punctuation. "
+        "*longer* / *shorter*: a token with 1-4 characters added or 1-3 dropped. "
+        "*context*: other surroundings (a connection string without its host, a bare "
+        "`Bearer`). *Redacted* = no 8-character piece of the value as written came out.",
+        "",
+        *head,
+        *rows(True),
+    ]
+    differs = summary.get("prefilter_differs", [])
+    lines += [
+        "",
+        "## Keyword prefilter",
+        "",
+        f"{summary.get('patterns_with_keywords', 0)} patterns run only where one of their "
+        f"keywords is present. Texts whose output changes without the prefilter: "
+        f"**{len(differs)}**" + (f" ({', '.join(differs[:10])})" if differs else "") + ".",
+    ]
     lines += [
         "",
         "## How often each pattern fires on public text",

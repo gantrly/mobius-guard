@@ -13,7 +13,14 @@ from mobiusguard_eval.detectors import score_items
 from mobiusguard_eval.detectors.keyword import KeywordDetector
 from mobiusguard_eval.detectors.tfidf import TfidfLosoDetector
 from mobiusguard_eval.items import ATTACK, BENIGN, Item, make_item, write_jsonl
-from mobiusguard_eval.redaction import GENERATORS, NEAR_MISSES, evaluate, leaked, synthetic
+from mobiusguard_eval.redaction import (
+    GENERATORS,
+    NEAR_MISSES,
+    evaluate,
+    garbled_jobs,
+    leaked,
+    synthetic,
+)
 from mobiusguard_eval.run import compute, report, score
 from mobiusguard_eval.suite import assign_splits, obfuscated
 from mobiusguard_redact import default_patterns, redact
@@ -154,6 +161,29 @@ def test_redaction_evaluate_writes_report(tmp_path: Path) -> None:
     assert summary["firing"]["email"]["items"] == 1
     assert (tmp_path / "redaction_report.md").read_text().startswith("# Redactor evaluation")
     assert summary["synthetic"]["email/positive"]["leaked"] == 0
+    assert summary["prefilter_differs"] == []
+    assert (
+        "## Values garbled the way models repeat them"
+        in (tmp_path / "redaction_report.md").read_text()
+    )
+
+
+def test_a_piece_that_is_also_in_the_message_is_not_a_leak() -> None:
+    url = "https://hooks.slack.com/services/T0/B0/abc"
+    carrier = "which devices or services do you use?"
+    assert not leaked(url, f"{carrier} [REDACTED:slack_webhook_url]", context=carrier)
+    assert leaked(url, f"{carrier} hooks.slack.com", context=carrier)
+
+
+def test_garbled_values_are_garbled_as_named() -> None:
+    kinds = {kind for _, kind, _, _ in garbled_jobs()}
+    assert kinds == {"garbled:wrapped", "garbled:longer", "garbled:shorter", "garbled:context"}
+    for pid, kind, gen, _ in garbled_jobs():
+        if kind not in ("garbled:longer", "garbled:shorter"):
+            continue
+        base = GENERATORS[pid][0](random.Random(5))
+        value = gen(random.Random(5))
+        assert (len(value) > len(base)) if kind == "garbled:longer" else (len(value) < len(base))
 
 
 def test_cli_sources_build_score_report(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
