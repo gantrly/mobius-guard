@@ -34,8 +34,8 @@ match is accepted, outside partial matching. A regression test covers the case.
 
 **Delay is about one word.** gitleaks' keyword rules (`<word>_api_key = …`) can start at
 any word, so the last unfinished word is held. Measured on this repo's docs and code in
-4-character chunks (2026-11-02, AWS g6.xlarge CPU, Python 3.12, all 245 patterns): output
-trails input by 3 characters at P50 and 41 at P99.
+4-character chunks (2026-11-03, AWS g6.xlarge CPU, Python 3.12, all 245 patterns): output
+trails input by 3 characters at P50, 36 at P99 and 169 at most.
 
 **The curl rules follow continued lines only (2026-11-02).** gitleaks' `curl-auth-header`
 and `curl-auth-user` looked up to five lines past the word `curl` for the header or user

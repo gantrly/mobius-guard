@@ -1,7 +1,7 @@
 # mobiusguard-eval
 
 The Mobius Guard evaluation harness. Part of [Mobius Guard](https://github.com/gantrly/mobius-guard).
-Pre-alpha.
+Alpha: the API may still change before 1.0.
 
 It scores prompt-injection detectors as recall at a fixed false-positive rate, with
 thresholds set on ordinary traffic and every reported set out of sample, attack families

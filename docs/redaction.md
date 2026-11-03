@@ -57,8 +57,8 @@ the rest of it would still be exposed.
   split across two events. Property tests check this at every split point for every
   shipped pattern.
 - **About one word of delay.** Text that cannot be part of a secret is passed on at once;
-  only where a secret might be starting is text held back (3 characters at the median and
-  41 at P99 on this repository's own docs and code).
+  only where a secret might be starting is text held back (3 characters at the median, 36
+  at P99 and 169 at most on this repository's own docs and code).
 - In the proxy, each text and each tool-call argument stream is redacted separately: per
   choice in Chat Completions, per output item in Responses, per content block in Anthropic
   Messages. Anthropic thinking blocks are left untouched, because they carry a signature
