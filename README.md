@@ -15,6 +15,8 @@
 <p align="center">
   <a href="#licence"><img alt="Licence: Apache-2.0" src="https://img.shields.io/badge/licence-Apache--2.0-1b1e23?style=flat-square"></a>
   <img alt="Status: v0.1 ready to release" src="https://img.shields.io/badge/status-v0.1%20ready-f5b301?style=flat-square">
+  <a href="https://github.com/gantrly/mobius-guard/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/gantrly/mobius-guard/ci.yml?branch=main&style=flat-square&label=CI"></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/gantrly/mobius-guard"><img alt="OpenSSF Scorecard" src="https://img.shields.io/ossf-scorecard/github.com/gantrly/mobius-guard?style=flat-square&label=OpenSSF%20Scorecard"></a>
   <img alt="Python 3.11 to 3.13" src="https://img.shields.io/badge/Python-3.11%20%C2%B7%203.12%20%C2%B7%203.13-3776ab?style=flat-square&logo=python&logoColor=white">
   <img alt="Pyright strict" src="https://img.shields.io/badge/types-pyright%20strict-3178c6?style=flat-square">
   <img alt="Property-based tests" src="https://img.shields.io/badge/tests-Hypothesis-1e7f4a?style=flat-square">
@@ -157,8 +159,9 @@ run behind it. Mobius Guard has no dependency on Gantrly and works with any LLM 
 
 ## Contributing
 
-Issues and pull requests are welcome: start with [CONTRIBUTING.md](CONTRIBUTING.md). Found a
-way past the guard? Report it privately ([SECURITY.md](SECURITY.md)).
+Issues and pull requests are welcome: start with [CONTRIBUTING.md](CONTRIBUTING.md).
+Questions and ideas: [Discussions](https://github.com/gantrly/mobius-guard/discussions).
+Found a way past the guard? Report it privately ([SECURITY.md](SECURITY.md)).
 
 ## Licence
 

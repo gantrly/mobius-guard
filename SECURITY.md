@@ -31,4 +31,6 @@ fix, and credit you in the release notes if you'd like.
 
 ## Supported versions
 
-Mobius Guard is pre-release. Fixes go into the latest version only.
+Fixes go into the latest release only (currently the 0.1 series). Releases are published from
+this repository's CI with PyPI trusted publishing and build provenance: `gh attestation
+verify <file> -R gantrly/mobius-guard` shows where a wheel was built.

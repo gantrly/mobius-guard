@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Ask a question or share an idea
+    url: https://github.com/gantrly/mobius-guard/discussions
+    about: Questions, ideas and show-and-tell go to Discussions.
   - name: Report a security vulnerability in Mobius Guard
     url: https://github.com/gantrly/mobius-guard/security/advisories/new
     about: Please report vulnerabilities privately, not as a public issue.

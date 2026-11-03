@@ -1,9 +1,10 @@
 name: Release
 
 # Runs when a version tag (v0.1.0, ...) is pushed: checks, builds, tests the wheels in a
-# clean environment, then publishes each package to PyPI with trusted publishing (no stored
-# token). Each package publishes from its own GitHub environment, because PyPI accepts a
-# publisher configuration for one project only. See docs/releasing.md.
+# clean environment and attests where they were built; then publishes each package to PyPI
+# with trusted publishing (no stored token), each from its own GitHub environment because
+# PyPI accepts a publisher configuration for one project only; then creates the GitHub
+# release with the changelog entry and the files. See docs/releasing.md.
 
 on:
   push:
@@ -15,11 +16,15 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # build provenance
+      attestations: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
       - run: uv sync --locked
       - run: make check
       - name: The tag matches every package version
@@ -32,7 +37,10 @@ jobs:
       - run: uv build --all-packages
       - name: Install the wheels in a clean environment and try them
         run: scripts/check_dist.sh dist
-      - uses: actions/upload-artifact@v7
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/*
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dist
           path: dist/
@@ -49,15 +57,40 @@ jobs:
           - { project: mobiusguard-redact, files: mobiusguard_redact }
           - { project: mobiusguard, files: mobiusguard }
           - { project: mobiusguard-eval, files: mobiusguard_eval }
-    environment: pypi-${{ matrix.project }}
+    environment:
+      name: pypi-${{ matrix.project }}
+      url: https://pypi.org/project/${{ matrix.project }}/
     permissions:
       contents: read
       id-token: write # trusted publishing
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: dist
           path: dist/
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
       - name: Publish ${{ matrix.project }}
-        run: uv publish --trusted-publishing always dist/${{ matrix.files }}-*
+        env:
+          FILES: ${{ matrix.files }}
+        run: uv publish --trusted-publishing always dist/"$FILES"-*
+
+  github-release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist/
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/release_notes.py "${GITHUB_REF_NAME#v}" > notes.md
+          gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "Mobius Guard $GITHUB_REF_NAME" --notes-file notes.md --generate-notes
