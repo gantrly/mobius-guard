@@ -63,4 +63,6 @@ def test_held_keys_with_client_tokens_are_fine(tmp_path: Path) -> None:
 
 def test_a_missing_key_variable_is_warned_about(tmp_path: Path) -> None:
     env = {"MOBIUSGUARD_CLIENT_TOKENS": "t1"}
-    assert sum("which is not set" in w for w in warnings(load(_held(tmp_path), env), env)) == 2
+    found = warnings(load(_held(tmp_path), env), env)
+    assert "the OpenAI upstream's api_key_env variable is not set" in found
+    assert "the Anthropic upstream's api_key_env variable is not set" in found

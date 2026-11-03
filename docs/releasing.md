@@ -37,8 +37,9 @@ you approve it.
 1. On a branch, set the version in the three `__init__.py` files (`__version__`) and, for a
    new minor version, the ranges between the packages in `packages/mobiusguard/pyproject.toml`
    and `packages/mobiusguard-eval/pyproject.toml`; a test fails if they disagree.
-2. Give the version a **dated** changelog section: `## 0.2.0 (2026-12-01)`. Until it is
-   dated, merging does not release anything.
+2. Rename the changelog's `## Unreleased` section to the version and date:
+   `## 0.2.0 (2026-12-01)`, and start a new, empty `## Unreleased` above it. Until the
+   version has a dated section, merging does not release anything.
 3. `uv lock`, `make check`, and `uv build --all-packages && scripts/check_dist.sh dist`.
 4. Open the pull request (label it, put it on the release's milestone) and merge it.
 5. **Tag release** (`.github/workflows/tag-release.yml`) sees a ready version without a tag

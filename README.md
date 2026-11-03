@@ -14,8 +14,9 @@
 
 <p align="center">
   <a href="#licence"><img alt="Licence: Apache-2.0" src="https://img.shields.io/badge/licence-Apache--2.0-1b1e23?style=flat-square"></a>
-  <a href="https://pypi.org/project/mobiusguard/"><img alt="PyPI" src="https://img.shields.io/pypi/v/mobiusguard?style=flat-square&color=f5b301&label=PyPI"></a>
+  <a href="https://pypi.org/project/mobiusguard/"><img alt="PyPI" src="https://img.shields.io/pypi/v/mobiusguard?style=flat-square&color=f5b301&label=PyPI&cacheSeconds=3600"></a>
   <a href="https://github.com/gantrly/mobius-guard/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/gantrly/mobius-guard/ci.yml?branch=main&style=flat-square&label=CI"></a>
+  <a href="https://www.bestpractices.dev/projects/16287"><img alt="OpenSSF Best Practices" src="https://www.bestpractices.dev/projects/16287/badge"></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/gantrly/mobius-guard"><img alt="OpenSSF Scorecard" src="https://img.shields.io/ossf-scorecard/github.com/gantrly/mobius-guard?style=flat-square&label=OpenSSF%20Scorecard"></a>
   <img alt="Python 3.11 to 3.13" src="https://img.shields.io/badge/Python-3.11%20%C2%B7%203.12%20%C2%B7%203.13-3776ab?style=flat-square&logo=python&logoColor=white">
   <img alt="Pyright strict" src="https://img.shields.io/badge/types-pyright%20strict-3178c6?style=flat-square">
