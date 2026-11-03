@@ -54,8 +54,8 @@ uv build --all-packages && scripts/check_dist.sh dist   # wheels in a clean envi
   give each job only the permissions it needs; Dependabot keeps the pins current.
 - **Releases** follow [docs/releasing.md](docs/releasing.md): the three packages share one
   version, set in each `__init__.py`; a test fails if the versions or the ranges between
-  the packages disagree. Add a `CHANGELOG.md` entry for anything users notice, under an
-  undated heading: **dating the section for the current version and merging releases it**
+  the packages disagree. Add a `CHANGELOG.md` entry for anything users notice, under
+  `## Unreleased`: **dating the section for the current version and merging releases it**
   (tag-release.yml tags and starts the release, which then waits for approval).
 - `make check` must pass before saying something is done. Say plainly what was and wasn't
   tested.

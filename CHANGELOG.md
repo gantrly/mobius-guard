@@ -4,6 +4,12 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
 `mobiusguard-eval`) are released together with one version number. Versions follow
 [Semantic Versioning](https://semver.org); before 1.0, a minor version may change the API.
 
+## Unreleased
+
+- SECURITY.md: response times, coordinated disclosure, safe harbour, scope and supported
+  versions. OpenSSF Best Practices badge in the README.
+- `serve` names the upstream, not the variable, when a held key's variable is not set.
+
 ## 0.1.0 (2026-11-03)
 
 The first release.
