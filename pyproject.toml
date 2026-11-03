@@ -20,13 +20,13 @@ dev = [
   "mobiusguard-redact",
   "mobiusguard",
   "mobiusguard-eval[sklearn]",
-  "pytest>=8.3",
+  "pytest>=9.2.0",
   "pytest-cov>=6.0",
-  "hypothesis>=6.120",
+  "hypothesis>=6.170.14",
   "ruff>=0.8",
   "pyright>=1.1.390",
   "pre-commit>=4.0",
-  "types-regex>=2026.9.29.20261017",
+  "types-regex>=2026.9.29.20261030",
 ]
 
 # ---------------------------------------------------------------- ruff
