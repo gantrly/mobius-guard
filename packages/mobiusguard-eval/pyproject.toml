@@ -39,7 +39,7 @@ sklearn = [
 ]
 hf = [
     "torch>=2.5",
-    "transformers>=4.46",
+    "transformers>=5.22.1",
 ]
 
 [build-system]
