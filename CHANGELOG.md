@@ -4,7 +4,7 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
 `mobiusguard-eval`) are released together with one version number. Versions follow
 [Semantic Versioning](https://semver.org); before 1.0, a minor version may change the API.
 
-## 0.1.0 (not yet released)
+## 0.1.0 (2026-11-03)
 
 The first release.
 

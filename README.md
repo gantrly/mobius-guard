@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="#licence"><img alt="Licence: Apache-2.0" src="https://img.shields.io/badge/licence-Apache--2.0-1b1e23?style=flat-square"></a>
-  <img alt="Status: v0.1 ready to release" src="https://img.shields.io/badge/status-v0.1%20ready-f5b301?style=flat-square">
+  <a href="https://pypi.org/project/mobiusguard/"><img alt="PyPI" src="https://img.shields.io/pypi/v/mobiusguard?style=flat-square&color=f5b301&label=PyPI"></a>
   <a href="https://github.com/gantrly/mobius-guard/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/gantrly/mobius-guard/ci.yml?branch=main&style=flat-square&label=CI"></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/gantrly/mobius-guard"><img alt="OpenSSF Scorecard" src="https://img.shields.io/ossf-scorecard/github.com/gantrly/mobius-guard?style=flat-square&label=OpenSSF%20Scorecard"></a>
   <img alt="Python 3.11 to 3.13" src="https://img.shields.io/badge/Python-3.11%20%C2%B7%203.12%20%C2%B7%203.13-3776ab?style=flat-square&logo=python&logoColor=white">
@@ -100,7 +100,7 @@ logged in plain text unless you ask. Details: [architecture](docs/architecture.m
 ## Quickstart
 
 ```sh
-pip install mobiusguard        # not on PyPI yet: until v0.1, `uv run mobiusguard` in a checkout
+pip install mobiusguard        # Python 3.11 or newer
 mobiusguard serve --port 8787
 ```
 
@@ -145,7 +145,7 @@ docker build -t mobiusguard . && docker run -p 127.0.0.1:8787:8787 mobiusguard
 
 ```mermaid
 timeline
-    v0.1 · ready : Streaming redactor : Evaluation harness : Proxy for three APIs
+    v0.1 · released : Streaming redactor : Evaluation harness : Proxy for three APIs
     v0.2 : Own small CPU classifier : Red-team findings as reviewed patches
     v0.3 : Dashboard : Tool, RAG and MCP screening : LiteLLM and Presidio adapters
 ```

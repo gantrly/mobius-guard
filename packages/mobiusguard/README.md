@@ -1,7 +1,7 @@
 # mobiusguard
 
 The Mobius Guard firewall proxy. Part of [Mobius Guard](https://github.com/gantrly/mobius-guard).
-Pre-alpha.
+Alpha: the API may still change before 1.0.
 
 It sits between your app and the model and speaks three APIs: OpenAI Chat Completions
 (`/v1/chat/completions`), OpenAI Responses (`/v1/responses`) and Anthropic Messages

@@ -13,8 +13,10 @@ depend on each other within the same minor version (`>=0.1.0,<0.2`), and a test 
 the versions or these ranges disagree. One number makes "which redactor does this proxy
 use" a non-question, at the cost of releasing a package that did not change.
 
-**Published from a tag, by the CI, with trusted publishing.** Pushing a `v*` tag runs
-`.github/workflows/release.yml`: the full checks, a check that the tag matches every
+**Published from a tag, by the CI, with trusted publishing.** Merging a release pull
+request (a version with a dated changelog section) makes `tag-release.yml` tag the merge
+commit and start `.github/workflows/release.yml` on the tag (added 2026-11-03, so that
+tagging is not a manual step); a maintainer can also push a `v*` tag. Release runs: the full checks, a check that the tag matches every
 package version, the build, an install of the wheels into a clean environment
 (`scripts/check_dist.sh`), then `uv publish` with PyPI trusted publishing. No PyPI token
 exists anywhere. PyPI accepts one publisher configuration per project, so each package is

@@ -3,7 +3,8 @@
 Streaming redaction for LLM output. It rewrites secrets and personal data in text that
 arrives in chunks, including a secret split across two chunks, **without stopping the
 stream** and without buffering the whole reply. Part of
-[Mobius Guard](https://github.com/gantrly/mobius-guard). Pre-alpha.
+[Mobius Guard](https://github.com/gantrly/mobius-guard). Alpha: the API may still change before
+1.0.
 
 ```python
 from mobiusguard_redact import StreamRedactor
