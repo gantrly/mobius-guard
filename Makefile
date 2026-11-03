@@ -17,10 +17,10 @@ typecheck:
 	uv run pyright
 
 test:
-	uv run pytest --cov --cov-report=term-missing
+	uv run pytest -n auto --cov --cov-report=term-missing
 
 test-stress:
-	HYPOTHESIS_PROFILE=stress uv run pytest -q
+	HYPOTHESIS_PROFILE=stress uv run pytest -n auto -q
 
 check: lint typecheck test
 
