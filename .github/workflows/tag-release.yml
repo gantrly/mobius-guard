@@ -1,0 +1,49 @@
+name: Tag release
+
+# When main carries a version that is ready to release (scripts/release_version.py: the
+# packages agree and CHANGELOG.md has a dated section) and has no tag yet, tag that commit
+# and start the Release workflow on the tag. The release still waits for a person to
+# approve the pypi-* environments. A tag made with the workflow token does not trigger
+# workflows by itself, so the Release workflow is started explicitly (workflow_dispatch).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tag-release
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the tag
+      actions: write # start the Release workflow
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: The version ready to release, if any
+        id: version
+        run: echo "version=$(python3 scripts/release_version.py)" >> "$GITHUB_OUTPUT"
+      - name: Tag it and start the release
+        if: steps.version.outputs.version != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          tag="v$VERSION"
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" > /dev/null 2>&1; then
+            echo "$tag already exists; nothing to release" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          obj=$(gh api "repos/$GITHUB_REPOSITORY/git/tags" -f tag="$tag" \
+                -f message="Mobius Guard $tag" -f object="$GITHUB_SHA" -f type=commit -q .sha)
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$tag" -f sha="$obj" > /dev/null
+          gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "$tag"
+          echo "Tagged $tag at $GITHUB_SHA and started the Release workflow" >> "$GITHUB_STEP_SUMMARY"
