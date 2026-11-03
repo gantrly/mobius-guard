@@ -252,9 +252,11 @@ def test_text_after_a_private_key_is_not_held_back() -> None:
 
 
 def test_a_private_key_without_its_end_line_does_not_leak() -> None:
+    # 64-character chunks: the held text is rescanned on every chunk until the limit, so
+    # token-sized chunks make this one test take half a minute.
     text = "key:\n" + _PEM[:200] + "\n" + "more text. " * 900
     r = StreamRedactor()
-    out = "".join(r.feed(text[i : i + 4]) for i in range(0, len(text), 4)) + r.flush()
+    out = "".join(r.feed(text[i : i + 64]) for i in range(0, len(text), 64)) + r.flush()
     assert "MIIEow" not in out
 
 

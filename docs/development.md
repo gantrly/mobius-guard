@@ -5,8 +5,8 @@ Requires [uv](https://docs.astral.sh/uv/). Read [CONTRIBUTING.md](../CONTRIBUTIN
 
 ```sh
 make install       # .venv and the pre-commit hook
-make check         # ruff, pyright strict, pytest with coverage: what CI runs
-make test-stress   # property tests with 5,000 examples each (about 6 minutes)
+make check         # ruff, pyright strict, pytest (in parallel) with coverage: what CI runs
+make test-stress   # property tests with 5,000 examples each, in parallel (a few minutes)
 make bench         # redactor latency per chunk and how much is held back
 uv build --all-packages && scripts/check_dist.sh dist   # the wheels in a clean environment
 ```
