@@ -19,7 +19,7 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-    "huggingface-hub>=0.26",
+    "huggingface-hub>=2.4.0",
     "mobiusguard>=0.1.0,<0.2",
     "mobiusguard-redact>=0.1.0,<0.2",
     "numpy>=2.0",
