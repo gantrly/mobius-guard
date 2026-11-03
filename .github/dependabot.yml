@@ -4,6 +4,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Update uv.lock only: CI tests the newest versions, while the published packages keep
+    # their wide ranges (raising "torch>=2.5" to the latest would force users to upgrade).
+    versioning-strategy: lockfile-only
     labels: [dependencies]
     groups:
       dev-tools:
