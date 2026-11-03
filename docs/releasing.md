@@ -31,20 +31,26 @@ No PyPI token is stored anywhere: the workflow proves who it is with GitHub's OI
 
 ## Each release
 
-1. Set the version in the three `__init__.py` files (`__version__`) and, for a new minor
-   version, the ranges between the packages in `packages/mobiusguard/pyproject.toml` and
-   `packages/mobiusguard-eval/pyproject.toml`. A test fails if they disagree.
-2. Move the changelog entry from "not yet released" to the version and date; for the
-   first release, also change "Pre-alpha" in the READMEs to "Alpha".
-3. `uv lock`, `make check`, then build and try the wheels in a clean environment:
-   `uv build --all-packages && scripts/check_dist.sh dist`.
-4. Commit, then tag and push the tag: `git tag -s v0.1.0 -m v0.1.0 && git push origin v0.1.0`.
-5. The Release workflow runs the checks again, checks the tag against every package
-   version, builds and tests the wheels in a clean environment, then waits: approve the
-   three `pypi-*` deployments in the one *Review deployments* dialog. If an upload fails,
-   re-run the failed job: files already on PyPI are skipped.
-6. The last job creates the GitHub release: the changelog entry, install lines, the
+A release is a pull request; merging it starts the release, and nothing reaches PyPI until
+you approve it.
+
+1. On a branch, set the version in the three `__init__.py` files (`__version__`) and, for a
+   new minor version, the ranges between the packages in `packages/mobiusguard/pyproject.toml`
+   and `packages/mobiusguard-eval/pyproject.toml`; a test fails if they disagree.
+2. Give the version a **dated** changelog section: `## 0.2.0 (2026-12-01)`. Until it is
+   dated, merging does not release anything.
+3. `uv lock`, `make check`, and `uv build --all-packages && scripts/check_dist.sh dist`.
+4. Open the pull request (label it, put it on the release's milestone) and merge it.
+5. **Tag release** (`.github/workflows/tag-release.yml`) sees a ready version without a tag
+   on `main`, creates the tag `vX.Y.Z` on the merge commit and starts **Release** on it.
+6. Release runs the checks again, checks the tag against every package version, builds,
+   tests the wheels in a clean environment, attests where they were built, then waits:
+   approve the three `pypi-*` deployments in the one *Review deployments* dialog. If an
+   upload fails, re-run the failed job: files already on PyPI are skipped.
+7. The last job creates the GitHub release: the changelog entry, install lines, the
    generated list of merged pull requests (grouped by label, `.github/release.yml`) and the
-   wheels and sdists, each with a build provenance attestation
-   (`gh attestation verify <file> -R gantrly/mobius-guard`). Announce it in Discussions →
-   Announcements and close the release's milestone.
+   wheels and sdists (`gh attestation verify <file> -R gantrly/mobius-guard`). Announce it in
+   Discussions → Announcements and close the milestone.
+
+A maintainer can still release by hand by pushing a `v*` tag; only admins and GitHub
+Actions may create those tags (the *release tags* ruleset).
