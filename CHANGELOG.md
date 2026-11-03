@@ -7,7 +7,8 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
 ## Unreleased
 
 - SECURITY.md: response times, coordinated disclosure, safe harbour, scope and supported
-  versions.
+  versions. OpenSSF Best Practices badge in the README.
+- `serve` names the upstream, not the variable, when a held key's variable is not set.
 
 ## 0.1.0 (2026-11-03)
 
