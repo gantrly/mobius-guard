@@ -34,7 +34,7 @@ Issues = "https://github.com/gantrly/mobius-guard/issues"
 
 [project.optional-dependencies]
 classifier = [
-    "torch>=2.5",
+    "torch>=2.15.0",
     "transformers>=4.46",
 ]
 otel = [
