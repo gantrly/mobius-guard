@@ -1,0 +1,19 @@
+# Categories for the automatically generated part of release notes (by pull request label).
+changelog:
+  exclude:
+    labels: [skip-changelog]
+  categories:
+    - title: Security
+      labels: [security]
+    - title: Detection and redaction
+      labels: [detection, redaction]
+    - title: Features
+      labels: [enhancement]
+    - title: Fixes
+      labels: [bug]
+    - title: Documentation
+      labels: [documentation]
+    - title: Dependencies
+      labels: [dependencies]
+    - title: Other changes
+      labels: ["*"]

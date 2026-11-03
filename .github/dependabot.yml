@@ -4,6 +4,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    labels: [dependencies]
     groups:
       dev-tools:
         dependency-type: development
@@ -11,3 +12,12 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    labels: [dependencies]
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    labels: [dependencies]

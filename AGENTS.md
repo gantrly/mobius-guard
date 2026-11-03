@@ -46,7 +46,12 @@ uv build --all-packages && scripts/check_dist.sh dist   # wheels in a clean envi
 - **No datasets, models or secrets in git.** Every data source goes in the provenance
   ledger with its licence and which known models trained on it.
 - **Commits:** sign off (`git commit -s`), with a clear message about what changed and why.
-  Push only when asked.
+  Push only when asked. `main` is protected: work on a branch and open a pull request; it
+  is squash-merged once CI, CodeQL and the sign-off check pass. Label it (`detection`,
+  `redaction`, `proxy`, `evaluation`, `security`, `bug`, `enhancement`, `documentation`), since the
+  labels group the generated release notes.
+- **Workflows:** pin every action to a full commit SHA with its version in a comment, and
+  give each job only the permissions it needs; Dependabot keeps the pins current.
 - **Releases** follow [docs/releasing.md](docs/releasing.md): the three packages share one
   version, set in each `__init__.py`; a test fails if the versions or the ranges between
   the packages disagree. Add a `CHANGELOG.md` entry for anything users notice.

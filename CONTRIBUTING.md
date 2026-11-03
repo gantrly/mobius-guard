@@ -54,3 +54,7 @@ unsigned commits can't be merged.
 ## Pull requests
 
 Keep them focused on one change. Fill in the template: what changed, and how you tested it.
+`main` is protected: every change lands through a pull request, squash-merged, once CI
+(tests on Linux and macOS, the build, CodeQL and the sign-off check) passes. Questions and
+ideas that aren't a concrete change are welcome in
+[Discussions](https://github.com/gantrly/mobius-guard/discussions).

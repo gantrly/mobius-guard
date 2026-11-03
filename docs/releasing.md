@@ -43,4 +43,8 @@ No PyPI token is stored anywhere: the workflow proves who it is with GitHub's OI
    version, builds and tests the wheels in a clean environment, then waits: approve the
    three `pypi-*` deployments in the one *Review deployments* dialog. If an upload fails,
    re-run the failed job: files already on PyPI are skipped.
-6. Create the GitHub release from the tag, with the changelog entry.
+6. The last job creates the GitHub release: the changelog entry, install lines, the
+   generated list of merged pull requests (grouped by label, `.github/release.yml`) and the
+   wheels and sdists, each with a build provenance attestation
+   (`gh attestation verify <file> -R gantrly/mobius-guard`). Announce it in Discussions →
+   Announcements and close the release's milestone.
