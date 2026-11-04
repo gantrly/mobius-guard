@@ -40,6 +40,21 @@ def _keep(text: object) -> str | None:
     return None if junk(s) else s
 
 
+def _json_rows(path: Path) -> Iterator[dict[str, Any]]:
+    """A JSON array, or JSON Lines (one object per line), read either way."""
+    with path.open(encoding="utf-8") as f:
+        head = f.read(1)
+        while head.isspace():
+            head = f.read(1)
+        f.seek(0)
+        if head == "[":
+            yield from cast("list[dict[str, Any]]", json.load(f))
+            return
+        for line in f:
+            if line.strip():
+                yield cast("dict[str, Any]", json.loads(line))
+
+
 def _add(source: Source) -> None:
     register(source, ledger=TRAINING)
 
@@ -113,8 +128,7 @@ _add(
 
 
 def _satml(paths: list[Path]) -> Iterator[Item]:
-    chats = cast("list[dict[str, Any]]", json.loads(paths[0].read_text(encoding="utf-8")))
-    for chat in chats:
+    for chat in _json_rows(paths[0]):
         if not chat.get("is_attack") or chat.get("is_evaluation"):
             continue
         for msg in cast("list[dict[str, Any]]", chat.get("history") or []):
@@ -216,8 +230,7 @@ _add(
 
 
 def _salad(paths: list[Path]) -> Iterator[Item]:
-    rows = cast("list[dict[str, Any]]", json.loads(paths[0].read_text(encoding="utf-8")))
-    for r in rows:
+    for r in _json_rows(paths[0]):
         if text := _keep(r.get("augq")):
             yield make_item(text, ATTACK, "salad", lang="en", meta={"method": str(r.get("method"))})
 
