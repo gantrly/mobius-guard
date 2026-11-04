@@ -46,15 +46,18 @@ class Source:
 
 
 LEDGER: dict[str, Source] = {}
+# Training sources for the v0.2 classifier (decision 0012). Kept apart from LEDGER, so the
+# evaluation suite never includes them; none of LEDGER's sources may appear here.
+TRAINING: dict[str, Source] = {}
 
 
-def register(source: Source) -> Source:
-    if source.id in LEDGER:
+def register(source: Source, *, ledger: dict[str, Source] = LEDGER) -> Source:
+    if source.id in LEDGER or source.id in TRAINING:
         raise ValueError(f"duplicate source {source.id}")
     for f in source.files:
         if f.kind == "url" and not f.sha256:
             raise ValueError(f"{source.id}: url files need a sha256")
         if f.kind == "hf_dataset" and len(f.revision) != 40:
             raise ValueError(f"{source.id}: pin Hugging Face files to a commit hash")
-    LEDGER[source.id] = source
+    ledger[source.id] = source
     return source

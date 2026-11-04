@@ -7,6 +7,9 @@
     latency --detector D [--threads N] --out runs/latency-D.json [--suite S]
     redaction --suite S --out runs/redaction [--per-pattern 200]
     pipeline --out runs [--tag v0.1] [--device cuda]   all of the above, in order
+    train-sources                    list the v0.2 training ledger
+    train-data --suite S --out runs/train-v0.2 [--cap 20000]   build the training set
+    train --data D --base B --seed N --out runs/model-B-sN [--limit N]   fine-tune one run
 
 Every step saves its work as it goes and skips what is already done for the same inputs,
 so running a command again resumes it. ``--force`` redoes a step from the start.
@@ -226,6 +229,43 @@ def pipeline(
 # ------------------------------------------------------------------------------ main
 
 
+def step_train_data(suite: Path, out: Path, *, cap: int, source_ids: Sequence[str] | None = None,
+                    force: bool = False) -> None:  # fmt: skip
+    from . import train_data
+    from .train_sources import training_sources
+
+    sources = training_sources(list(source_ids) if source_ids else None)
+    items = load_suite(suite)
+    key = train_data.build_key(sources, train_data.suite_key(items), cap)
+    if not force and train_data.is_built(out, key):
+        log(f"train-data: {out} is up to date, skipping (--force to rebuild)")
+        return
+    loaded: dict[str, list[Item]] = {}
+    for s in sources:
+        loaded[s.id] = list(s.parse(fetch(s)))
+        log(f"train-data: {s.id} {len(loaded[s.id]):,} items")
+    summary = train_data.build(sources, loaded, items, out, cap=cap, log=log)
+    log(f"train-data: {summary['items']}, labels {dict(summary['labels'])}")
+
+
+def step_train(data: Path, out: Path, *, base: str, seed: int, epochs: int, lr: float,
+               batch_size: int, max_length: int, limit: int, device: str) -> None:  # fmt: skip
+    from .train import TrainConfig, train
+
+    cfg = TrainConfig(base=base, seed=seed, epochs=epochs, lr=lr, batch_size=batch_size,
+                      max_length=max_length, limit=limit)  # fmt: skip
+    result = train(data, cfg, out, device=device, log=log)
+    log(f"train: best epoch {result['best_epoch']}, wrote {out / 'best'}")
+
+
+def _train_sources(_: argparse.Namespace) -> int:
+    from .train_sources import training_sources
+
+    for s in training_sources():
+        print(f"{s.id:<21} {s.role:<7} {s.licence:<11} {s.title}")
+    return 0
+
+
 def _sources(_: argparse.Namespace) -> int:
     for s in ledger_sources():
         trained = ", ".join(s.trained_on_by) or "-"
@@ -237,7 +277,15 @@ def _run(a: argparse.Namespace) -> int:
     cmd: str = a.command
     if cmd == "sources":
         return _sources(a)
-    if cmd == "build":
+    if cmd == "train-sources":
+        return _train_sources(a)
+    if cmd == "train-data":
+        step_train_data(Path(a.suite), Path(a.out), cap=a.cap, source_ids=a.sources, force=a.force)
+    elif cmd == "train":
+        step_train(Path(a.data), Path(a.out), base=a.base, seed=a.seed, epochs=a.epochs, lr=a.lr,
+                   batch_size=a.batch_size, max_length=a.max_length, limit=a.limit,
+                   device=a.device)  # fmt: skip
+    elif cmd == "build":
         step_build(Path(a.out), a.sources, force=a.force)
     elif cmd == "score":
         step_score(Path(a.suite), a.detector, Path(a.out), device=a.device,
@@ -271,7 +319,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     p = sub.add_parser("score")
     p.add_argument("--suite", required=True)
-    p.add_argument("--detector", required=True, choices=detectors.NAMES)
+    p.add_argument("--detector", required=True, help=f"{', '.join(detectors.NAMES)}, or local:DIR")
     p.add_argument("--out", required=True)
     p.add_argument("--device", default="cpu")
     p.add_argument("--batch-size", type=int, default=32)
@@ -296,6 +344,27 @@ def main(argv: Sequence[str] | None = None) -> int:
     p.add_argument("--out", required=True)
     p.add_argument("--per-pattern", type=int, default=200)
     p.add_argument("--force", action="store_true")
+
+    sub.add_parser("train-sources")
+
+    p = sub.add_parser("train-data", help="build the v0.2 training set")
+    p.add_argument("--suite", required=True, help="the evaluation suite, held out")
+    p.add_argument("--out", required=True)
+    p.add_argument("--cap", type=int, default=20_000, help="items per source")
+    p.add_argument("--sources", nargs="*", help="training source IDs (default: all)")
+    p.add_argument("--force", action="store_true")
+
+    p = sub.add_parser("train", help="fine-tune one base model with one seed")
+    p.add_argument("--data", required=True)
+    p.add_argument("--out", required=True)
+    p.add_argument("--base", required=True, choices=["deberta-v3-xsmall", "mmbert-small"])
+    p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--epochs", type=int, default=3)
+    p.add_argument("--lr", type=float, default=5e-5)
+    p.add_argument("--batch-size", type=int, default=32)
+    p.add_argument("--max-length", type=int, default=256)
+    p.add_argument("--limit", type=int, default=0, help="train on N items only (small run)")
+    p.add_argument("--device", default="cuda")
 
     p = sub.add_parser("pipeline", help="every step in order, resuming what was saved")
     p.add_argument("--out", default="runs")

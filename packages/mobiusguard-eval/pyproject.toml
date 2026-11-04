@@ -49,6 +49,11 @@ hf = [
     "torch>=2.5",
     "transformers>=4.46",
 ]
+# Fine-tuning the v0.2 classifier (decision 0012): DeBERTa-v3's tokenizer needs these.
+train = [
+    "sentencepiece>=0.2",
+    "protobuf>=5",
+]
 
 [build-system]
 requires = ["hatchling>=1.32.4"]
