@@ -50,8 +50,12 @@ you approve it.
    upload fails, re-run the failed job: files already on PyPI are skipped.
 7. The last job creates the GitHub release: the changelog entry, install lines, the
    generated list of merged pull requests (grouped by label, `.github/release.yml`) and the
-   wheels and sdists (`gh attestation verify <file> -R gantrly/mobius-guard`). Announce it in
-   Discussions → Announcements and close the milestone.
+   wheels and sdists. Two more files carry the build provenance:
+   `mobius-guard-vX.Y.Z.sigstore.json` (the Sigstore bundle) and `….intoto.jsonl` (its
+   in-toto envelope). Check a file online with
+   `gh attestation verify <file> -R gantrly/mobius-guard`, or offline with
+   `--bundle mobius-guard-vX.Y.Z.sigstore.json`. PyPI also shows a PEP 740 attestation for
+   each file. Announce the release in Discussions → Announcements and close the milestone.
 
 A maintainer can still release by hand by pushing a `v*` tag; only admins and GitHub
 Actions may create those tags (the *release tags* ruleset).

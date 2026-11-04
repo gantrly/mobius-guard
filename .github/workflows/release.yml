@@ -5,7 +5,9 @@ name: Release
 # clean environment and attests where they were built; then publishes each package to PyPI
 # with trusted publishing (no stored token), each from its own GitHub environment because
 # PyPI accepts a publisher configuration for one project only; then creates the GitHub
-# release with the changelog entry and the files. See docs/releasing.md.
+# release with the changelog entry, the files, and the build provenance as files too
+# (a Sigstore bundle and its in-toto envelope), so it can be checked offline. See
+# docs/releasing.md.
 
 on:
   push:
@@ -43,12 +45,28 @@ jobs:
       - name: Install the wheels in a clean environment and try them
         run: scripts/check_dist.sh dist
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        with:
-          subject-path: dist/*
+        id: attest
+        with: # not dist/* : uv also writes a .gitignore there
+          subject-path: |
+            dist/*.whl
+            dist/*.tar.gz
+      - name: The provenance as release files
+        env:
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: |
+          mkdir provenance
+          name="mobius-guard-$GITHUB_REF_NAME"
+          cp "$BUNDLE" "provenance/$name.sigstore.json"
+          jq -c .dsseEnvelope "$BUNDLE" > "provenance/$name.intoto.jsonl"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dist
           path: dist/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: provenance
+          path: provenance/
           if-no-files-found: error
 
   publish:
@@ -73,11 +91,14 @@ jobs:
         with:
           name: dist
           path: dist/
-      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
-      - name: Publish ${{ matrix.project }}
+      - name: Only ${{ matrix.project }}'s files
         env:
           FILES: ${{ matrix.files }}
-        run: uv publish --trusted-publishing always dist/"$FILES"-*
+        run: mkdir upload && mv dist/"$FILES"-* upload/ && ls upload
+      # Trusted publishing, and PEP 740 attestations on PyPI for each file.
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+        with:
+          packages-dir: upload/
 
   github-release:
     needs: publish
@@ -92,10 +113,14 @@ jobs:
         with:
           name: dist
           path: dist/
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: provenance
+          path: provenance/
       - name: Create the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           python3 scripts/release_notes.py "${GITHUB_REF_NAME#v}" > notes.md
-          gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag \
+          gh release create "$GITHUB_REF_NAME" dist/* provenance/* --repo "$GITHUB_REPOSITORY" --verify-tag \
             --title "Mobius Guard $GITHUB_REF_NAME" --notes-file notes.md --generate-notes

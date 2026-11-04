@@ -16,6 +16,13 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
 - The benchmark measures this case: `benchmarks/redact_stream.py --held`.
 - Dependencies in the lockfile updated to their latest releases; no known
   vulnerabilities.
+- Releases: each GitHub release also carries its build provenance as files, a Sigstore
+  bundle and an in-toto envelope, so a download can be checked offline
+  (`gh attestation verify <file> --bundle …`). The provenance now covers only the wheels
+  and sdists (0.1.0's also listed a stray `.gitignore`). Uploads use
+  `pypa/gh-action-pypi-publish`, which adds PEP 740 attestations on PyPI.
+- A fuzz target for the redactor (`fuzz/redactor.py`, Atheris), run on pull requests that
+  touch the redactor and weekly.
 
 ## 0.1.0 (2026-11-03)
 

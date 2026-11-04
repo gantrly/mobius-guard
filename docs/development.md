@@ -11,6 +11,19 @@ make bench         # redactor latency per chunk and how much is held back
 uv build --all-packages && scripts/check_dist.sh dist   # the wheels in a clean environment
 ```
 
+## Fuzzing
+
+`fuzz/redactor.py` fuzzes the redactor's main guarantee: the same output however the text
+is split. It is built from pieces of what the patterns look for. Atheris (coverage-guided)
+drives the property through Hypothesis, so a failing input is shrunk to a small example.
+The *Fuzz* workflow runs it for 3 minutes on pull requests that touch the redactor, and
+for 20 minutes every week.
+
+```sh
+uv sync --group fuzz && uv run python fuzz/redactor.py -max_total_time=300  # Linux x86_64
+uv run python fuzz/redactor.py --hypothesis   # anywhere: the same property, without Atheris
+```
+
 ## The evaluation harness
 
 Scoring can run on a GPU machine and the report anywhere; every step saves its progress and
@@ -38,6 +51,7 @@ packages/mobiusguard          the proxy: APIs, normalisation, rules, policy, red
 packages/mobiusguard-eval     the evaluation harness: ledger, suite, detectors, metrics, CLI
 scripts/                      gitleaks rule import, live check, wheel check, README images
 benchmarks/                   redactor latency
+fuzz/                         the redactor fuzz target (Atheris)
 examples/                     settings for Ollama, Compose with a local model
 Dockerfile                    the proxy's container image
 docs/                         guides, results, roadmap, architecture, threat model,
