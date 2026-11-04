@@ -14,6 +14,10 @@ Each part is finished, tested and reviewed before the next one starts.
 
 ## v0.2: closed loop and our own model
 
+Plan for the classifier: [decision 0012](decisions/0012-classifier-v0.2.md) (proposed 2026-11-04)
+and its [training data](training-data.md). Released so far: 0.1.1 (2026-11-04), the redactor's
+held-text fix (#17).
+
 - Red-team runner (mutation families, with garak/PyRIT adapters rather than re-writing them).
 - Patch proposals (rules or threshold changes) as reviewable diffs, gated on the benign
   canary set and a sealed holdout.
