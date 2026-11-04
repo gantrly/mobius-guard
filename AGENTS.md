@@ -29,6 +29,7 @@ make fmt        # format and auto-fix
 uv run pytest packages/mobiusguard-redact -q
 make test-stress   # property tests with 5,000 examples each; run after changing a pattern
 make bench         # redactor latency and holdback
+uv run python fuzz/redactor.py --hypothesis   # the fuzz property; Atheris itself runs in CI
 uv build --all-packages && scripts/check_dist.sh dist   # wheels in a clean environment
 ```
 

@@ -18,8 +18,11 @@ request (a version with a dated changelog section) makes `tag-release.yml` tag t
 commit and start `.github/workflows/release.yml` on the tag (added 2026-11-03, so that
 tagging is not a manual step); a maintainer can also push a `v*` tag. Release runs: the full checks, a check that the tag matches every
 package version, the build, an install of the wheels into a clean environment
-(`scripts/check_dist.sh`), then `uv publish` with PyPI trusted publishing. No PyPI token
-exists anywhere. PyPI accepts one publisher configuration per project, so each package is
+(`scripts/check_dist.sh`), then the upload with PyPI trusted publishing. No PyPI token
+exists anywhere. (2026-11-04: the upload moved from `uv publish` to
+`pypa/gh-action-pypi-publish`, which also publishes PEP 740 attestations to PyPI and is the
+publisher OpenSSF Scorecard recognises. The build provenance is also attached to each GitHub
+release as a Sigstore bundle and an in-toto envelope, so it can be checked offline.) PyPI accepts one publisher configuration per project, so each package is
 published by its own job from its own GitHub environment (`pypi-mobiusguard-redact`,
 `pypi-mobiusguard`, `pypi-mobiusguard-eval`); each environment requires a person to
 approve, and the three jobs wait together, so one approval releases all three. Steps in

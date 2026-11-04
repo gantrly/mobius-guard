@@ -29,6 +29,10 @@ dev = [
   "types-regex>=2026.9.29.20261017",
   "pytest-xdist>=3.6",
 ]
+# The fuzz workflow (fuzz/redactor.py). Atheris ships wheels for Linux x86_64 only.
+fuzz = [
+  "atheris>=3.1; sys_platform == 'linux' and platform_machine == 'x86_64' and python_version >= '3.12'",
+]
 
 # ---------------------------------------------------------------- ruff
 [tool.ruff]
@@ -52,6 +56,7 @@ ignore = ["ANN401"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["S101", "S311", "ANN"]
+"fuzz/**" = ["S101"]  # a fuzz target fails by assertion
 
 # ---------------------------------------------------------------- pyright
 [tool.pyright]

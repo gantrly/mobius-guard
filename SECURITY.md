@@ -88,9 +88,14 @@ publishing (no stored token) and a person approving each upload. Every wheel and
 archive carries a build provenance attestation:
 
 ```sh
-gh attestation verify mobiusguard-0.1.0-py3-none-any.whl -R gantrly/mobius-guard
+gh attestation verify mobiusguard-0.1.1-py3-none-any.whl -R gantrly/mobius-guard
 ```
 
-The repository's own safeguards (pinned workflow actions, CodeQL, OpenSSF Scorecard, secret
-scanning with push protection, protected `main` and release tags) are described in
+From 0.1.1, each GitHub release also has the provenance as files: a Sigstore bundle
+(`mobius-guard-v0.1.1.sigstore.json`) and its in-toto envelope (`.intoto.jsonl`). To check
+a file offline, add `--bundle mobius-guard-v0.1.1.sigstore.json`. PyPI shows a PEP 740
+attestation for each file.
+
+The repository's own safeguards (pinned workflow actions, CodeQL, OpenSSF Scorecard, a
+weekly fuzz run, secret scanning with push protection, protected `main` and release tags) are described in
 [docs/releasing.md](docs/releasing.md) and [docs/threat-model.md](docs/threat-model.md).

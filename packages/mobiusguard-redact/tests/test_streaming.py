@@ -252,12 +252,41 @@ def test_text_after_a_private_key_is_not_held_back() -> None:
 
 
 def test_a_private_key_without_its_end_line_does_not_leak() -> None:
-    # 64-character chunks: the held text is rescanned on every chunk until the limit, so
-    # token-sized chunks make this one test take half a minute.
+    # Token-sized chunks: this took half a minute while the held text was rescanned from
+    # its start on every chunk (issue #17); now each pattern resumes where it stopped.
     text = "key:\n" + _PEM[:200] + "\n" + "more text. " * 900
     r = StreamRedactor()
-    out = "".join(r.feed(text[i : i + 64]) for i in range(0, len(text), 64)) + r.flush()
+    out = "".join(r.feed(text[i : i + 4]) for i in range(0, len(text), 4)) + r.flush()
     assert "MIIEow" not in out
+
+
+_WHILE_HELD = [
+    # A continued curl command is held line by line; secrets inside it and after it.
+    "curl -H 'Authorization: Bearer Zq8Lm3Np7Rt1Xw5Kv2Ab9Cd' \\\n"
+    "  -d 'aws=AKIAQWERTYUIOPASDFGH' \\\n"
+    "  -d 'to=jo.doe@example.co.uk' \\\n"
+    "  https://api.example.com/v1\nok then ghp_" + "Zx9Q" * 9 + " end",
+    # A finished match that runs past the start of a possible one.
+    "iban GB82 WEST 1234 5698 7654 32 GB82 WEST 1234 5698 7654 32 x",
+    "cards 4111 1111 1111 1111 1111 1111 1111 1111 1111 end",
+    # Held by a private key, with secrets inside it and after it.
+    "key:\n" + _PEM[:-29] + "\naws AKIAQWERTYUIOPASDFGH\n" + _PEM[-29:] + "\nmail jo@example.com",
+]
+
+
+@pytest.mark.parametrize("text", _WHILE_HELD)
+@pytest.mark.parametrize("size", [1, 2, 3, 4, 7, 16, 61])
+def test_matches_that_arrive_while_text_is_held_match_one_shot(text: str, size: int) -> None:
+    # Scans resume while text is held (issue #17): matches that start, end or both inside
+    # the held text, and after it, must come out as in one pass.
+    cuts = list(range(size, len(text), size))
+    assert chunked(text, cuts) == redact(text, ALL, prefilter=False)
+    assert chunked(text, cuts, CURATED) == redact(text, CURATED, prefilter=False)
+
+
+@given(st.sampled_from(_WHILE_HELD), st.lists(st.integers(1, 300), max_size=40))
+def test_matches_that_arrive_while_text_is_held_split_anywhere(text: str, cuts: list[int]) -> None:
+    assert chunked(text, cuts) == redact(text, ALL, prefilter=False)
 
 
 @pytest.mark.parametrize("cut", [1, 5, 40, 100, 300])
