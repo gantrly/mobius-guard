@@ -61,7 +61,7 @@ uv build --all-packages && scripts/check_dist.sh dist   # wheels in a clean envi
 - `make check` must pass before saying something is done. Say plainly what was and wasn't
   tested.
 
-## Redactor traps
+## Traps
 
 - **Streaming changes what a regex may do.** No variable-length lookbehinds (use
   `not_after`); a body that can run on to a later terminator holds back everything after a
@@ -72,5 +72,9 @@ uv build --all-packages && scripts/check_dist.sh dist   # wheels in a clean envi
   whose match needs text before its keyword, or whose secret starts before it, must be in
   `KEYWORDS_UNSAFE`; `test_keywords_are_a_safe_filter` checks every rule. After changing
   patterns or upgrading gitleaks, run the stress profile: it found the one such leak so far.
+- **Training data (v0.2):** never add an evaluation-suite source, or another split of one,
+  to `train_sources.py`; a test checks. Build and audit small random samples
+  (`--sample-seed`) before a full build, and read items by hand. Twins with opposite
+  labels on purpose go in `CONTRAST`, or the conflict rule drops them.
 - **Ruff formats Python code blocks inside Markdown**, so run `make fmt` after editing docs,
   or `make check` fails at lint before the tests run.

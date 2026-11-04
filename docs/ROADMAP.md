@@ -14,9 +14,19 @@ Each part is finished, tested and reviewed before the next one starts.
 
 ## v0.2: closed loop and our own model
 
-Plan for the classifier: [decision 0012](decisions/0012-classifier-v0.2.md) (proposed 2026-11-04)
+Plan for the classifier: [decision 0012](decisions/0012-classifier-v0.2.md) (accepted 2026-11-04)
 and its [training data](training-data.md). Released so far: 0.1.1 (2026-11-04), the redactor's
 held-text fix (#17).
+
+| Classifier step | Status |
+|---|---|
+| Decision and training-data ledger (16 sources, two labels: attack, harmful) | **done** 2026-11-04 |
+| Training-data builder with suite filters (MinHash, word shingles), contrast pairs, cap, split | **done**; audited on three random samples |
+| Two-output fine-tuning (DeBERTa-v3-xsmall, mmBERT-small), 512 tokens | **done** on small samples |
+| Length-bucketed batches, resume points every ~20 min, ONNX INT8 export with parity, harmful families in the suite | next |
+| Dress rehearsal on the full data (build, audit, speed and memory, resume, export, label-noise review) | next, then the long run on the maintainer's go |
+| Synthetic data (Claude on Bedrock): small run, then the full run on approval | pending |
+| Learning-rate sweep, three seeds, final evaluation once on the suite, model card, release | pending |
 
 - Red-team runner (mutation families, with garak/PyRIT adapters rather than re-writing them).
 - Patch proposals (rules or threshold changes) as reviewable diffs, gated on the benign

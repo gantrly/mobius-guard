@@ -39,6 +39,26 @@ uv run mobiusguard-eval redaction --suite runs/suite --out runs/redaction
 uv run mobiusguard-eval pipeline --out runs --device cuda  # all of it; run again to resume
 ```
 
+Training data and fine-tuning for the v0.2 classifier
+([decision 0012](decisions/0012-classifier-v0.2.md), [training-data.md](training-data.md)):
+
+```sh
+uv sync --all-packages --all-extras                  # includes the train extra
+uv run mobiusguard-eval train-sources                # the training ledger (never the suite's)
+uv run mobiusguard-eval train-data --suite runs/suite --out runs/train-small --cap 300 \
+    --sample-seed 1                                  # a small random sample, to audit first
+uv run mobiusguard-eval train-data --suite runs/suite --out runs/train     # the full set
+uv run mobiusguard-eval train --data runs/train --base mmbert-small --seed 0 \
+    --out runs/model-mmbert-s0 --device cuda         # one run; resumes after a stop
+uv run mobiusguard-eval score --suite runs/suite --detector "local:runs/model-mmbert-s0/best#harmful" \
+    --out runs/score-mmbert-harmful --device cuda    # #attack (default) or #harmful
+```
+
+Two gated sources (HackAPrompt, WildJailbreak) need a Hugging Face login that has accepted
+their terms. Download them where that login is, and copy the cached *files* (not the
+token) to the training machine. Each step runs on small random samples first, and those are
+audited before anything long.
+
 How it measures: [decision 0009](decisions/0009-evaluation-harness-v0.1.md) and the rules in
 [decision 0006](decisions/0006-evaluation-rules.md). Datasets and their licences:
 [datasets.md](datasets.md).
