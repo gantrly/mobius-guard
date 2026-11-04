@@ -8,7 +8,9 @@ secrets inserted, streamed in fixed-size chunks the way an LLM streams tokens. R
 - time spent in ``feed()`` per chunk (P50/P95/P99/max), for curated-only and all patterns,
   and all patterns without the keyword prefilter;
 - characters held back after each chunk (how far output lags input), P50/P95/P99/max;
-- overall throughput.
+- overall throughput;
+- with ``--held``: time per chunk while a possible match stays open (a private key with no
+  END line), by how much text is held at that point, up to the holdback limit.
 
 Results depend on hardware; the script prints the machine and versions with the numbers.
 """
@@ -16,7 +18,9 @@ Results depend on hardware; the script prints the machine and versions with the 
 from __future__ import annotations
 
 import argparse
+import base64
 import platform
+import random
 import statistics
 import sys
 import time
@@ -69,12 +73,33 @@ def run(
     return times, held, time.perf_counter() - t_all
 
 
+def held_run(
+    patterns: Sequence[Pattern], chunk: int, *, prefilter: bool = True
+) -> tuple[dict[int, list[float]], float]:
+    """Feed a private key that never ends; time each chunk by how much text is held."""
+    body = base64.b64encode(random.Random(0).randbytes(6400)).decode()  # noqa: S311 (fixed sample)
+    lines = "\n".join(body[i : i + 64] for i in range(0, len(body), 64))
+    text = "key:\n-----BEGIN PRIVATE KEY-----\n" + lines
+    r = StreamRedactor(patterns, prefilter=prefilter)
+    by_held: dict[int, list[float]] = {}
+    t_all = time.perf_counter()
+    for i in range(0, len(text), chunk):
+        t0 = time.perf_counter()
+        r.feed(text[i : i + chunk])
+        by_held.setdefault(r.held // 2048, []).append(time.perf_counter() - t0)
+    r.flush()
+    return by_held, time.perf_counter() - t_all
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--chunk", type=int, default=4, help="characters per chunk (~1 token)")
     ap.add_argument("--repeat", type=int, default=3)
+    ap.add_argument("--held", action="store_true", help="only the open-match case")
     args = ap.parse_args()
 
+    if args.held:
+        return main_held(args.chunk)
     text = corpus()
     print(f"machine : {platform.machine()} {platform.processor()} | {platform.platform()}")
     print(f"python  : {sys.version.split()[0]} | regex {regex.__version__}")
@@ -100,6 +125,31 @@ def main() -> int:
             f" {pct(held, 0.95):4d} {pct(held, 0.99):5d} {max(held):5d}"
             f" | {len(text) / total / 1e6:5.2f}"
         )
+    return 0
+
+
+def main_held(chunk: int) -> int:
+    print(f"machine : {platform.machine()} {platform.processor()} | {platform.platform()}")
+    print(f"python  : {sys.version.split()[0]} | regex {regex.__version__}")
+    print(f"input   : a private key with no END line, chunks of {chunk}\n")
+    bins = [f"{k * 2}-{k * 2 + 2}k" for k in range(4)]
+    print(
+        f"{'patterns':<17} {'n':>4} | feed ms p50 by chars held: "
+        + " ".join(f"{b:>7}" for b in bins)
+        + f" | {'total s':>7}"
+    )
+    sets = {
+        "curated": (CURATED, True),
+        "all": (default_patterns(), True),
+        "all, no prefilter": (default_patterns(), False),
+    }
+    for name, (pats, prefilter) in sets.items():
+        by_held, total = held_run(pats, chunk, prefilter=prefilter)
+        cells = [
+            f"{statistics.median(by_held[k]) * 1000:7.3f}" if k in by_held else f"{'-':>7}"
+            for k in range(4)
+        ]
+        print(f"{name:<17} {len(pats):>4} | {'':27} " + " ".join(cells) + f" | {total:7.2f}")
     return 0
 
 

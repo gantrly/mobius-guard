@@ -9,6 +9,13 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
 - SECURITY.md: response times, coordinated disclosure, safe harbour, scope and supported
   versions. OpenSSF Best Practices badge in the README.
 - `serve` names the upstream, not the variable, when a held key's variable is not set.
+- The redactor no longer rescans all the held text on every chunk while a possible secret
+  is open, such as a private key whose END line hasn't arrived yet. Each pattern resumes
+  where its last scan left off. With 6,000–8,000 characters held, a chunk takes 3.5 ms
+  instead of 66 ms with all patterns (#17). The output is unchanged.
+- The benchmark measures this case: `benchmarks/redact_stream.py --held`.
+- Dependencies in the lockfile updated to their latest releases; no known
+  vulnerabilities.
 
 ## 0.1.0 (2026-11-03)
 

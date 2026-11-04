@@ -120,6 +120,39 @@ P99 (3x and 5x faster; curated set alone 0.04 ms), and the same output with and 
 prefilter on all 57,064 public texts of the evaluation. The index of keywords is built once
 per pattern set.
 
+**CPU cost while text is held (2026-11-04, #17).** While a possible match is open, for
+example a private key whose END line hasn't arrived, nothing is emitted, and every chunk
+used to rescan all the held text with every pattern. At 6,000–8,000 characters held, that
+cost 66 ms per chunk with all patterns, so a reply could slow its own stream that way. While
+nothing has been emitted, the text only grows at the end, so each pattern now resumes where
+its last scan stopped being able to change:
+- at the end of the text, if it found no possible match;
+- otherwise at the possible match, or at a finished match that runs past it.
+
+Matches before that point are kept. This needs no new assumption. It is the rule that
+already lets text be emitted at all: a finished match that could not grow is final, and no
+match can start where neither a match nor a partial match was found. A pattern the
+prefilter skips keeps its place, and the keyword scan also reads only the new text. As soon
+as text is emitted, the next scan starts afresh, as before.
+
+What is left is the patterns that hold the text themselves (the two private-key patterns);
+they rescan from the key's start. Results on an Apple M1 Pro, Python 3.12, chunks of 4
+characters, a key that never ends (`benchmarks/redact_stream.py --held`):
+
+| All 245 patterns | Before | After |
+|---|---|---|
+| Per chunk, 0–2,000 characters held | 8.6 ms | 0.68 ms |
+| Per chunk, 6,000–8,000 characters held | 66 ms | 3.5 ms |
+| The whole key, until the holdback limit | 109 s | 4.9 s |
+
+On ordinary text (the benchmark's corpus, same machine, old and new in one process) the
+median chunk costs 7 µs more (0.104 → 0.112 ms) for the extra bookkeeping, and P99 is 3–8%
+lower.
+
+The output is the same as one-shot redaction. Tests now cover matches that start, end or
+both while text is held, and a finished match that runs past a possible one; they fail when
+any of the resume rules is broken on purpose.
+
 ## Considered
 
 - **Fixed window** (hold the last N characters): standard library only and simple, but

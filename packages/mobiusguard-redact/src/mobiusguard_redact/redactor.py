@@ -71,6 +71,11 @@ class StreamRedactor:
         self._buf = ""  # input not emitted yet
         self._offset = 0  # stream offset of _buf[0]
         self._closed = False
+        # What the last scan settled, reused while the text only grows at the end (see
+        # _process): per pattern, where to resume scanning and the matches before that.
+        self._scans: list[tuple[int, list[_Candidate]] | None] = [None] * len(self._patterns)
+        self._kw_seen = 0  # how far the keyword scan has read
+        self._kw_run: set[int] = set()
         self.findings: list[Finding] = []
 
     @property
@@ -98,23 +103,43 @@ class StreamRedactor:
         base = len(self._ctx)
         n = len(text)
 
+        # While nothing has been emitted since the last call, the text is the last text plus
+        # the new chunk, so each pattern resumes where its last scan stopped being able to
+        # change (issue #17). Matches before that point are final, and no match can start
+        # in the text between them: either would have shown as a match that could grow or
+        # as a partial match, the same rule that lets text be emitted at all. That holds for
+        # any earlier scan of this stream, so a pattern the prefilter skips keeps its place.
         hold = n
         candidates: list[_Candidate] = []
-        skip = self._keywords.skipped(text[base:], final=final) if self._keywords else ()
+        scans = self._scans  # a skipped pattern keeps its place for later
+        skip = self._skipped(text, base, final=final)
         for i, p in enumerate(self._patterns):
             if i in skip:
                 continue
-            for m in p.compiled.finditer(text, pos=base):
+            resume, found = scans[i] or (base, [])  # the list is replaced below
+            grows: int | None = None
+            for m in p.compiled.finditer(text, pos=resume):
                 if not final and p.could_grow(m):
-                    hold = min(hold, m.start())
+                    grows = m.start()
                     break
                 span = p.accepted_span(m)
                 s0, s1 = span or p.secret_span(m)
-                candidates.append(_Candidate(m.start(), m.end(), s0, s1, span is not None, p))
-            if not final:
-                start = p.partial_start(text, base)
-                if start is not None:
-                    hold = min(hold, start)
+                found.append(_Candidate(m.start(), m.end(), s0, s1, span is not None, p))
+            candidates += found
+            if final:
+                continue
+            start = p.partial_start(text, resume)
+            if start is not None:
+                grows = start if grows is None else min(grows, start)
+            if grows is None:
+                scans[i] = (n, found)
+            else:
+                hold = min(hold, grows)
+                if not found or found[-1].match_end <= grows:  # matches are in order
+                    scans[i] = (grows, found)
+                else:  # resume at a finished match that runs past the possible one
+                    again = min(grows, *(c.match_start for c in found if c.match_end > grows))
+                    scans[i] = (again, [c for c in found if c.match_start < again])
 
         if not final:
             # A finished match that crosses the hold point must be held too, or the next
@@ -138,7 +163,23 @@ class StreamRedactor:
         self._ctx = (self._ctx + self._buf[:consumed])[-self._context :] if self._context else ""
         self._buf = self._buf[consumed:]
         self._offset += consumed
+        if consumed:  # the text now starts elsewhere: scan afresh next time
+            self._scans = [None] * len(self._patterns)
+            self._kw_seen = 0
+            self._kw_run = set()
         return emitted
+
+    def _skipped(self, text: str, base: int, *, final: bool) -> frozenset[int]:
+        """The patterns the keyword prefilter skips, reading only text it has not read."""
+        kw = self._keywords
+        if kw is None:
+            return frozenset()
+        # Reread the last few characters too: a keyword may have arrived across the cut.
+        start = max(base, base + self._kw_seen - kw.longest + 1)
+        self._kw_run |= kw.present(text[start:])
+        self._kw_seen = len(text) - base
+        run = self._kw_run if final else self._kw_run | kw.starting(text[base:])
+        return kw.keyed - run
 
     def _render(self, text: str, base: int, hold: int, candidates: list[_Candidate]) -> str:
         spans = sorted(
@@ -175,7 +216,7 @@ class _Keywords:
 
     def __init__(self, patterns: Sequence[Pattern]) -> None:
         keyed = {i: p.keywords for i, p in enumerate(patterns) if p.keywords}
-        self._keyed = frozenset(keyed)
+        self.keyed = frozenset(keyed)
         words = sorted({k for ks in keyed.values() for k in ks}, key=len, reverse=True)
         # Longest first, so at each position the regex finds the longest keyword there;
         # every keyword inside it is present too.
@@ -188,19 +229,27 @@ class _Keywords:
             for k in ks:
                 for n in range(1, len(k)):
                     self._starts.setdefault(k[:n], set()).add(i)
-        self._longest = max(map(len, words), default=0)
+        self.longest = max(map(len, words), default=0)
+
+    def present(self, text: str) -> set[int]:
+        """The patterns that have one of their keywords in the text."""
+        run: set[int] = set()
+        if self._find is not None:
+            for m in self._find.finditer(text.lower(), overlapped=True):
+                run |= self._present[m.group()]
+        return run
+
+    def starting(self, text: str) -> set[int]:
+        """The patterns that have a keyword whose start ends the text: it may be arriving."""
+        low = text[-self.longest :].lower()
+        run: set[int] = set()
+        for n in range(1, min(self.longest, len(low) + 1)):
+            run |= self._starts.get(low[-n:], set())
+        return run
 
     def skipped(self, text: str, *, final: bool) -> frozenset[int]:
-        if self._find is None:
-            return frozenset()
-        low = text.lower()
-        run: set[int] = set()
-        for m in self._find.finditer(low, overlapped=True):
-            run |= self._present[m.group()]
-        if not final:  # a keyword may be arriving: its start is at the end of the text
-            for n in range(1, min(self._longest, len(low) + 1)):
-                run |= self._starts.get(low[-n:], set())
-        return self._keyed - run
+        run = self.present(text) if final else self.present(text) | self.starting(text)
+        return self.keyed - run
 
 
 _KEYWORDS: dict[tuple[int, ...], tuple[tuple[Pattern, ...], _Keywords]] = {}
