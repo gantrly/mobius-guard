@@ -88,9 +88,12 @@ def train(
     log(f"train: {cfg.base} seed {cfg.seed}: {len(train_items):,} train, {len(val_items):,} val")
 
     tok: Any = tf.AutoTokenizer.from_pretrained(repo, revision=revision)
+    # float32 weights: DeBERTa-v3's checkpoint is float16, which transformers 5 keeps by
+    # default, and training float16 weights with AdamW gives NaN from the second step.
+    # Mixed precision (bf16 autocast) is applied to the computation only.
     model: Any = tf.AutoModelForSequenceClassification.from_pretrained(
         repo, revision=revision, num_labels=2, id2label=LABELS,
-        label2id={v: k for k, v in LABELS.items()},
+        label2id={v: k for k, v in LABELS.items()}, dtype=torch.float32,
     ).to(device)  # fmt: skip
     steps_per_epoch = math.ceil(len(train_items) / cfg.batch_size)
     total = steps_per_epoch * cfg.epochs
@@ -139,6 +142,9 @@ def train(
         for step, (enc, labels) in enumerate(batches(train_items, shuffle=True), 1):
             with torch.autocast("cuda", dtype=torch.bfloat16, enabled=use_bf16):
                 loss = model(**enc, labels=torch.tensor(labels, device=device)).loss
+            if not torch.isfinite(loss):
+                raise FloatingPointError(f"{cfg.base}: loss is {float(loss)} at epoch {epoch + 1} "
+                                         f"step {step}; nothing saved from this epoch")  # fmt: skip
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             opt.step()
