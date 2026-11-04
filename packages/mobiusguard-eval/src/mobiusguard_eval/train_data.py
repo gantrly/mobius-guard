@@ -33,11 +33,14 @@ from .suite import dedupe
 
 CAP = 20_000
 VAL_FRACTION = 0.1
-BUILD = 1  # bump when the rules change
+BUILD = 2  # bump when the rules change
 
 
 def _unit(key: str) -> float:
-    return int.from_bytes(hashlib.sha256(key.encode()).digest()[:8], "big") / 2**64
+    """A stable number in [0, 1) for a key, for the train/val split. Salted: the cap ranks
+    items by an unsalted hash of the same IDs, so without the salt the items a cap keeps
+    (the lowest hashes) would all fall below VAL_FRACTION and land in val."""
+    return int.from_bytes(hashlib.sha256(f"split:{key}".encode()).digest()[:8], "big") / 2**64
 
 
 def _by_hash(items: Sequence[Item]) -> list[Item]:

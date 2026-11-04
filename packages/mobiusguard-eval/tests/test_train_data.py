@@ -71,7 +71,16 @@ def test_cap_and_clusters_stay_in_one_split(tmp_path: Path) -> None:
     for it in items:
         split_of.setdefault(it.cluster, set()).add(it.split)
     assert all(len(s) == 1 for s in split_of.values())
-    assert any(it.split == "val" for it in items) or len(items) < 20
+
+
+def test_a_capped_source_still_splits_about_one_in_ten(tmp_path: Path) -> None:
+    # The cap and the split once ranked items by the same hash: every capped item went to val.
+    loaded = {"a": [make_item(t, ATTACK, "a") for t in _texts(3000, "attack")]}
+    train_data.build([_source("a")], loaded, [], tmp_path, cap=1000)
+    val = sum(1 for _ in read_jsonl(tmp_path / "val.jsonl"))
+    train = sum(1 for _ in read_jsonl(tmp_path / "train.jsonl"))
+    assert train + val == 1000
+    assert 50 <= val <= 160
 
 
 def test_junk_filter() -> None:
