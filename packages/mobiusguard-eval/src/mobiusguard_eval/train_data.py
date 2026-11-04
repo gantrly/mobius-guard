@@ -10,7 +10,10 @@ The rules, in order:
    jailbreak, say). MinHash misses a suite text reused inside a longer one (a jailbreak
    template with a new question attached), so 8-word shingles catch those: a training text
    is also dropped when half its shingles occur in the suite, or it holds half of some
-   suite text's shingles. A cluster whose known harmful labels disagree is dropped too.
+   suite text's shingles. A near-duplicate cluster whose attack labels, or known harmful
+   labels, disagree is dropped too, unless all its sources form one declared contrast pair
+   (CONTRAST: a harmful request and its harmless twin, an injected document and the same
+   document clean), whose near-identical texts with opposite labels are the point.
    Every drop is written out for review.
 4. Each source is capped, chosen by hash, so no single game or style dominates.
 5. Whole clusters go to ``train`` or ``val`` (10%), so near copies never straddle the two.
@@ -39,7 +42,12 @@ CAP = 20_000
 VAL_FRACTION = 0.1
 SHINGLE_WORDS = 8
 CONTAINMENT = 0.5
-BUILD = 4  # bump when the rules change
+BUILD = 5  # bump when the rules change
+# Sources whose items are near-identical twins with opposite labels, on purpose.
+CONTRAST = (
+    frozenset({"jbb_harmful", "jbb_benign"}),
+    frozenset({"syn_indirect", "syn_twin"}),
+)
 
 
 def word_shingles(text: str, k: int = SHINGLE_WORDS) -> set[str]:
@@ -135,8 +143,10 @@ def build(
     has_suite: set[int] = set(idx[:n_suite])
     labels: dict[int, set[int]] = defaultdict(set)
     harmful: dict[int, set[str]] = defaultdict(set)
+    members: dict[int, set[str]] = defaultdict(set)
     for i, it in enumerate(pre):
         labels[idx[n_suite + i]].add(it.label)
+        members[idx[n_suite + i]].add(it.source)
         if h := it.meta.get("harmful", ""):
             harmful[idx[n_suite + i]].add(h)
     suite_of: dict[int, str] = {}
@@ -146,6 +156,9 @@ def build(
     log("train-data: word-shingle overlap with the suite")
     overlap = suite_overlap(suite, [it.text for it in pre])
 
+    def contrast(c: int) -> bool:
+        return any(members[c] <= pair for pair in CONTRAST)
+
     kept: list[tuple[Item, int]] = []
     dropped: list[dict[str, Any]] = []
     for i, it in enumerate(pre):
@@ -153,8 +166,8 @@ def build(
         reason = (
             "near_suite" if c in has_suite
             else "suite_overlap" if overlap[i]
-            else "both_labels" if len(labels[c]) > 1
-            else "both_harmful" if len(harmful[c]) > 1
+            else "both_labels" if len(labels[c]) > 1 and not contrast(c)
+            else "both_harmful" if len(harmful[c]) > 1 and not contrast(c)
             else ""
         )  # fmt: skip
         if reason:

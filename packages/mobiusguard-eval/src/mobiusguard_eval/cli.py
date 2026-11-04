@@ -33,6 +33,7 @@ from .checkpoint import fingerprint, write_atomic
 from .fetch import fetch
 from .items import Item
 from .suite import build, is_built, ledger_sources, load_suite
+from .train import TrainConfig
 
 
 def log(message: str) -> None:
@@ -306,7 +307,7 @@ def _run(a: argparse.Namespace) -> int:
     return 0
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="mobiusguard-eval", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)  # fmt: skip
     sub = ap.add_subparsers(dest="command", required=True)
@@ -361,10 +362,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     p.add_argument("--out", required=True)
     p.add_argument("--base", required=True, choices=["deberta-v3-xsmall", "mmbert-small"])
     p.add_argument("--seed", type=int, default=0)
-    p.add_argument("--epochs", type=int, default=3)
-    p.add_argument("--lr", type=float, default=5e-5)
-    p.add_argument("--batch-size", type=int, default=32)
-    p.add_argument("--max-length", type=int, default=256)
+    p.add_argument("--epochs", type=int, default=TrainConfig.epochs)
+    p.add_argument("--lr", type=float, default=TrainConfig.lr)
+    p.add_argument("--batch-size", type=int, default=TrainConfig.batch_size)
+    p.add_argument("--max-length", type=int, default=TrainConfig.max_length)
     p.add_argument("--limit", type=int, default=0, help="train on N items only (small run)")
     p.add_argument("--device", default="cuda")
 
@@ -381,7 +382,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     p.add_argument("--no-redaction", action="store_true")
     p.add_argument("--force", action="store_true", help="redo every step")
 
-    return _run(ap.parse_args(argv))
+    return ap
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    return _run(build_parser().parse_args(argv))
 
 
 if __name__ == "__main__":
