@@ -41,12 +41,16 @@ class HFClassifier(_ProxyClassifier):
 
 
 def local_classifier(path: str, *, device: str = "cpu", batch_size: int = 32) -> HFClassifier:
-    """A model trained here (``train``), from its directory. Its fingerprint holds the
-    weights' hash, so a retrained model is never mistaken for the old one's scores."""
+    """A model trained here (``train``), from its directory; ``DIR#harmful`` scores its
+    harmful output instead of the attack output. Its fingerprint holds the weights' hash,
+    so a retrained model is never mistaken for the old one's scores."""
+    path, _, output = path.partition("#")
     d = Path(path)
     h = hashlib.sha256()
     for f in sorted(d.glob("*.safetensors")) + sorted(d.glob("*.bin")):
         h.update(f.read_bytes())
-    spec = HFModel(name=f"local:{d.parent.name}", repo=str(d), revision=h.hexdigest()[:40],
-                   licence="Apache-2.0", positive_label="attack")  # fmt: skip
+    label = output or "attack"
+    spec = HFModel(name=f"local:{d.parent.name}#{label}", repo=str(d),
+                   revision=h.hexdigest()[:40], licence="Apache-2.0",
+                   positive_label=label)  # fmt: skip
     return HFClassifier(spec, device=device, batch_size=batch_size)

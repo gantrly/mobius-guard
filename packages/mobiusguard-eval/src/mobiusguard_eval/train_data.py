@@ -10,7 +10,8 @@ The rules, in order:
    jailbreak, say). MinHash misses a suite text reused inside a longer one (a jailbreak
    template with a new question attached), so 8-word shingles catch those: a training text
    is also dropped when half its shingles occur in the suite, or it holds half of some
-   suite text's shingles. Every drop is written out for review.
+   suite text's shingles. A cluster whose known harmful labels disagree is dropped too.
+   Every drop is written out for review.
 4. Each source is capped, chosen by hash, so no single game or style dominates.
 5. Whole clusters go to ``train`` or ``val`` (10%), so near copies never straddle the two.
    Model selection uses ``val``; the suite scores only the final candidates.
@@ -38,7 +39,7 @@ CAP = 20_000
 VAL_FRACTION = 0.1
 SHINGLE_WORDS = 8
 CONTAINMENT = 0.5
-BUILD = 3  # bump when the rules change
+BUILD = 4  # bump when the rules change
 
 
 def word_shingles(text: str, k: int = SHINGLE_WORDS) -> set[str]:
@@ -78,8 +79,9 @@ def _unit(key: str) -> float:
     return int.from_bytes(hashlib.sha256(f"split:{key}".encode()).digest()[:8], "big") / 2**64
 
 
-def _by_hash(items: Sequence[Item]) -> list[Item]:
-    return sorted(items, key=lambda it: hashlib.sha256(it.id.encode()).hexdigest())
+def _rank(it: Item, seed: str) -> str:
+    """The order a cap takes items in. A seed draws a different random sample."""
+    return hashlib.sha256(f"{seed}:{it.id}".encode() if seed else it.id.encode()).hexdigest()
 
 
 def suite_key(suite: Sequence[Item]) -> str:
@@ -87,9 +89,11 @@ def suite_key(suite: Sequence[Item]) -> str:
     return hashlib.sha256("\n".join(sorted(it.id for it in suite)).encode()).hexdigest()
 
 
-def build_key(sources: Sequence[Source], suite_ids: str, cap: int) -> str:
+def build_key(sources: Sequence[Source], suite_ids: str, cap: int, seed: str = "") -> str:
     files = {s.id: [f"{f.location}/{f.path}@{f.revision}" for f in s.files] for s in sources}
-    return fingerprint({"files": files, "suite": suite_ids, "cap": cap, "build": BUILD})
+    return fingerprint(
+        {"files": files, "suite": suite_ids, "cap": cap, "seed": seed, "build": BUILD}
+    )
 
 
 def is_built(out: Path, key: str) -> bool:
@@ -106,6 +110,7 @@ def build(
     out: Path,
     *,
     cap: int = CAP,
+    seed: str = "",
     log: Callable[[str], None] = lambda _m: None,
 ) -> dict[str, Any]:
     """Write ``train.jsonl``, ``val.jsonl``, ``dropped.jsonl`` and ``summary.json``."""
@@ -122,15 +127,18 @@ def build(
     for s in sources:
         mine = by_source[s.id]
         counts[s.id]["after_dedupe"] = len(mine)
-        pre += _by_hash(mine)[: 3 * cap]
+        pre += sorted(mine, key=lambda it: _rank(it, seed))[: 3 * cap]
 
     log(f"train-data: clustering {len(pre):,} training texts with {len(suite):,} suite texts")
     idx = clusters([it.text for it in suite] + [it.text for it in pre])
     n_suite = len(suite)
     has_suite: set[int] = set(idx[:n_suite])
     labels: dict[int, set[int]] = defaultdict(set)
+    harmful: dict[int, set[str]] = defaultdict(set)
     for i, it in enumerate(pre):
         labels[idx[n_suite + i]].add(it.label)
+        if h := it.meta.get("harmful", ""):
+            harmful[idx[n_suite + i]].add(h)
     suite_of: dict[int, str] = {}
     for i, it in enumerate(suite):
         suite_of.setdefault(idx[i], it.id)
@@ -146,6 +154,7 @@ def build(
             "near_suite" if c in has_suite
             else "suite_overlap" if overlap[i]
             else "both_labels" if len(labels[c]) > 1
+            else "both_harmful" if len(harmful[c]) > 1
             else ""
         )  # fmt: skip
         if reason:
@@ -161,7 +170,7 @@ def build(
     for it, c in kept:
         per_source[it.source].append((it, c))
     for s in sources:
-        mine = sorted(per_source[s.id], key=lambda p: hashlib.sha256(p[0].id.encode()).hexdigest())
+        mine = sorted(per_source[s.id], key=lambda p: _rank(p[0], seed))
         for it, c in mine[:cap]:
             # Name a cluster by its first training member's ID: stable across rebuilds.
             final.append(replace(it, cluster=str(c)))
@@ -185,7 +194,8 @@ def build(
 
     summary: dict[str, Any] = {
         "built": datetime.now(UTC).isoformat(timespec="seconds"),
-        "build_key": build_key(sources, suite_ids, cap),
+        "build_key": build_key(sources, suite_ids, cap, seed),
+        "seed": seed,
         "mobiusguard_eval": __version__,
         "cap": cap,
         "suite_ids_sha256": suite_ids,
@@ -194,6 +204,7 @@ def build(
             "val": sum(it.split == "val" for it in final),
         },
         "labels": Counter(f"{'attack' if it.label else 'benign'}/{it.split}" for it in final),
+        "harmful": Counter(f"{it.meta.get('harmful', '')}/{it.split}" for it in final),
         "languages": Counter(it.lang for it in final),
         "sources": {
             s.id: {

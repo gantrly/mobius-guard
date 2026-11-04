@@ -1,6 +1,9 @@
 """Training sources for the v0.2 classifier (decision 0012, docs/training-data.md).
 
-None of these is an evaluation source: the suite stays held out. Licences, revisions and
+The model has two outputs, so each item has two labels: ``label`` (1 = an injection or a
+jailbreak) and ``meta["harmful"]`` ("1" = a harmful request, "0" = not, "" = unknown, which
+the harmful output's loss skips). None of these is an evaluation source: the suite stays
+held out. Licences, revisions and
 columns were checked against each source on 2026-11-04. Two sets are gated on Hugging Face
 (``gated=True`` in the notes): download them where a logged-in account has accepted their
 terms, and copy the cached files to the training machine, never the token.
@@ -59,6 +62,13 @@ def _add(source: Source) -> None:
     register(source, ledger=TRAINING)
 
 
+def _m(harmful: str, **extra: str) -> dict[str, str]:
+    return {"harmful": harmful, **extra}
+
+
+HARMFUL_KEY = "harmful"
+
+
 # ------------------------------------------------------------------------------ attacks
 
 
@@ -66,7 +76,7 @@ def _hackaprompt(paths: list[Path]) -> Iterator[Item]:
     cols = ["user_input", "correct", "level", "model", "dataset"]
     for r in _rows_parquet(paths[0], cols):
         if r["correct"] and (text := _keep(r["user_input"])):
-            meta = {"level": str(r["level"]), "model": str(r["model"]), "set": str(r["dataset"])}
+            meta = _m("0", level=str(r["level"]), model=str(r["model"]), set=str(r["dataset"]))
             yield make_item(text, ATTACK, "hackaprompt", lang="en", meta=meta)
 
 
@@ -103,7 +113,7 @@ def _mosscap(paths: list[Path]) -> Iterator[Item]:
         for r in _rows_parquet(path, ["prompt", "level"]):
             text = _keep(r["prompt"])
             if text and _MOSSCAP_CUES.search(text):
-                yield make_item(text, ATTACK, "mosscap", meta={"level": str(r["level"])})
+                yield make_item(text, ATTACK, "mosscap", meta=_m("0", level=str(r["level"])))
 
 
 _add(
@@ -133,7 +143,7 @@ def _satml(paths: list[Path]) -> Iterator[Item]:
             continue
         for msg in cast("list[dict[str, Any]]", chat.get("history") or []):
             if msg.get("role") == "user" and (text := _keep(msg.get("content"))):
-                yield make_item(text, ATTACK, "satml", meta={"model": str(chat.get("model"))})
+                yield make_item(text, ATTACK, "satml", meta=_m("0", model=str(chat.get("model"))))
 
 
 _add(
@@ -160,8 +170,9 @@ def _wild(paths: list[Path]) -> Iterator[Item]:
     source = "wild_jb" if attack else "wild_regular"
     for r in _rows_parquet(paths[0], ["prompt", "platform"]):
         if text := _keep(r["prompt"]):
-            yield make_item(text, ATTACK if attack else BENIGN, source,
-                            meta={"platform": str(r["platform"])})  # fmt: skip
+            # A jailbreak template's request is often a placeholder: harmful unknown.
+            meta = _m("" if attack else "0", platform=str(r["platform"]))
+            yield make_item(text, ATTACK if attack else BENIGN, source, meta=meta)
 
 
 _add(
@@ -191,7 +202,7 @@ def _wildjailbreak_rows(path: Path) -> Iterator[dict[str, str]]:
 def _wildjailbreak(paths: list[Path]) -> Iterator[Item]:
     for r in _wildjailbreak_rows(paths[0]):
         if r["data_type"] == "adversarial_harmful" and (text := _keep(r["adversarial"])):
-            yield make_item(text, ATTACK, "wildjailbreak", lang="en")
+            yield make_item(text, ATTACK, "wildjailbreak", lang="en", meta=_m("1"))
 
 
 def _wildjailbreak_benign(paths: list[Path]) -> Iterator[Item]:
@@ -199,7 +210,15 @@ def _wildjailbreak_benign(paths: list[Path]) -> Iterator[Item]:
         kind = r["data_type"]
         column = {"adversarial_benign": "adversarial", "vanilla_benign": "vanilla"}.get(kind)
         if column and (text := _keep(r[column])):
-            yield make_item(text, BENIGN, "wildjailbreak_benign", lang="en", meta={"type": kind})
+            yield make_item(
+                text, BENIGN, "wildjailbreak_benign", lang="en", meta=_m("0", type=kind)
+            )
+
+
+def _wildjailbreak_harmful(paths: list[Path]) -> Iterator[Item]:
+    for r in _wildjailbreak_rows(paths[0]):
+        if r["data_type"] == "vanilla_harmful" and (text := _keep(r["vanilla"])):
+            yield make_item(text, BENIGN, "wildjailbreak_harmful", lang="en", meta=_m("1"))
 
 
 _add(
@@ -211,8 +230,21 @@ _add(
         role="attack",
         files=_hf(*_WJB),
         parse=_wildjailbreak,
-        notes="Gated (AI2 terms). Synthetic jailbreaks wrapping harmful requests; the plain "
-        "harmful requests (vanilla_harmful) are left out: a harmful request is not injection.",
+        notes="Gated (AI2 terms). Synthetic jailbreaks wrapping harmful requests: attack and "
+        "harmful.",
+    )
+)
+_add(
+    Source(
+        id="wildjailbreak_harmful",
+        title="WildJailbreak (vanilla harmful)",
+        homepage="https://huggingface.co/datasets/allenai/wildjailbreak",
+        licence="ODC-BY-1.0",
+        role="benign",
+        files=_hf(*_WJB),
+        parse=_wildjailbreak_harmful,
+        notes="Gated. Plain harmful requests: harmful, but not an injection or a jailbreak "
+        "(attack label 0), so the attack output learns the difference.",
     )
 )
 _add(
@@ -232,7 +264,14 @@ _add(
 def _salad(paths: list[Path]) -> Iterator[Item]:
     for r in _json_rows(paths[0]):
         if text := _keep(r.get("augq")):
-            yield make_item(text, ATTACK, "salad", lang="en", meta={"method": str(r.get("method"))})
+            yield make_item(text, ATTACK, "salad", lang="en",
+                            meta=_m("1", method=str(r.get("method"))))  # fmt: skip
+
+
+def _salad_base(paths: list[Path]) -> Iterator[Item]:
+    for r in _json_rows(paths[0]):
+        if text := _keep(r.get("question")):
+            yield make_item(text, BENIGN, "salad_base", lang="en", meta=_m("1"))
 
 
 _add(
@@ -248,8 +287,64 @@ _add(
             "attack_enhanced_set.json",
         ),
         parse=_salad,
-        notes="Questions wrapped by jailbreak methods (GPTFuzz, AutoDAN, ...); the base set of "
-        "plain harmful questions is left out. ProtectAI v2 trained on Salad-Data.",
+        notes="Harmful questions wrapped by jailbreak methods (GPTFuzz, AutoDAN, ...): attack "
+        "and harmful. ProtectAI v2 trained on Salad-Data.",
+    )
+)
+_add(
+    Source(
+        id="salad_base",
+        title="Salad-Data base set (plain harmful questions)",
+        homepage="https://huggingface.co/datasets/OpenSafetyLab/Salad-Data",
+        licence="Apache-2.0",
+        role="benign",
+        files=_hf(
+            "OpenSafetyLab/Salad-Data", "d21a325e276a99bd69b1fbb8aa51a9f249486b72", "base_set.json"
+        ),
+        parse=_salad_base,
+        notes="Plain harmful questions: harmful, attack label 0. ProtectAI v2 trained on "
+        "Salad-Data.",
+    )
+)
+
+_JBB = ("JailbreakBench/JBB-Behaviors", "886acc352a31533ffbcf4ef22c744658688086fc")
+
+
+def _jbb(paths: list[Path]) -> Iterator[Item]:
+    harmful = "harmful-" in paths[0].name
+    source = "jbb_harmful" if harmful else "jbb_benign"
+    csv.field_size_limit(1 << 24)
+    with paths[0].open(encoding="utf-8", newline="") as f:
+        for r in csv.DictReader(f):
+            if text := _keep(r.get("Goal")):
+                meta = _m("1" if harmful else "0", category=r.get("Category", ""))
+                yield make_item(text, BENIGN, source, lang="en", meta=meta)
+
+
+_add(
+    Source(
+        id="jbb_harmful",
+        title="JailbreakBench behaviors (harmful)",
+        homepage="https://huggingface.co/datasets/JailbreakBench/JBB-Behaviors",
+        licence="MIT",
+        role="benign",
+        files=_hf(*_JBB, "data/harmful-behaviors.csv"),
+        parse=_jbb,
+        notes="100 harmful requests across ten categories: harmful, attack label 0. Some come "
+        "from AdvBench and HarmBench.",
+    )
+)
+_add(
+    Source(
+        id="jbb_benign",
+        title="JailbreakBench behaviors (benign twins)",
+        homepage="https://huggingface.co/datasets/JailbreakBench/JBB-Behaviors",
+        licence="MIT",
+        role="benign",
+        files=_hf(*_JBB, "data/benign-behaviors.csv"),
+        parse=_jbb,
+        notes="100 harmless requests on the same topics as the harmful ones: a hard contrast "
+        "for the harmful output.",
     )
 )
 
@@ -258,7 +353,7 @@ def _gandalf_sum(paths: list[Path]) -> Iterator[Item]:
     for path in paths:
         for r in _rows_parquet(path, ["text"]):
             if text := _keep(r["text"]):
-                yield make_item(text, ATTACK, "gandalf_sum", lang="en")
+                yield make_item(text, ATTACK, "gandalf_sum", lang="en", meta=_m("0"))
 
 
 _add(
@@ -292,14 +387,20 @@ _LANGS = {
 
 
 def _wildchat(paths: list[Path]) -> Iterator[Item]:
-    for r in _rows_parquet(paths[0], ["conversation", "language", "toxic", "redacted"]):
+    cols = ["conversation", "language", "toxic", "openai_moderation"]
+    for r in _rows_parquet(paths[0], cols):
         if r["toxic"]:
             continue
         turns = cast("list[dict[str, Any]]", r["conversation"] or [])
-        first = next((t for t in turns if t.get("role") == "user"), None)
+        i, first = next(((i, t) for i, t in enumerate(turns) if t.get("role") == "user"),
+                        (0, None))  # fmt: skip
         if first and (text := _keep(first.get("content"))):
             lang = _LANGS.get(str(r["language"]), "other")
-            yield make_item(text, BENIGN, "wildchat", lang=lang)
+            mod = cast("list[dict[str, Any]]", r["openai_moderation"] or [])
+            # Real users do ask for harmful things: a message the moderation API flagged is
+            # not known to be harmless, so its harmful label is left unknown.
+            flagged = bool(mod[i].get("flagged")) if i < len(mod) else True
+            yield make_item(text, BENIGN, "wildchat", lang=lang, meta=_m("" if flagged else "0"))
 
 
 _add(
@@ -325,7 +426,7 @@ _add(
 def _ultrachat(paths: list[Path]) -> Iterator[Item]:
     for r in _rows_parquet(paths[0], ["prompt"]):
         if text := _keep(r["prompt"]):
-            yield make_item(text, BENIGN, "ultrachat", lang="en")
+            yield make_item(text, BENIGN, "ultrachat", lang="en", meta=_m("0"))
 
 
 _add(

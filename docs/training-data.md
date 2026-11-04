@@ -1,68 +1,82 @@
-# Training data for the v0.2 classifier (proposed)
+# Training data for the v0.2 classifier
 
-**Status:** proposed, 2026-11-04, for the maintainer's check
-([decision 0012](decisions/0012-classifier-v0.2.md)). Nothing is downloaded or trained until
-each source is accepted. Once accepted, the source of truth moves into code next to the
-evaluation ledger ([datasets.md](datasets.md)), pinned to a commit.
+**Status:** accepted, 2026-11-04 ([decision 0012](decisions/0012-classifier-v0.2.md)). The
+source of truth is
+[`train_sources.py`](../packages/mobiusguard-eval/src/mobiusguard_eval/train_sources.py):
+each source is pinned to a commit and kept in its own ledger, apart from the evaluation's
+([datasets.md](datasets.md)). Licences, gating, sizes and columns were checked against each
+source on 2026-11-04.
 
-**How we checked:**
-- Licences, gating and sizes come from each source's Hugging Face metadata and card, read
-  on 2026-11-04.
-- The two gated sets (HackAPrompt, WildJailbreak) need a Hugging Face login before their
-  files and columns can be read. Their columns are to be confirmed then, and the plan
-  below may change.
+**Two labels per item.** The model has two outputs, so every item has:
+- **attack:** 1 for an injection or a jailbreak, 0 otherwise;
+- **harmful:** 1 for a harmful request, 0 for not, or unknown. The harmful output's loss
+  skips unknown labels.
 
-**Rules for every source:**
+**Rules for every source** (`mobiusguard-eval train-data`):
 - **Not from the evaluation suite.** None of the suite's 11 sources is used, in any split.
-- **No near duplicates** of any suite text (MinHash, Jaccard ≥ 0.8).
-- **Exact repeats dropped.** A text labelled both ways is dropped.
-- **Capped at 20,000 items per source,** so that no single game or style dominates.
-- **Each item keeps its source ID.** The model card lists every source with its licence
-  and attribution.
+- **No near duplicates of suite texts** (MinHash, Jaccard ≥ 0.8), and no suite text reused
+  inside a longer one: dropped when half of its 8-word shingles occur in the suite, or it
+  holds half of a suite text's shingles.
+- **Exact repeats dropped;** so are clusters whose attack labels, or known harmful labels,
+  disagree.
+- **Capped at 20,000 items per source,** so no single game or style dominates.
+- **Split 90/10 into train and val by cluster.**
+- **Every drop is written out with its reason,** for review.
+- **Each item keeps its source ID.** The model card lists every source with its licence and
+  attribution.
 
 "Trained on by" lists published classifiers whose model cards name the set; ProtectAI v2
 also used 15 sets it doesn't name.
 
-## Attacks
+## Attacks (attack = 1)
 
-| ID | Source | Licence | Access | Size | Planned use | Trained on by |
+| ID | Source | Licence | Access | Harmful | Planned use | Trained on by |
 |---|---|---|---|---|---|---|
-| hackaprompt | [hackaprompt/hackaprompt-dataset](https://huggingface.co/datasets/hackaprompt/hackaprompt-dataset) | MIT | gated (accept terms) | 600k+ competition submissions | The user inputs of submissions that succeeded, deduplicated (to confirm: a success column) | - |
-| mosscap | [Lakera/mosscap_prompt_injection](https://huggingface.co/datasets/Lakera/mosscap_prompt_injection) | MIT | open | 279k prompts (DEF CON 31 game) | Attacks, but the card says not every prompt is one. Plan: keep prompts aimed at the secret (password words, instruction overrides). Read a random 200 by hand; if more than 10% are not attacks, ask before labelling with Claude | - |
-| satml | [ethz-spylab/ctf-satml24](https://huggingface.co/datasets/ethz-spylab/ctf-satml24) | MIT | open | 137k attack chats | The attacker's messages from chats marked `is_attack`, deduplicated | - |
-| wild_jb | [TrustAIRLab/in-the-wild-jailbreak-prompts](https://huggingface.co/datasets/TrustAIRLab/in-the-wild-jailbreak-prompts) | MIT | open | 1,405 jailbreak prompts (2023-12-25) | Attacks. Near-duplicate filter against the suite's jackhhao set, which collected from similar sites | - |
-| wildjailbreak | [allenai/wildjailbreak](https://huggingface.co/datasets/allenai/wildjailbreak) | ODC-BY | gated (accept AI2 terms) | 262k synthetic prompts | Adversarial harmful as attacks; vanilla harmful left out (a harmful request is not injection) | - |
-| salad | [OpenSafetyLab/Salad-Data](https://huggingface.co/datasets/OpenSafetyLab/Salad-Data) | Apache-2.0 | open | attack-enhanced set | Jailbreak-wrapped questions as attacks; the base set is left out | ProtectAI v2 |
-| gandalf_sum | [Lakera/gandalf_summarization](https://huggingface.co/datasets/Lakera/gandalf_summarization) | MIT | open | 140 | Indirect injections, all used | - |
+| hackaprompt | [hackaprompt/hackaprompt-dataset](https://huggingface.co/datasets/hackaprompt/hackaprompt-dataset) | MIT | gated | 0 | The user inputs of the 77,213 submissions that succeeded (`correct`) | - |
+| mosscap | [Lakera/mosscap_prompt_injection](https://huggingface.co/datasets/Lakera/mosscap_prompt_injection) | MIT | open | 0 | Prompts aimed at the secret or the instructions (keyword filter); a hand check of 200 found 3–4% that were not attacks | - |
+| satml | [ethz-spylab/ctf-satml24](https://huggingface.co/datasets/ethz-spylab/ctf-satml24) | MIT | open | 0 | The attacker's messages from chats marked `is_attack`, without junk | - |
+| gandalf_sum | [Lakera/gandalf_summarization](https://huggingface.co/datasets/Lakera/gandalf_summarization) | MIT | open | 0 | Indirect injections, all 140 | - |
+| wild_jb | [TrustAIRLab/in-the-wild-jailbreak-prompts](https://huggingface.co/datasets/TrustAIRLab/in-the-wild-jailbreak-prompts) | MIT | open | unknown | 1,405 jailbreak prompts; their requests are often placeholders | - |
+| wildjailbreak | [allenai/wildjailbreak](https://huggingface.co/datasets/allenai/wildjailbreak) | ODC-BY | gated | 1 | Adversarial harmful: persuasive jailbreaks around a harmful request | - |
+| salad | [OpenSafetyLab/Salad-Data](https://huggingface.co/datasets/OpenSafetyLab/Salad-Data) | Apache-2.0 | open | 1 | Attack-enhanced set: harmful questions in jailbreak wrappers | ProtectAI v2 |
 
-## Benign and hard benign
+## Harmful requests that are not attacks (attack = 0, harmful = 1)
 
-| ID | Source | Licence | Access | Size | Planned use |
+| ID | Source | Licence | Access | Planned use |
+|---|---|---|---|---|
+| wildjailbreak_harmful | WildJailbreak (above) | ODC-BY | gated | Vanilla harmful: plain harmful requests |
+| salad_base | Salad-Data (above) | Apache-2.0 | open | Base set: plain harmful questions |
+| jbb_harmful | [JailbreakBench/JBB-Behaviors](https://huggingface.co/datasets/JailbreakBench/JBB-Behaviors) | MIT | open | 100 harmful behaviours in ten categories |
+
+## Benign (attack = 0)
+
+| ID | Source | Licence | Access | Harmful | Planned use |
 |---|---|---|---|---|---|
-| wildchat | [allenai/WildChat-1M](https://huggingface.co/datasets/allenai/WildChat-1M) | ODC-BY | open | 1M real conversations, many languages | First user turns, toxic-flagged ones left out. Real users also try jailbreaks there, so items near a known attack text, or flagged by our rules, are dropped and counted |
-| ultrachat | [HuggingFaceH4/ultrachat_200k](https://huggingface.co/datasets/HuggingFaceH4/ultrachat_200k) | MIT | open | 200k synthetic dialogues | First user turns |
-| wild_regular | in-the-wild (above), regular prompts | MIT | open | 13,735 | Ordinary prompts from the same communities as the jailbreaks: a hard contrast |
-| wildjailbreak_benign | WildJailbreak (above) | ODC-BY | gated | | Adversarial benign (jailbreak-style wording around harmless requests) and vanilla benign |
+| wildchat | [allenai/WildChat-1M](https://huggingface.co/datasets/allenai/WildChat-1M) | ODC-BY | open | 0, or unknown when flagged | First user turns of one shard, toxic ones left out. When OpenAI's moderation flagged the turn, its harmful label is unknown |
+| ultrachat | [HuggingFaceH4/ultrachat_200k](https://huggingface.co/datasets/HuggingFaceH4/ultrachat_200k) | MIT | open | 0 | First user turns of one shard |
+| wild_regular | in-the-wild (above), regular prompts | MIT | open | 0 | 13,735 ordinary prompts from the same communities as the jailbreaks |
+| wildjailbreak_benign | WildJailbreak (above) | ODC-BY | gated | 0 | Adversarial benign (jailbreak-style wording around harmless requests) and vanilla benign |
+| jbb_benign | JailbreakBench (above) | MIT | open | 0 | 100 harmless requests on the same topics as the harmful ones |
 
-## Synthetic (Claude on Bedrock; needs approval, see decision 0012)
+## Synthetic (Claude on Bedrock, see decision 0012)
 
-| ID | What | Planned size |
-|---|---|---|
-| syn_indirect | Carrier documents (10 genres, about 10 languages) with an inserted injection (a fixed list of goals and techniques) | 8,000 |
-| syn_twin | The same documents without the injection | 8,000 |
-| syn_hard_benign | Legitimate instructions, security writing, trigger words in harmless text | 4,000 |
+| ID | What | Attack | Harmful | Planned size |
+|---|---|---|---|---|
+| syn_indirect | Carrier documents (10 genres, 10 languages) with an inserted injection | 1 | 0 | 8,000 |
+| syn_twin | The same documents without the injection | 0 | 0 | 8,000 |
+| syn_hard_benign | Legitimate instructions, security writing, trigger words in harmless text | 0 | 0 | 4,000 |
 
 ## Left out, and why
 
 | Source | Why |
 |---|---|
-| deepset, Gandalf (ignore instructions), jackhhao, SPML, BIPIA, LLMail-Inject, NotInject, XSTest, OR-Bench, oasst1 (all splits) | The evaluation suite's sources: held out |
+| deepset, Gandalf (ignore instructions), jackhhao, SPML, BIPIA, LLMail-Inject, NotInject, XSTest, OR-Bench, oasst1 (all splits) | The evaluation suite's sources: held out. XSTest's unsafe prompts and OR-Bench's toxic set measure the harmful output |
 | qxcv/tensor-trust | No licence on the dataset or its GitHub repository |
 | xTRam1/safe-guard-prompt-injection, jayavibhav/prompt-injection, imoxto/prompt_injection_cleaned_dataset-v2, rubend18/ChatGPT-Jailbreak-Prompts | No licence |
 | Harelix/Prompt-Injection-Mixed-Techniques-2024 | Not accessible any more (401) |
 | qualifire/prompt-injections-benchmark, HuggingFaceH4/no_robots | CC-BY-NC: non-commercial |
 | databricks/databricks-dolly-15k | CC-BY-SA: share-alike terms for a trained model are unclear |
 | lmsys/lmsys-chat-1m | Its own licence, not a permissive one |
-| walledai/AdvBench, JailbreakBench/JBB-Behaviors, Salad-Data base set | Harmful requests, not injection (decision 0012) |
+| walledai/AdvBench | Gated, and JailbreakBench covers the same kind of request openly (some of its behaviours come from AdvBench) |
 | Lakera PINT | Not public |
 | Open-Orca/OpenOrca | Not needed: WildChat and UltraChat cover ordinary prompts |

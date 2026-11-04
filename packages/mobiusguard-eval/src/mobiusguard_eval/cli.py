@@ -230,13 +230,13 @@ def pipeline(
 
 
 def step_train_data(suite: Path, out: Path, *, cap: int, source_ids: Sequence[str] | None = None,
-                    force: bool = False) -> None:  # fmt: skip
+                    seed: str = "", force: bool = False) -> None:  # fmt: skip
     from . import train_data
     from .train_sources import training_sources
 
     sources = training_sources(list(source_ids) if source_ids else None)
     items = load_suite(suite)
-    key = train_data.build_key(sources, train_data.suite_key(items), cap)
+    key = train_data.build_key(sources, train_data.suite_key(items), cap, seed)
     if not force and train_data.is_built(out, key):
         log(f"train-data: {out} is up to date, skipping (--force to rebuild)")
         return
@@ -244,7 +244,7 @@ def step_train_data(suite: Path, out: Path, *, cap: int, source_ids: Sequence[st
     for s in sources:
         loaded[s.id] = list(s.parse(fetch(s)))
         log(f"train-data: {s.id} {len(loaded[s.id]):,} items")
-    summary = train_data.build(sources, loaded, items, out, cap=cap, log=log)
+    summary = train_data.build(sources, loaded, items, out, cap=cap, seed=seed, log=log)
     log(f"train-data: {summary['items']}, labels {dict(summary['labels'])}")
 
 
@@ -280,7 +280,8 @@ def _run(a: argparse.Namespace) -> int:
     if cmd == "train-sources":
         return _train_sources(a)
     if cmd == "train-data":
-        step_train_data(Path(a.suite), Path(a.out), cap=a.cap, source_ids=a.sources, force=a.force)
+        step_train_data(Path(a.suite), Path(a.out), cap=a.cap, source_ids=a.sources,
+                        seed=a.sample_seed, force=a.force)  # fmt: skip
     elif cmd == "train":
         step_train(Path(a.data), Path(a.out), base=a.base, seed=a.seed, epochs=a.epochs, lr=a.lr,
                    batch_size=a.batch_size, max_length=a.max_length, limit=a.limit,
@@ -352,6 +353,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     p.add_argument("--out", required=True)
     p.add_argument("--cap", type=int, default=20_000, help="items per source")
     p.add_argument("--sources", nargs="*", help="training source IDs (default: all)")
+    p.add_argument("--sample-seed", default="", help="draw a different random sample")
     p.add_argument("--force", action="store_true")
 
     p = sub.add_parser("train", help="fine-tune one base model with one seed")

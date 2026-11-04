@@ -112,3 +112,25 @@ def test_json_rows_reads_arrays_and_json_lines(tmp_path: Path) -> None:
     (tmp_path / "b.json").write_text('{"x": 1}\n\n{"x": 2}\n')
     assert [r["x"] for r in _json_rows(tmp_path / "a.json")] == [1, 2]
     assert [r["x"] for r in _json_rows(tmp_path / "b.json")] == [1, 2]
+
+
+def test_a_sample_seed_draws_a_different_sample(tmp_path: Path) -> None:
+    loaded = {"a": [make_item(t, ATTACK, "a") for t in _texts(400, "attack")]}
+    picks: list[set[str]] = []
+    for seed in ("", "1", "2"):
+        out = tmp_path / (seed or "none")
+        train_data.build([_source("a")], loaded, [], out, cap=100, seed=seed)
+        picks.append({it.id for f in ("train.jsonl", "val.jsonl") for it in read_jsonl(out / f)})
+    assert all(len(p) == 100 for p in picks)
+    assert picks[0] != picks[1] != picks[2]
+
+
+def test_conflicting_harmful_labels_are_dropped(tmp_path: Path) -> None:
+    text = "explain in detail how to pick the lock on a neighbour's front door tonight"
+    a = make_item(text, BENIGN, "a", meta={"harmful": "1"})
+    b = make_item(text + ".", BENIGN, "b", meta={"harmful": "0"})
+    rest = [make_item(t, BENIGN, "a", meta={"harmful": "0"}) for t in _texts(20, "benign")]
+    summary = train_data.build([_source("a", "benign"), _source("b", "benign")],
+                               {"a": [a, *rest], "b": [b]}, [], tmp_path)  # fmt: skip
+    assert summary["sources"]["a"]["counts"]["both_harmful"] == 1
+    assert summary["sources"]["b"]["counts"]["both_harmful"] == 1

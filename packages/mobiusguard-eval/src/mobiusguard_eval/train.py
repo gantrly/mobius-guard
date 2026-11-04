@@ -1,10 +1,14 @@
 """Fine-tune a base encoder on the v0.2 training set (decision 0012). Needs the ``hf`` and
 ``train`` extras and, in practice, a GPU.
 
-One run = one base model and one seed. After each epoch the model is scored on ``val``
-(never on the evaluation suite): AUC and recall at 1% false positives, with the threshold
-set on val's own benign items. The epoch with the best val recall is kept in ``best/``.
-Each epoch also saves a resume point, so a stopped run continues where it was.
+One run = one base model and one seed. The model has two independent outputs (sigmoid,
+each read as log-odds): ``attack`` (an injection or a jailbreak) and ``harmful`` (a harmful
+request). The harmful loss skips items whose harmful label is unknown.
+
+After each epoch both outputs are scored on ``val`` (never on the evaluation suite): AUC and
+recall at 1% false positives, the threshold set on val's own negatives. The epoch with the
+best mean of the two recalls is kept in ``best/``. Each epoch also saves a resume point, so
+a stopped run continues where it was.
 """
 
 from __future__ import annotations
@@ -31,7 +35,7 @@ BASES = {  # name: (repo, revision)
     ),
     "mmbert-small": ("jhu-clsp/mmBERT-small", "abc32620dd4f6ab06f5fbe905dc25f310618e09f"),
 }
-LABELS = {0: "benign", 1: "attack"}
+LABELS = {0: "attack", 1: "harmful"}  # two independent outputs (multi-label)
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,7 +45,7 @@ class TrainConfig:
     epochs: int = 3
     lr: float = 5e-5
     batch_size: int = 32
-    max_length: int = 256
+    max_length: int = 512
     warmup: float = 0.06
     weight_decay: float = 0.01
     limit: int = 0  # use only N training items (and N/9 val items): the small run
@@ -51,6 +55,11 @@ def _subset(items: list[Item], n: int) -> list[Item]:
     if not n or n >= len(items):
         return items
     return sorted(items, key=lambda it: hashlib.sha256(it.id.encode()).hexdigest())[:n]
+
+
+def _harmful(it: Item) -> float:
+    """1.0, 0.0, or -1.0 when unknown (masked out of the loss and the metrics)."""
+    return {"1": 1.0, "0": 0.0}.get(it.meta.get("harmful", ""), -1.0)
 
 
 def val_metrics(scores: Sequence[float], labels: Sequence[int]) -> dict[str, float]:
@@ -94,7 +103,9 @@ def train(
     model: Any = tf.AutoModelForSequenceClassification.from_pretrained(
         repo, revision=revision, num_labels=2, id2label=LABELS,
         label2id={v: k for k, v in LABELS.items()}, dtype=torch.float32,
+        problem_type="multi_label_classification",
     ).to(device)  # fmt: skip
+    bce: Any = torch.nn.BCEWithLogitsLoss(reduction="none")
     steps_per_epoch = math.ceil(len(train_items) / cfg.batch_size)
     total = steps_per_epoch * cfg.epochs
     opt: Any = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
@@ -109,16 +120,35 @@ def train(
             chunk = [items[j] for j in order[i : i + cfg.batch_size]]
             enc = tok([it.text for it in chunk], truncation=True, max_length=cfg.max_length,
                       padding=True, return_tensors="pt")  # fmt: skip
-            yield {k: v.to(device) for k, v in enc.items()}, [it.label for it in chunk]
+            targets = torch.tensor([[float(it.label), _harmful(it)] for it in chunk], device=device)
+            yield {k: v.to(device) for k, v in enc.items()}, targets
 
-    def scores(items: Sequence[Item]) -> list[float]:
+    def loss_of(logits: Any, targets: Any) -> Any:
+        known = targets >= 0
+        per = bce(logits.float(), targets.clamp(min=0)) * known
+        return per.sum() / known.sum().clamp(min=1)
+
+    def scores(items: Sequence[Item]) -> tuple[list[float], list[float]]:
         model.eval()
-        result: list[float] = []
+        attack: list[float] = []
+        harmful: list[float] = []
         with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16, enabled=use_bf16):
             for enc, _ in batches(items, shuffle=False):
                 logits = model(**enc).logits.float()
-                result += (logits[:, 1] - logits[:, 0]).tolist()
+                attack += logits[:, 0].tolist()
+                harmful += logits[:, 1].tolist()
         model.train()
+        return attack, harmful
+
+    def evaluate(items: Sequence[Item]) -> dict[str, Any]:
+        attack, harmful = scores(items)
+        known = [(s, int(_harmful(it))) for s, it in zip(harmful, items, strict=True)
+                 if _harmful(it) >= 0]  # fmt: skip
+        result: dict[str, Any] = {"attack": val_metrics(attack, [it.label for it in items])}
+        if known and any(y for _, y in known) and not all(y for _, y in known):
+            result["harmful"] = val_metrics([s for s, _ in known], [y for _, y in known])
+        recalls = [result[k]["recall_at_1pct_fpr"] for k in ("attack", "harmful") if k in result]
+        result["selection"] = sum(recalls) / len(recalls)
         return result
 
     history: list[dict[str, Any]] = []
@@ -135,13 +165,13 @@ def train(
             start_epoch, history = state["epoch"], state["history"]
             log(f"train: resuming after epoch {start_epoch}")
 
-    best = max((h["val"]["recall_at_1pct_fpr"] for h in history), default=-1.0)
+    best = max((h["val"]["selection"] for h in history), default=-1.0)
     model.train()
     for epoch in range(start_epoch, cfg.epochs):
         t0, loss_sum, n = time.time(), 0.0, 0
-        for step, (enc, labels) in enumerate(batches(train_items, shuffle=True), 1):
+        for step, (enc, targets) in enumerate(batches(train_items, shuffle=True), 1):
             with torch.autocast("cuda", dtype=torch.bfloat16, enabled=use_bf16):
-                loss = model(**enc, labels=torch.tensor(labels, device=device)).loss
+                loss = loss_of(model(**enc).logits, targets)
             if not torch.isfinite(loss):
                 raise FloatingPointError(f"{cfg.base}: loss is {float(loss)} at epoch {epoch + 1} "
                                          f"step {step}; nothing saved from this epoch")  # fmt: skip
@@ -154,13 +184,14 @@ def train(
             if step % 500 == 0:
                 where = f"epoch {epoch + 1} step {step}/{steps_per_epoch}"
                 log(f"train: {where} loss {loss_sum / n:.4f}")
-        val = val_metrics(scores(val_items), [it.label for it in val_items])
+        val = evaluate(val_items)
         history.append({"epoch": epoch + 1, "train_loss": loss_sum / max(1, n),
                         "seconds": round(time.time() - t0, 1), "val": val})  # fmt: skip
-        log(f"train: epoch {epoch + 1}: loss {loss_sum / max(1, n):.4f}, val AUC "
-            f"{val['auc']:.4f}, recall@1%FPR {val['recall_at_1pct_fpr']:.4f}")  # fmt: skip
-        if val["recall_at_1pct_fpr"] > best:
-            best = val["recall_at_1pct_fpr"]
+        parts = [f"{k} AUC {val[k]['auc']:.4f} recall@1%FPR {val[k]['recall_at_1pct_fpr']:.4f}"
+                 for k in ("attack", "harmful") if k in val]  # fmt: skip
+        log(f"train: epoch {epoch + 1}: loss {loss_sum / max(1, n):.4f}, val " + "; ".join(parts))
+        if val["selection"] > best:
+            best = val["selection"]
             model.save_pretrained(out / "best")
             tok.save_pretrained(out / "best")
         torch.save({"key": fingerprint(key), "model": model.state_dict(), "opt": opt.state_dict(),
@@ -182,7 +213,7 @@ def train(
         "torch": torch.__version__,
         "transformers": tf.__version__,
         "history": history,
-        "best_epoch": max(history, key=lambda h: h["val"]["recall_at_1pct_fpr"])["epoch"],
+        "best_epoch": max(history, key=lambda h: h["val"]["selection"])["epoch"],
     }
     write_atomic(done, json.dumps(result, indent=2) + "\n")
     resume.unlink(missing_ok=True)  # the run is complete; best/ holds the model

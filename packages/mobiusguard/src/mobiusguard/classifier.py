@@ -88,6 +88,8 @@ class HFClassifier:
         self.model: Any = model.to(device).eval()
         labels = {str(v).lower(): int(k) for k, v in self.model.config.id2label.items()}
         self.positive = labels[spec.positive_label.lower()]
+        # Mobius Guard's own model has two independent outputs (attack, harmful).
+        self.multi_label = self.model.config.problem_type == "multi_label_classification"
 
     def info(self) -> dict[str, str]:
         t = self.torch
@@ -123,6 +125,9 @@ class HFClassifier:
                 logits = self.model(
                     input_ids=enc["input_ids"], attention_mask=enc["attention_mask"]
                 ).logits
+                if self.multi_label:  # independent sigmoid outputs: the logit is the log-odds
+                    out.extend(float(v) for v in logits[:, self.positive].double().cpu().tolist())
+                    continue
                 # Log-odds of the positive label, not its probability: probabilities round to
                 # exactly 1.0 in float32 for confident inputs, and ties can't be thresholded.
                 lp = t.log_softmax(logits.double(), dim=-1)
