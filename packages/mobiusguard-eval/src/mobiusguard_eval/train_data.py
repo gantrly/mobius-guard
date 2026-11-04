@@ -7,7 +7,10 @@ The rules, in order:
 3. Near duplicates (MinHash, the suite's settings) are clustered together with every text
    of the evaluation suite. A training text is dropped when its cluster holds a suite text
    (the suite stays held out) or texts of both labels (a WildChat message that is really a
-   jailbreak, say). Every such drop is written out for review.
+   jailbreak, say). MinHash misses a suite text reused inside a longer one (a jailbreak
+   template with a new question attached), so 8-word shingles catch those: a training text
+   is also dropped when half its shingles occur in the suite, or it holds half of some
+   suite text's shingles. Every drop is written out for review.
 4. Each source is capped, chosen by hash, so no single game or style dominates.
 5. Whole clusters go to ``train`` or ``val`` (10%), so near copies never straddle the two.
    Model selection uses ``val``; the suite scores only the final candidates.
@@ -27,13 +30,45 @@ from typing import Any
 from . import __version__
 from .checkpoint import fingerprint
 from .dedup import clusters
-from .items import Item, write_jsonl
+from .items import Item, normalize, write_jsonl
 from .ledger import Source
 from .suite import dedupe
 
 CAP = 20_000
 VAL_FRACTION = 0.1
-BUILD = 2  # bump when the rules change
+SHINGLE_WORDS = 8
+CONTAINMENT = 0.5
+BUILD = 3  # bump when the rules change
+
+
+def word_shingles(text: str, k: int = SHINGLE_WORDS) -> set[str]:
+    words = normalize(text).split()
+    return {" ".join(words[i : i + k]) for i in range(len(words) - k + 1)}
+
+
+def suite_overlap(suite: Sequence[Item], texts: Sequence[str]) -> list[bool]:
+    """For each text: does it share most of its word shingles with the suite, or hold most
+    of one suite text's? Texts too short for three shingles are left to MinHash."""
+    index: dict[str, list[int]] = defaultdict(list)
+    sizes: list[int] = []
+    for j, it in enumerate(suite):
+        sh = word_shingles(it.text)
+        sizes.append(len(sh))
+        for s in sh:
+            index[s].append(j)
+    result: list[bool] = []
+    for text in texts:
+        sh = word_shingles(text)
+        if len(sh) < 3:
+            result.append(False)
+            continue
+        hits = [s for s in sh if s in index]
+        if len(hits) >= CONTAINMENT * len(sh):
+            result.append(True)
+            continue
+        held = Counter(j for s in hits for j in index[s])
+        result.append(any(sizes[j] >= 3 and n >= CONTAINMENT * sizes[j] for j, n in held.items()))
+    return result
 
 
 def _unit(key: str) -> float:
@@ -100,11 +135,19 @@ def build(
     for i, it in enumerate(suite):
         suite_of.setdefault(idx[i], it.id)
 
+    log("train-data: word-shingle overlap with the suite")
+    overlap = suite_overlap(suite, [it.text for it in pre])
+
     kept: list[tuple[Item, int]] = []
     dropped: list[dict[str, Any]] = []
     for i, it in enumerate(pre):
         c = idx[n_suite + i]
-        reason = "near_suite" if c in has_suite else "both_labels" if len(labels[c]) > 1 else ""
+        reason = (
+            "near_suite" if c in has_suite
+            else "suite_overlap" if overlap[i]
+            else "both_labels" if len(labels[c]) > 1
+            else ""
+        )  # fmt: skip
         if reason:
             counts[it.source][reason] += 1
             near = suite_of.get(c, "")
