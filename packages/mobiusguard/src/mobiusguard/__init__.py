@@ -3,4 +3,4 @@
 Streaming redaction and an honest, held-out evaluation.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"

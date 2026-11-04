@@ -34,9 +34,10 @@ No PyPI token is stored anywhere: the workflow proves who it is with GitHub's OI
 A release is a pull request; merging it starts the release, and nothing reaches PyPI until
 you approve it.
 
-1. On a branch, set the version in the three `__init__.py` files (`__version__`) and, for a
-   new minor version, the ranges between the packages in `packages/mobiusguard/pyproject.toml`
-   and `packages/mobiusguard-eval/pyproject.toml`; a test fails if they disagree.
+1. On a branch, set the version in the three `__init__.py` files (`__version__`) and the
+   ranges between the packages in `packages/mobiusguard/pyproject.toml` and
+   `packages/mobiusguard-eval/pyproject.toml` (`>=X.Y.Z,<X.Y+1`, so upgrading one package
+   brings the others' fixes too); a test fails if they disagree.
 2. Rename the changelog's `## Unreleased` section to the version and date:
    `## 0.2.0 (2026-12-01)`, and start a new, empty `## Unreleased` above it. Until the
    version has a dated section, merging does not release anything.
