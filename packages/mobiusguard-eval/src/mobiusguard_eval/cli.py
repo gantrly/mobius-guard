@@ -35,6 +35,8 @@ from .items import Item
 from .suite import build, is_built, ledger_sources, load_suite
 from .train import TrainConfig
 
+TRAIN_DEFAULTS = TrainConfig(base="")  # a slots dataclass: its class attributes are descriptors
+
 
 def log(message: str) -> None:
     print(f"[{datetime.now(UTC):%H:%M:%S}] {message}", file=sys.stderr, flush=True)
@@ -251,7 +253,7 @@ def step_train_data(suite: Path, out: Path, *, cap: int, source_ids: Sequence[st
 
 def step_train(data: Path, out: Path, *, base: str, seed: int, epochs: int, lr: float,
                batch_size: int, max_length: int, limit: int, device: str) -> None:  # fmt: skip
-    from .train import TrainConfig, train
+    from .train import train
 
     cfg = TrainConfig(base=base, seed=seed, epochs=epochs, lr=lr, batch_size=batch_size,
                       max_length=max_length, limit=limit)  # fmt: skip
@@ -362,10 +364,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out", required=True)
     p.add_argument("--base", required=True, choices=["deberta-v3-xsmall", "mmbert-small"])
     p.add_argument("--seed", type=int, default=0)
-    p.add_argument("--epochs", type=int, default=TrainConfig.epochs)
-    p.add_argument("--lr", type=float, default=TrainConfig.lr)
-    p.add_argument("--batch-size", type=int, default=TrainConfig.batch_size)
-    p.add_argument("--max-length", type=int, default=TrainConfig.max_length)
+    p.add_argument("--epochs", type=int, default=TRAIN_DEFAULTS.epochs)
+    p.add_argument("--lr", type=float, default=TRAIN_DEFAULTS.lr)
+    p.add_argument("--batch-size", type=int, default=TRAIN_DEFAULTS.batch_size)
+    p.add_argument("--max-length", type=int, default=TRAIN_DEFAULTS.max_length)
     p.add_argument("--limit", type=int, default=0, help="train on N items only (small run)")
     p.add_argument("--device", default="cuda")
 

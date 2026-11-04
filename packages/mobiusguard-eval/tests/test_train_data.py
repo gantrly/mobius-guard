@@ -149,12 +149,14 @@ def test_cli_defaults_follow_the_training_config() -> None:
     ns = cli.build_parser().parse_args(
         ["train", "--data", "d", "--out", "o", "--base", "mmbert-small"]
     )
+    cfg = TrainConfig(base="mmbert-small")
     assert (ns.max_length, ns.epochs, ns.lr, ns.batch_size) == (
-        TrainConfig.max_length,
-        TrainConfig.epochs,
-        TrainConfig.lr,
-        TrainConfig.batch_size,
+        cfg.max_length,
+        cfg.epochs,
+        cfg.lr,
+        cfg.batch_size,
     )
+    assert (ns.max_length, ns.epochs) == (512, 3)  # real numbers, not slot descriptors
 
 
 def test_conflicting_harmful_labels_are_dropped(tmp_path: Path) -> None:
