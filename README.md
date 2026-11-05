@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="#licence"><img alt="Licence: Apache-2.0" src="https://img.shields.io/badge/licence-Apache--2.0-1b1e23?style=flat-square"></a>
-  <a href="https://pypi.org/project/mobiusguard/"><img alt="PyPI" src="https://img.shields.io/pypi/v/mobiusguard?style=flat-square&color=f5b301&label=PyPI&cacheSeconds=3600"></a>
+  <a href="https://pypi.org/project/mobiusguard/"><img alt="PyPI version" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fpypi.org%2Fpypi%2Fmobiusguard%2Fjson&query=%24.info.version&prefix=v&label=PyPI&color=f5b301&style=flat-square&cacheSeconds=600"></a>
   <a href="https://github.com/gantrly/mobius-guard/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/gantrly/mobius-guard/ci.yml?branch=main&style=flat-square&label=CI"></a>
   <a href="https://www.bestpractices.dev/projects/16287"><img alt="OpenSSF Best Practices" src="https://www.bestpractices.dev/projects/16287/badge"></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/gantrly/mobius-guard"><img alt="OpenSSF Scorecard" src="https://img.shields.io/ossf-scorecard/github.com/gantrly/mobius-guard?style=flat-square&label=OpenSSF%20Scorecard"></a>
