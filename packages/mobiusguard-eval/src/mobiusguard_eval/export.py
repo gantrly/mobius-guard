@@ -7,8 +7,13 @@ Writes, into ``out``:
 
 Parity: on up to ``n_parity`` validation texts, the float32 ONNX logits must match
 PyTorch's to within ``FP32_TOLERANCE``. The INT8 model is compared by agreement, not
-equality: the correlation of its logits with PyTorch's per output, the largest
-difference, and each output's AUC on the same texts for both models. Latency is the INT8
+equality: per output, its logits must correlate with PyTorch's at ``INT8_MIN_CORRELATION``
+or more, and its AUC on the same texts may fall by ``INT8_MAX_AUC_DROP`` at most.
+
+INT8 uses per-channel weight scales and ``reduce_range`` (7-bit weights). Without
+reduce_range, a CPU without VNNI (the rehearsal box's AMD EPYC 7R13) overflows in its
+8-bit multiply, and the model's outputs became noise (AUC 0.98 -> 0.57, 2026-11-05).
+reduce_range is correct on every x86 CPU, so the shipped file is. Latency is the INT8
 model on the CPU, batch size 1, at 128 and 512 tokens, with the thread count, CPU and
 onnxruntime version stated.
 """
@@ -29,6 +34,8 @@ from .items import Item, read_jsonl
 from .metrics import auc
 
 FP32_TOLERANCE = 1e-3
+INT8_MIN_CORRELATION = 0.98
+INT8_MAX_AUC_DROP = 0.01
 OUTPUTS = ("attack", "harmful")
 
 
@@ -86,7 +93,8 @@ def export(
     del graph.graph.value_info[:]
     onnx.save(graph, str(fp32))
     int8 = out / "model.int8.onnx"
-    quant.quantize_dynamic(str(fp32), str(int8), weight_type=quant.QuantType.QInt8)
+    quant.quantize_dynamic(str(fp32), str(int8), weight_type=quant.QuantType.QInt8,
+                           per_channel=True, reduce_range=True)  # fmt: skip
     tok.save_pretrained(out)
 
     texts: list[str]
@@ -145,7 +153,11 @@ def export(
             if pos and neg:
                 entry["auc_torch"] = auc(r[pos, k].tolist(), r[neg, k].tolist())
                 entry["auc_int8"] = auc(q[pos, k].tolist(), q[neg, k].tolist())
+        entry["ok"] = entry["correlation"] >= INT8_MIN_CORRELATION and (
+            "auc_int8" not in entry or entry["auc_torch"] - entry["auc_int8"] <= INT8_MAX_AUC_DROP
+        )
         parity[f"int8_{name}"] = entry
+    parity["int8_ok"] = all(parity[f"int8_{name}"]["ok"] for name in OUTPUTS)
 
     latency: dict[str, Any] = {}
     filler = "The quick brown fox jumps over the lazy dog. " * 200
@@ -180,5 +192,6 @@ def export(
     }
     write_atomic(out / "export.json", json.dumps(result, indent=2) + "\n")
     log(f"export: fp32 parity {'ok' if parity['fp32_ok'] else 'FAILED'} (max diff "
-        f"{fp32_diff:.2e}); INT8 latency {latency}")  # fmt: skip
+        f"{fp32_diff:.2e}); INT8 {'ok' if parity['int8_ok'] else 'FAILED'}; "
+        f"INT8 latency {latency}")  # fmt: skip
     return result

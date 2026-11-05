@@ -271,6 +271,8 @@ def step_export(model: Path, out: Path, *, val: Path | None, threads: int) -> No
     result = export(model, out, val=val, threads=threads, log=log)
     if not result["parity"]["fp32_ok"]:
         raise SystemExit("export: float32 ONNX does not match PyTorch")
+    if not result["parity"]["int8_ok"]:
+        raise SystemExit("export: the INT8 model does not agree with PyTorch (see export.json)")
 
 
 def _train_sources(_: argparse.Namespace) -> int:
