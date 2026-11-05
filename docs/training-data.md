@@ -86,6 +86,10 @@ Commands: `mobiusguard-eval judge` (paid) and `apply-judges`.
 
 ## Synthetic (Claude on Bedrock, see decision 0012)
 
+**Not built** (2026-11-05): the first training run uses the public data above; see
+[decision 0012](decisions/0012-classifier-v0.2.md#status-of-the-synthetic-data-2026-11-05).
+The plan is kept for reference.
+
 | ID | What | Attack | Harmful | Planned size |
 |---|---|---|---|---|
 | syn_indirect | Carrier documents (10 genres, 10 languages) with an inserted injection | 1 | 0 | 8,000 |
