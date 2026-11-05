@@ -75,6 +75,14 @@ def _subset(items: list[Item], n: int) -> list[Item]:
     return sorted(items, key=lambda it: hashlib.sha256(it.id.encode()).hexdigest())[:n]
 
 
+def restore_rng(torch: Any, state: dict[str, Any], *, cuda: bool) -> None:
+    """Restore the RNG state saved in a resume point. ``torch.load(map_location="cuda")``
+    moves every tensor to the GPU, but the RNG setters only accept CPU byte tensors."""
+    torch.set_rng_state(state["torch_rng"].cpu())
+    if cuda and state.get("cuda_rng") is not None:
+        torch.cuda.set_rng_state_all([s.cpu() for s in state["cuda_rng"]])
+
+
 def _harmful(it: Item) -> float:
     """1.0, 0.0, or -1.0 when unknown (masked out of the loss and the metrics)."""
     return {"1": 1.0, "0": 0.0}.get(it.meta.get("harmful", ""), -1.0)
@@ -197,9 +205,7 @@ def train(
             model.load_state_dict(state["model"])
             opt.load_state_dict(state["opt"])
             sched.load_state_dict(state["sched"])
-            torch.set_rng_state(state["torch_rng"])
-            if cuda and state.get("cuda_rng") is not None:
-                torch.cuda.set_rng_state_all(state["cuda_rng"])
+            restore_rng(torch, state, cuda=cuda)
             start_epoch, start_step = state["epoch"], state["step"]
             history, carried = state["history"], (state["loss_sum"], state["n"])
             log(f"train: resuming at epoch {start_epoch + 1}, step {start_step}")

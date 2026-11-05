@@ -168,3 +168,28 @@ def test_conflicting_harmful_labels_are_dropped(tmp_path: Path) -> None:
                                {"a": [a, *rest], "b": [b]}, [], tmp_path)  # fmt: skip
     assert summary["sources"]["a"]["counts"]["both_harmful"] == 1
     assert summary["sources"]["b"]["counts"]["both_harmful"] == 1
+
+
+def test_rng_state_restores_after_loading_onto_another_device(tmp_path: Path) -> None:
+    # The resume test on the box failed: torch.load(map_location="cuda") moved the saved RNG
+    # state to the GPU and torch.set_rng_state rejected it. Reproduced on any GPU device.
+    import pytest
+
+    torch = pytest.importorskip("torch")
+    from mobiusguard_eval.train import restore_rng
+
+    device = (
+        "cuda" if torch.cuda.is_available()
+        else "mps" if torch.backends.mps.is_available()
+        else None
+    )  # fmt: skip
+    if device is None:
+        pytest.skip("needs a GPU device to move the state onto")
+    torch.manual_seed(1)
+    torch.save({"torch_rng": torch.get_rng_state(), "cuda_rng": None}, tmp_path / "r.pt")
+    expected = torch.rand(3)
+    loaded = torch.load(tmp_path / "r.pt", map_location=device, weights_only=False)
+    assert loaded["torch_rng"].device.type == device
+    torch.manual_seed(99)
+    restore_rng(torch, loaded, cuda=False)
+    assert torch.equal(torch.rand(3), expected)
