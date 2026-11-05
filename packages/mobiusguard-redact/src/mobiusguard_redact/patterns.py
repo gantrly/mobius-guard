@@ -88,27 +88,36 @@ class Pattern:
         return m.span(self.group)
 
     def accepted_span(self, m: regex.Match[str]) -> tuple[int, int] | None:
-        """The span to redact for a match, or None if it isn't a finding.
+        """The span to redact for a match, or None if it isn't a finding."""
+        return self.accepted(m)[0]
+
+    def accepted(self, m: regex.Match[str]) -> tuple[tuple[int, int] | None, int]:
+        """The span to redact for a match (None if it isn't a finding), and where it ends.
 
         A pattern with a validator (cards, IBANs, phone numbers) can match one piece too
         many: "IBAN GB82...32 5." takes in the " 5" and fails its check. Then the match is
         tried again without its last space- or hyphen-separated piece, up to three times.
         Cutting only at a separator keeps the pattern's boundary rules true, and the result
         depends only on the matched text, so it is the same however the stream is split.
+
+        The end is that of the match as accepted: the regex match, or the shorter one it was
+        cut back to. The pieces cut off may start the next match (two IBANs one space
+        apart, issue #20), so the search goes on from there.
         """
         if self.accepts(m):
-            return self.secret_span(m)
+            return self.secret_span(m), m.end()
         if self.validator is None or self.group not in (0, None) or m.re.groups:
-            return None
+            return None, m.end()
         text = m.group()
         for _ in range(3):
             cut = max(text.rfind(" "), text.rfind("-"))
             if cut <= 0:
-                return None
+                break
             text = text[:cut].rstrip(" -")
             if self.compiled.fullmatch(text) and self._accepts_text(text, text):
-                return (m.start(), m.start() + len(text))
-        return None
+                end = m.start() + len(text)
+                return (m.start(), end), end
+        return None, m.end()
 
     def accepts(self, m: regex.Match[str]) -> bool:
         """Whether a regex match is a real finding (validators, entropy, allowlists)."""
