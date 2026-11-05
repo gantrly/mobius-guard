@@ -153,6 +153,14 @@ The result is **157,113 items** (141,497 train, 15,616 val, 35% attacks); each i
 its source labels in `meta`. Noise the judges agreed with cannot be found this way. The
 evaluation suite was never judged: it stays the honest test.
 
+## Status of the synthetic data (2026-11-05)
+
+The synthetic generator was not built in this round. The first training run uses the cleaned
+public data only, and its held-out numbers will show what the missing indirect-injection data
+costs. Published, permissively licensed indirect-injection datasets that are not in the
+evaluation suite are being looked at as an alternative. They would go through the ledger, the
+maintainer's check and the same filters. The cost estimate below is kept for reference.
+
 ## Cost of the synthetic data
 
 | | Calls | Input | Output | Sonnet 4.6 | Haiku 4.5 |
