@@ -21,6 +21,7 @@ so running a command again resumes it. ``--force`` redoes a step from the start.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib
 import json
 import random
@@ -75,8 +76,8 @@ def step_score(
     from .run import score
 
     items = load_suite(suite)
-    if limit:
-        items = items[:limit]
+    if limit:  # the suite is sorted by source: a small run needs a fair mix of every family
+        items = sorted(items, key=lambda it: hashlib.sha256(it.id.encode()).hexdigest())[:limit]
     score(items, detectors.get(detector, device=device, batch_size=batch_size), out,
           force=force, log=log)  # fmt: skip
     log(f"score: wrote {out}")
@@ -369,7 +370,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out", required=True)
     p.add_argument("--device", default="cpu")
     p.add_argument("--batch-size", type=int, default=32)
-    p.add_argument("--limit", type=int, default=0, help="score only the first N items")
+    p.add_argument(
+        "--limit", type=int, default=0, help="score a fixed random N items only (small run)"
+    )
     p.add_argument("--force", action="store_true")
 
     p = sub.add_parser("report")

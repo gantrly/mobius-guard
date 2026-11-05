@@ -240,7 +240,7 @@ def train(
             opt.step()
             sched.step()
             opt.zero_grad(set_to_none=True)
-            loss_sum, n, seen = loss_sum + float(loss), n + 1, seen + len(batches[step])
+            loss_sum, n, seen = loss_sum + loss.detach().item(), n + 1, seen + len(batches[step])
             if (step + 1) % 500 == 0:
                 rate = seen / (time.time() - t0)
                 log(f"train: epoch {epoch + 1} step {step + 1}/{len(batches)} loss "
