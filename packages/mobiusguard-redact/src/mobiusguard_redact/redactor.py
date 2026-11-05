@@ -34,7 +34,7 @@ class Finding:
 @dataclass(frozen=True, slots=True)
 class _Candidate:
     match_start: int
-    match_end: int
+    match_end: int  # of the match as accepted, which may be cut back (Pattern.accepted)
     secret_start: int
     secret_end: int
     accepted: bool
@@ -118,13 +118,23 @@ class StreamRedactor:
                 continue
             resume, found = scans[i] or (base, [])  # the list is replaced below
             grows: int | None = None
-            for m in p.compiled.finditer(text, pos=resume):
-                if not final and p.could_grow(m):
-                    grows = m.start()
-                    break
-                span = p.accepted_span(m)
-                s0, s1 = span or p.secret_span(m)
-                found.append(_Candidate(m.start(), m.end(), s0, s1, span is not None, p))
+            pos: int | None = resume
+            while pos is not None:
+                at, pos = pos, None
+                for m in p.compiled.finditer(text, pos=at):
+                    if not final and p.could_grow(m):
+                        grows = m.start()
+                        break
+                    span, end = p.accepted(m)
+                    s0, s1 = span or p.secret_span(m)
+                    found.append(_Candidate(m.start(), end, s0, s1, span is not None, p))
+                    if end < m.end():
+                        # Accepted once cut back: the pieces cut off may start the next
+                        # match (two IBANs one space apart, #20), so search again from the
+                        # end of the accepted one. Every candidate's end is where the
+                        # search went on from, so the resume rules below hold as before.
+                        pos = end
+                        break
             candidates += found
             if final:
                 continue

@@ -53,8 +53,26 @@ def test_one_character_chunks_match_one_shot(pattern_id: str, text: str, secret:
     assert chunked(sentence, range(len(sentence))) == expected, pattern_id
 
 
+# Numbers one space apart: the first match runs on into the next and is cut back (#20).
+_ADJACENT = [
+    "iban GB82 WEST 1234 5698 7654 32 GB82 WEST 1234 5698 7654 32 x",
+    "GB82 WEST 1234 5698 7654 32 GB82 WEST 1234 5698 7654 32 GB82 WEST 1234 5698 7654 32",
+    "amex 3782 822463 10005 3782 822463 10005 x",
+    "tel +44 20 7946 0958 +44 20 7946 0958 x",
+]
+
+
+@pytest.mark.parametrize("text", _ADJACENT)
+def test_numbers_one_space_apart_split_anywhere(text: str) -> None:
+    expected = redact(text, ALL, prefilter=False)
+    assert not regex.search(r"\d{4}", expected), expected
+    for cut in range(1, len(text)):
+        assert chunked(text, [cut]) == expected, cut
+    assert chunked(text, range(len(text))) == expected
+
+
 # Fragments the property tests build text from: plain words, separators and secrets.
-_SECRETS = [text for _, text, _ in POSITIVES]
+_SECRETS = [text for _, text, _ in POSITIVES] + _ADJACENT
 _WORDS = [
     "the",
     "key",
@@ -269,6 +287,7 @@ _WHILE_HELD = [
     # A finished match that runs past the start of a possible one.
     "iban GB82 WEST 1234 5698 7654 32 GB82 WEST 1234 5698 7654 32 x",
     "cards 4111 1111 1111 1111 1111 1111 1111 1111 1111 end",
+    *_ADJACENT,
     # Held by a private key, with secrets inside it and after it.
     "key:\n" + _PEM[:-29] + "\naws AKIAQWERTYUIOPASDFGH\n" + _PEM[-29:] + "\nmail jo@example.com",
 ]

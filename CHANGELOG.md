@@ -6,6 +6,12 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
 
 ## Unreleased
 
+- Fix: of two IBANs written in groups of four with only a space between them, the second
+  was not redacted; nor was the second of two such American Express numbers (#20). The
+  first number's match ran on into the second and was cut back to pass its check, but the
+  search then went on from inside the second number. It now goes on from the end of the
+  accepted number, in one-shot and streaming redaction alike.
+
 ## 0.1.1 (2026-11-04)
 
 - SECURITY.md: response times, coordinated disclosure, safe harbour, scope and supported

@@ -122,6 +122,30 @@ def test_a_trailing_piece_does_not_hide_a_valid_number(text: str, expected: str)
     assert redact(text) == expected
 
 
+_IBAN = "GB82 WEST 1234 5698 7654 32"
+_AMEX = "3782 822463 10005"
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        # Issue #20: the first match ran on into the second number and was cut back to pass
+        # its check, but the search went on after the uncut match, inside the second.
+        (f"iban {_IBAN} {_IBAN} x", "iban [REDACTED:iban] [REDACTED:iban] x"),
+        (f"{_IBAN} {_IBAN} {_IBAN}", "[REDACTED:iban] [REDACTED:iban] [REDACTED:iban]"),
+        (f"amex {_AMEX} {_AMEX} x", "amex [REDACTED:payment_card] [REDACTED:payment_card] x"),
+        # Never affected (a phone number can't run on into a "+"); kept as a regression test.
+        (
+            "tel +44 20 7946 0958 +44 20 7946 0958 x",
+            "tel [REDACTED:phone_international] [REDACTED:phone_international] x",
+        ),
+    ],
+)
+def test_numbers_one_space_apart_are_all_redacted(text: str, expected: str) -> None:
+    assert redact(text) == expected
+    assert redact(text, prefilter=False) == expected
+
+
 def test_an_invalid_card_is_not_taken_for_an_aadhaar_number() -> None:
     # Its last 12 digits can pass the Aadhaar check by chance; 4-4-4-4 blocks are a card.
     assert redact("card 4121 5299 1419 9802 x") == "card 4121 5299 1419 9802 x"
