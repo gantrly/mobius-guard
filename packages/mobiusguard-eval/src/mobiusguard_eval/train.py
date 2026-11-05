@@ -7,8 +7,14 @@ request). The harmful loss skips items whose harmful label is unknown.
 
 After each epoch both outputs are scored on ``val`` (never on the evaluation suite): AUC and
 recall at 1% false positives, the threshold set on val's own negatives. The epoch with the
-best mean of the two recalls is kept in ``best/``. Each epoch also saves a resume point, so
-a stopped run continues where it was.
+best mean of the two recalls is kept in ``best/``.
+
+Batches group texts of similar length (most are short, so padding to the longest text in a
+random batch wastes most of the compute); each epoch's order is fixed by the seed and the
+epoch, so a resumed run continues at the exact batch where it stopped. A resume point is
+written every ``checkpoint_minutes`` and at the end of each epoch, atomically.
+``stop_after_minutes`` (rehearsals) stops cleanly: resume point, val, and the model in
+``partial/``.
 """
 
 from __future__ import annotations
@@ -49,6 +55,18 @@ class TrainConfig:
     warmup: float = 0.06
     weight_decay: float = 0.01
     limit: int = 0  # use only N training items (and N/9 val items): the small run
+    checkpoint_minutes: float = 20.0  # not part of the run's identity
+    stop_after_minutes: float = 0.0  # 0 = run to the end; not part of the run's identity
+
+    def key(self) -> dict[str, Any]:
+        """What makes two runs the same run (and a resume point usable)."""
+        d = asdict(self)
+        d.pop("checkpoint_minutes")
+        d.pop("stop_after_minutes")
+        return d
+
+
+BUCKET = 50  # batches per length-sorted window
 
 
 def _subset(items: list[Item], n: int) -> list[Item]:
@@ -83,7 +101,7 @@ def train(
     tf: Any = importlib.import_module("transformers")
     repo, revision = BASES[cfg.base]
     summary = json.loads((data / "summary.json").read_text())
-    key = {"config": asdict(cfg), "data": summary["ids_sha256"], "base": [repo, revision]}
+    key = {"config": cfg.key(), "data": summary["ids_sha256"], "base": [repo, revision]}
     out.mkdir(parents=True, exist_ok=True)
     done = out / "metrics.json"
     if done.exists() and json.loads(done.read_text()).get("key") == fingerprint(key):
@@ -106,22 +124,30 @@ def train(
         problem_type="multi_label_classification",
     ).to(device)  # fmt: skip
     bce: Any = torch.nn.BCEWithLogitsLoss(reduction="none")
-    steps_per_epoch = math.ceil(len(train_items) / cfg.batch_size)
-    total = steps_per_epoch * cfg.epochs
+    total = math.ceil(len(train_items) / cfg.batch_size) * cfg.epochs
     opt: Any = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
     sched: Any = tf.get_linear_schedule_with_warmup(opt, int(cfg.warmup * total), total)
     use_bf16 = device.startswith("cuda") and torch.cuda.is_bf16_supported()
 
-    def batches(items: Sequence[Item], shuffle: bool) -> Any:
-        order = list(range(len(items)))
-        if shuffle:
-            random.shuffle(order)
-        for i in range(0, len(order), cfg.batch_size):
-            chunk = [items[j] for j in order[i : i + cfg.batch_size]]
-            enc = tok([it.text for it in chunk], truncation=True, max_length=cfg.max_length,
-                      padding=True, return_tensors="pt")  # fmt: skip
-            targets = torch.tensor([[float(it.label), _harmful(it)] for it in chunk], device=device)
-            yield {k: v.to(device) for k, v in enc.items()}, targets
+    def encode(chunk: Sequence[Item]) -> tuple[dict[str, Any], Any]:
+        enc = tok([it.text for it in chunk], truncation=True, max_length=cfg.max_length,
+                  padding=True, return_tensors="pt")  # fmt: skip
+        targets = torch.tensor([[float(it.label), _harmful(it)] for it in chunk], device=device)
+        return {k: v.to(device) for k, v in enc.items()}, targets
+
+    def plan(epoch: int) -> list[list[int]]:
+        """The epoch's batches: shuffled, then length-sorted inside windows, then shuffled
+        again as batches. Fixed by (seed, epoch), so a resume replays the same order."""
+        rng = random.Random(f"{cfg.seed}:{epoch}")  # noqa: S311 - a training order, not a secret
+        order = list(range(len(train_items)))
+        rng.shuffle(order)
+        window = cfg.batch_size * BUCKET
+        result: list[list[int]] = []
+        for w in range(0, len(order), window):
+            part = sorted(order[w : w + window], key=lambda j: lengths[j])
+            result += [part[i : i + cfg.batch_size] for i in range(0, len(part), cfg.batch_size)]
+        rng.shuffle(result)
+        return result
 
     def loss_of(logits: Any, targets: Any) -> Any:
         known = targets >= 0
@@ -130,13 +156,16 @@ def train(
 
     def scores(items: Sequence[Item]) -> tuple[list[float], list[float]]:
         model.eval()
-        attack: list[float] = []
-        harmful: list[float] = []
+        attack = [0.0] * len(items)
+        harmful = [0.0] * len(items)
+        order = sorted(range(len(items)), key=lambda j: len(items[j].text))  # less padding
         with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16, enabled=use_bf16):
-            for enc, _ in batches(items, shuffle=False):
+            for i in range(0, len(order), cfg.batch_size):
+                idx = order[i : i + cfg.batch_size]
+                enc, _ = encode([items[j] for j in idx])
                 logits = model(**enc).logits.float()
-                attack += logits[:, 0].tolist()
-                harmful += logits[:, 1].tolist()
+                for j, a, h in zip(idx, logits[:, 0].tolist(), logits[:, 1].tolist(), strict=True):
+                    attack[j], harmful[j] = a, h
         model.train()
         return attack, harmful
 
@@ -151,8 +180,16 @@ def train(
         result["selection"] = sum(recalls) / len(recalls)
         return result
 
+    lengths = [len(it.text) for it in train_items]
+    cuda = device.startswith("cuda")
+    if cuda:
+        torch.cuda.reset_peak_memory_stats()
+
+    def peak_gb() -> float:
+        return round(torch.cuda.max_memory_allocated() / 2**30, 2) if cuda else 0.0
+
     history: list[dict[str, Any]] = []
-    start_epoch = 0
+    start_epoch, start_step, carried = 0, 0, (0.0, 0)
     resume = out / "resume.pt"
     if resume.exists():
         state = torch.load(resume, map_location=device, weights_only=False)
@@ -160,33 +197,72 @@ def train(
             model.load_state_dict(state["model"])
             opt.load_state_dict(state["opt"])
             sched.load_state_dict(state["sched"])
-            random.setstate(state["random"])
             torch.set_rng_state(state["torch_rng"])
-            start_epoch, history = state["epoch"], state["history"]
-            log(f"train: resuming after epoch {start_epoch}")
+            if cuda and state.get("cuda_rng") is not None:
+                torch.cuda.set_rng_state_all(state["cuda_rng"])
+            start_epoch, start_step = state["epoch"], state["step"]
+            history, carried = state["history"], (state["loss_sum"], state["n"])
+            log(f"train: resuming at epoch {start_epoch + 1}, step {start_step}")
+
+    def save_resume(epoch: int, step: int, loss_sum: float, n: int) -> None:
+        tmp = resume.with_suffix(".tmp")
+        torch.save({"key": fingerprint(key), "model": model.state_dict(), "opt": opt.state_dict(),
+                    "sched": sched.state_dict(), "torch_rng": torch.get_rng_state(),
+                    "cuda_rng": torch.cuda.get_rng_state_all() if cuda else None,
+                    "epoch": epoch, "step": step, "loss_sum": loss_sum, "n": n,
+                    "history": history}, tmp)  # fmt: skip
+        tmp.replace(resume)  # a kill mid-save leaves the old resume point intact
 
     best = max((h["val"]["selection"] for h in history), default=-1.0)
+    started = last_save = time.time()
     model.train()
     for epoch in range(start_epoch, cfg.epochs):
-        t0, loss_sum, n = time.time(), 0.0, 0
-        for step, (enc, targets) in enumerate(batches(train_items, shuffle=True), 1):
+        batches = plan(epoch)
+        first = start_step if epoch == start_epoch else 0
+        loss_sum, n = carried if epoch == start_epoch else (0.0, 0)
+        t0, seen = time.time(), 0
+        for step in range(first, len(batches)):
+            enc, targets = encode([train_items[j] for j in batches[step]])
             with torch.autocast("cuda", dtype=torch.bfloat16, enabled=use_bf16):
                 loss = loss_of(model(**enc).logits, targets)
             if not torch.isfinite(loss):
-                raise FloatingPointError(f"{cfg.base}: loss is {float(loss)} at epoch {epoch + 1} "
-                                         f"step {step}; nothing saved from this epoch")  # fmt: skip
+                where = f"epoch {epoch + 1} step {step}"
+                raise FloatingPointError(f"{cfg.base}: loss is {float(loss)} at {where}; "
+                                         "the last resume point is unchanged")  # fmt: skip
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             opt.step()
             sched.step()
             opt.zero_grad(set_to_none=True)
-            loss_sum, n = loss_sum + float(loss), n + 1
-            if step % 500 == 0:
-                where = f"epoch {epoch + 1} step {step}/{steps_per_epoch}"
-                log(f"train: {where} loss {loss_sum / n:.4f}")
+            loss_sum, n, seen = loss_sum + float(loss), n + 1, seen + len(batches[step])
+            if (step + 1) % 500 == 0:
+                rate = seen / (time.time() - t0)
+                log(f"train: epoch {epoch + 1} step {step + 1}/{len(batches)} loss "
+                    f"{loss_sum / n:.4f}, {rate:.0f} items/s, peak GPU {peak_gb()} GB")  # fmt: skip
+            now = time.time()
+            if now - last_save >= cfg.checkpoint_minutes * 60:
+                save_resume(epoch, step + 1, loss_sum, n)
+                last_save = now
+                log(f"train: resume point at epoch {epoch + 1} step {step + 1}")
+            if cfg.stop_after_minutes and now - started >= cfg.stop_after_minutes * 60:
+                save_resume(epoch, step + 1, loss_sum, n)
+                val = evaluate(val_items)
+                model.save_pretrained(out / "partial")
+                tok.save_pretrained(out / "partial")
+                stopped = {"stopped_at": {"epoch": epoch + 1, "step": step + 1,
+                                          "of": len(batches)},
+                           "items_per_second": round(seen / (now - t0), 1),
+                           "peak_gpu_gb": peak_gb(), "train_loss": loss_sum / max(1, n),
+                           "val": val, "val_seconds": round(time.time() - now, 1)}  # fmt: skip
+                write_atomic(out / "partial.json", json.dumps(stopped, indent=2) + "\n")
+                log(f"train: stopped after {cfg.stop_after_minutes} min as asked; "
+                    f"wrote {out / 'partial'}")  # fmt: skip
+                return stopped
         val = evaluate(val_items)
         history.append({"epoch": epoch + 1, "train_loss": loss_sum / max(1, n),
-                        "seconds": round(time.time() - t0, 1), "val": val})  # fmt: skip
+                        "seconds": round(time.time() - t0, 1),
+                        "items_per_second": round(seen / max(1e-9, time.time() - t0), 1),
+                        "peak_gpu_gb": peak_gb(), "val": val})  # fmt: skip
         parts = [f"{k} AUC {val[k]['auc']:.4f} recall@1%FPR {val[k]['recall_at_1pct_fpr']:.4f}"
                  for k in ("attack", "harmful") if k in val]  # fmt: skip
         log(f"train: epoch {epoch + 1}: loss {loss_sum / max(1, n):.4f}, val " + "; ".join(parts))
@@ -194,14 +270,12 @@ def train(
             best = val["selection"]
             model.save_pretrained(out / "best")
             tok.save_pretrained(out / "best")
-        torch.save({"key": fingerprint(key), "model": model.state_dict(), "opt": opt.state_dict(),
-                    "sched": sched.state_dict(), "random": random.getstate(),
-                    "torch_rng": torch.get_rng_state(), "epoch": epoch + 1,
-                    "history": history}, resume)  # fmt: skip
+        save_resume(epoch + 1, 0, 0.0, 0)
+        last_save = time.time()
 
     result: dict[str, Any] = {
         "key": fingerprint(key),
-        "config": asdict(cfg),
+        "config": cfg.key(),
         "base": {"repo": repo, "revision": revision},
         "data": {
             "dir": str(data),

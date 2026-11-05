@@ -10,6 +10,7 @@
     train-sources                    list the v0.2 training ledger
     train-data --suite S --out runs/train-v0.2 [--cap 20000]   build the training set
     train --data D --base B --seed N --out runs/model-B-sN [--limit N]   fine-tune one run
+    export --model DIR --out DIR [--val D/val.jsonl]   ONNX + INT8, parity, CPU latency
 
 Every step saves its work as it goes and skips what is already done for the same inputs,
 so running a command again resumes it. ``--force`` redoes a step from the start.
@@ -252,13 +253,24 @@ def step_train_data(suite: Path, out: Path, *, cap: int, source_ids: Sequence[st
 
 
 def step_train(data: Path, out: Path, *, base: str, seed: int, epochs: int, lr: float,
-               batch_size: int, max_length: int, limit: int, device: str) -> None:  # fmt: skip
+               batch_size: int, max_length: int, limit: int, device: str,
+               checkpoint_minutes: float, stop_after_minutes: float) -> None:  # fmt: skip
     from .train import train
 
     cfg = TrainConfig(base=base, seed=seed, epochs=epochs, lr=lr, batch_size=batch_size,
-                      max_length=max_length, limit=limit)  # fmt: skip
+                      max_length=max_length, limit=limit, checkpoint_minutes=checkpoint_minutes,
+                      stop_after_minutes=stop_after_minutes)  # fmt: skip
     result = train(data, cfg, out, device=device, log=log)
-    log(f"train: best epoch {result['best_epoch']}, wrote {out / 'best'}")
+    if "best_epoch" in result:
+        log(f"train: best epoch {result['best_epoch']}, wrote {out / 'best'}")
+
+
+def step_export(model: Path, out: Path, *, val: Path | None, threads: int) -> None:
+    from .export import export
+
+    result = export(model, out, val=val, threads=threads, log=log)
+    if not result["parity"]["fp32_ok"]:
+        raise SystemExit("export: float32 ONNX does not match PyTorch")
 
 
 def _train_sources(_: argparse.Namespace) -> int:
@@ -285,10 +297,14 @@ def _run(a: argparse.Namespace) -> int:
     if cmd == "train-data":
         step_train_data(Path(a.suite), Path(a.out), cap=a.cap, source_ids=a.sources,
                         seed=a.sample_seed, force=a.force)  # fmt: skip
+    elif cmd == "export":
+        step_export(Path(a.model), Path(a.out), val=Path(a.val) if a.val else None,
+                    threads=a.threads)  # fmt: skip
     elif cmd == "train":
         step_train(Path(a.data), Path(a.out), base=a.base, seed=a.seed, epochs=a.epochs, lr=a.lr,
                    batch_size=a.batch_size, max_length=a.max_length, limit=a.limit,
-                   device=a.device)  # fmt: skip
+                   device=a.device, checkpoint_minutes=a.checkpoint_minutes,
+                   stop_after_minutes=a.stop_after_minutes)  # fmt: skip
     elif cmd == "build":
         step_build(Path(a.out), a.sources, force=a.force)
     elif cmd == "score":
@@ -370,6 +386,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--max-length", type=int, default=TRAIN_DEFAULTS.max_length)
     p.add_argument("--limit", type=int, default=0, help="train on N items only (small run)")
     p.add_argument("--device", default="cuda")
+    p.add_argument("--checkpoint-minutes", type=float, default=TRAIN_DEFAULTS.checkpoint_minutes,
+                   help="write a resume point this often")  # fmt: skip
+    p.add_argument("--stop-after-minutes", type=float, default=0.0,
+                   help="rehearsal: stop, score val, save the model in partial/")  # fmt: skip
+
+    p = sub.add_parser("export", help="ONNX + INT8 export of a trained model, with checks")
+    p.add_argument("--model", required=True, help="a trained model directory (best/ or partial/)")
+    p.add_argument("--out", required=True)
+    p.add_argument("--val", help="val.jsonl of its training set, for the parity check")
+    p.add_argument("--threads", type=int, default=4, help="CPU threads for the latency test")
 
     p = sub.add_parser("pipeline", help="every step in order, resuming what was saved")
     p.add_argument("--out", default="runs")

@@ -49,10 +49,14 @@ hf = [
     "torch>=2.5",
     "transformers>=4.46",
 ]
-# Fine-tuning the v0.2 classifier (decision 0012): DeBERTa-v3's tokenizer needs these.
+# Fine-tuning the v0.2 classifier (decision 0012): DeBERTa-v3's tokenizer needs
+# sentencepiece and protobuf; the ONNX export, INT8 quantisation and parity check need the rest.
 train = [
     "sentencepiece>=0.2",
     "protobuf>=5",
+    "onnx>=1.17",
+    "onnxruntime>=1.20",
+    "onnxscript>=0.2",
 ]
 
 [build-system]
