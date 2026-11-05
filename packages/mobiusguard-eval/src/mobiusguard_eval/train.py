@@ -33,6 +33,7 @@ from typing import Any
 from .checkpoint import fingerprint, write_atomic
 from .items import Item, read_jsonl
 from .metrics import auc, threshold_at_fpr
+from .run import git_commit
 
 BASES = {  # name: (repo, revision)
     "deberta-v3-xsmall": (
@@ -289,6 +290,7 @@ def train(
             "train": len(train_items),
             "val": len(val_items),
         },
+        "commit": git_commit(),
         "device": torch.cuda.get_device_name(0) if device.startswith("cuda") else device,
         "torch": torch.__version__,
         "transformers": tf.__version__,

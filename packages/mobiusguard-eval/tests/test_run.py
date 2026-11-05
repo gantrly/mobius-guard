@@ -277,3 +277,10 @@ def test_a_score_limit_is_a_random_mix_of_sources(
     assert len(seen[0]) == 40
     assert {it.source for it in seen[0]} == set("abcd")  # the first 40 would all be "a"
     assert [it.id for it in seen[0]] == [it.id for it in seen[1]]  # the same items every run
+
+
+def test_the_commit_can_come_from_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    from mobiusguard_eval.run import git_commit
+
+    monkeypatch.setenv("MOBIUSGUARD_COMMIT", "abc1234")
+    assert git_commit() == "abc1234"  # the box has the code without its git history

@@ -7,6 +7,7 @@ report is computed anywhere from the score files. Every run records what produce
 from __future__ import annotations
 
 import json
+import os
 import platform
 import subprocess
 import time
@@ -42,7 +43,11 @@ def machine() -> dict[str, str]:
     return {"cpu": cpu, "platform": platform.platform(), "python": platform.python_version()}
 
 
-def _git_commit() -> str:
+def git_commit() -> str:
+    """The code's commit: from git, or from ``MOBIUSGUARD_COMMIT`` where the code was copied
+    without its history (the GPU box)."""
+    if commit := os.environ.get("MOBIUSGUARD_COMMIT"):
+        return commit
     try:
         return subprocess.check_output(
             ["/usr/bin/env", "git", "rev-parse", "--short", "HEAD"],
@@ -112,7 +117,7 @@ def score(
         "seconds": round(seconds, 1),  # compute time, summed over groups and restarts
         "when": datetime.now(UTC).isoformat(timespec="seconds"),
         "machine": machine(),
-        "commit": _git_commit(),
+        "commit": git_commit(),
         "mobiusguard_eval": __version__,
         "key": fingerprint(key),
     }
