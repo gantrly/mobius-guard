@@ -54,6 +54,9 @@ uv run mobiusguard-eval score --suite runs/suite --detector "local:runs/model-mm
     --out runs/score-mmbert-harmful --device cuda    # #attack (default) or #harmful
 ```
 
+`--limit N` on `train` and `score` takes a fixed random N items (by item id), so a small run
+sees every source and family.
+
 Label cleaning (paid, Amazon Bedrock; the small run first with `--limit`):
 
 ```sh

@@ -161,6 +161,25 @@ costs. Published, permissively licensed indirect-injection datasets that are not
 evaluation suite are being looked at as an alternative. They would go through the ledger, the
 maintainer's check and the same filters. The cost estimate below is kept for reference.
 
+## Order of training (2026-11-05)
+
+- **Baseline first.** The first full run trains on the cleaned public data above: the
+  learning-rate sweep, then three seeds of each base's best rate.
+- **Then the indirect-injection data.** The published sets in the
+  [research note](../research/2026-11-05-indirect-injection-datasets.md) are added after
+  their licence checks, through the same ledger, filters and judges. The model is trained
+  **from scratch on everything together**, not fine-tuned further on the new data alone,
+  which would erode what it learned before and could not be rebuilt from one dataset. That
+  run reuses the baseline's chosen settings and trains the three seeds only.
+- **Decided before the baseline is scored:** the indirect data is added whatever the
+  baseline scores on the suite, so the suite does not steer the data.
+- **Which seed is exported:** of each base's three seeds, the one with the best validation
+  selection score; the bases are compared by their three-seed mean.
+- **The INT8 gate stays as it is.** If a model fails it, standard fixes are tried on the
+  trained model and judged against the same gate: leaving the most sensitive layers in
+  float32, or calibrated static INT8. A model that still fails is not shipped as INT8, and
+  the results note says so.
+
 ## Cost of the synthetic data
 
 | | Calls | Input | Output | Sonnet 4.6 | Haiku 4.5 |
