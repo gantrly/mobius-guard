@@ -6,13 +6,17 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
 
 ## Unreleased
 
-- README: the PyPI badge reads the version from PyPI's JSON and is cached for 10 minutes;
-  the standard PyPI badge is cached for 6 hours, so it showed the old version after a release.
+## 0.1.2 (2026-11-05)
+
 - Fix: of two IBANs written in groups of four with only a space between them, the second
   was not redacted; nor was the second of two such American Express numbers (#20). The
   first number's match ran on into the second and was cut back to pass its check, but the
   search then went on from inside the second number. It now goes on from the end of the
   accepted number, in one-shot and streaming redaction alike.
+- `mobiusguard` and `mobiusguard-eval` now require `mobiusguard-redact>=0.1.2`, so upgrading
+  the proxy brings this fix.
+- README: the PyPI badge reads the version from PyPI's JSON and is cached for 10 minutes;
+  the standard PyPI badge is cached for 6 hours, so it showed the old version after a release.
 
 ## 0.1.1 (2026-11-04)
 

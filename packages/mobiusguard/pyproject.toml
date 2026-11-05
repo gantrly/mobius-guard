@@ -20,7 +20,7 @@ classifiers = [
 ]
 dependencies = [
     "httpx>=0.28",
-    "mobiusguard-redact>=0.1.1,<0.2",
+    "mobiusguard-redact>=0.1.2,<0.2",
     "starlette>=0.46",
     "uvicorn>=0.34",
 ]
