@@ -111,6 +111,48 @@ words. More rules:
 - Every step runs first on small random samples, which are audited: automatic checks plus
   random items read by hand. Each long or paid step waits for the maintainer's go.
 
+## Label cleaning (2026-11-05)
+
+The dress rehearsal's model was used to find label noise: of the 200 training items it most
+disagreed with on each output, many were mislabelled at the source. Examples:
+- in-the-wild prompts are labelled by the community they were posted in;
+- SaTML labels every turn of an attack chat as an attack;
+- Salad-Data's base set labels by topic;
+- WildJailbreak's generator sometimes got its own label wrong.
+
+So the labels were checked by LLM judges, measured first.
+
+**Calibration** (300 items: 100 hard, 200 random; about $0.80):
+- *Referee.* Claude Sonnet 4.6 labelled every disputed item blind (text and policy only). It
+  is the newest Claude model this account can call, and was used as the reference.
+- *Noise.* On the random items, the source labels were about 23% wrong. The worst were
+  WildJailbreak (attack side) 47%, Salad-Data base 45% and SaTML 35%; WildChat, UltraChat and
+  JailbreakBench's harmful items were clean.
+- *Judges.* On the random items, Kimi K2.5 was right 95% (attack) / 93% (harmful), DeepSeek
+  v3.2 92% / 91%, and GPT-OSS-Safeguard 120B 81% / 89%: Safeguard was too strict and was
+  not used.
+
+**Judging:**
+- Kimi K2.5 and DeepSeek v3.2 (Bedrock, Mumbai, flex tier) labelled all 192,591 items with
+  the policy in `mobiusguard_eval/judge.py`: $39.58, 25 minutes.
+- Where they disagreed on attack, the item was dropped (15,151).
+
+**Spot check of the flips** (299, Sonnet 4.6, blind, $0.86):
+- right 100% for Salad-Data's attack flips and the base set's harmful flips;
+- **wrong for HackAPrompt** (the source was right 93%: those inputs only look harmless out
+  of their game);
+- 37–88% elsewhere.
+
+**The rule** (`judge.RULE_2026_11_05`):
+- keep those two kinds of flips;
+- revert HackAPrompt to its source label;
+- drop every other item whose attack label the judges flipped;
+- make every other changed harmful label unknown.
+
+The result is **157,113 items** (141,497 train, 15,616 val, 35% attacks); each item keeps
+its source labels in `meta`. Noise the judges agreed with cannot be found this way. The
+evaluation suite was never judged: it stays the honest test.
+
 ## Cost of the synthetic data
 
 | | Calls | Input | Output | Sonnet 4.6 | Haiku 4.5 |

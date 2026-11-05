@@ -11,6 +11,8 @@
     train-data --suite S --out runs/train-v0.2 [--cap 20000]   build the training set
     train --data D --base B --seed N --out runs/model-B-sN [--limit N]   fine-tune one run
     export --model DIR --out DIR [--val D/val.jsonl]   ONNX + INT8, parity, CPU latency
+    judge --data D --out runs/judged            two LLM judges label a training build (paid)
+    apply-judges --data D --judged J --out D2   clean a build with the judges' labels
 
 Every step saves its work as it goes and skips what is already done for the same inputs,
 so running a command again resumes it. ``--force`` redoes a step from the start.
@@ -21,6 +23,7 @@ from __future__ import annotations
 import argparse
 import importlib
 import json
+import random
 import sys
 import time
 import traceback
@@ -275,6 +278,23 @@ def step_export(model: Path, out: Path, *, val: Path | None, threads: int) -> No
         raise SystemExit("export: the INT8 model does not agree with PyTorch (see export.json)")
 
 
+def step_judge(data: Path, out: Path, *, workers: int, limit: int) -> None:
+    from . import judge
+    from .items import read_jsonl
+
+    items = [*read_jsonl(data / "train.jsonl"), *read_jsonl(data / "val.jsonl")]
+    rng = random.Random(0)  # noqa: S311 - an order, not a secret
+    rng.shuffle(items)  # the files are sorted by source: a --limit chunk should be a fair mix
+    judge.run(items[:limit] if limit else items, out, workers=workers, log=log)
+
+
+def step_apply_judges(data: Path, judged: Path, out: Path) -> None:
+    from . import judge
+
+    s = judge.apply_build(data, judged, out)
+    log(f"apply-judges: {s['items']}, labels {dict(s['labels'])}")
+
+
 def _train_sources(_: argparse.Namespace) -> int:
     from .train_sources import training_sources
 
@@ -299,6 +319,10 @@ def _run(a: argparse.Namespace) -> int:
     if cmd == "train-data":
         step_train_data(Path(a.suite), Path(a.out), cap=a.cap, source_ids=a.sources,
                         seed=a.sample_seed, force=a.force)  # fmt: skip
+    elif cmd == "judge":
+        step_judge(Path(a.data), Path(a.out), workers=a.workers, limit=a.limit)
+    elif cmd == "apply-judges":
+        step_apply_judges(Path(a.data), Path(a.judged), Path(a.out))
     elif cmd == "export":
         step_export(Path(a.model), Path(a.out), val=Path(a.val) if a.val else None,
                     threads=a.threads)  # fmt: skip
@@ -392,6 +416,17 @@ def build_parser() -> argparse.ArgumentParser:
                    help="write a resume point this often")  # fmt: skip
     p.add_argument("--stop-after-minutes", type=float, default=0.0,
                    help="rehearsal: stop, score val, save the model in partial/")  # fmt: skip
+
+    p = sub.add_parser("judge", help="two LLM judges label a training build (paid, Bedrock)")
+    p.add_argument("--data", required=True, help="a train-data build")
+    p.add_argument("--out", required=True)
+    p.add_argument("--workers", type=int, default=64, help="parallel calls per judge")
+    p.add_argument("--limit", type=int, default=0, help="label N items only (the small run)")
+
+    p = sub.add_parser("apply-judges", help="clean a training build with saved judge labels")
+    p.add_argument("--data", required=True)
+    p.add_argument("--judged", required=True, help="the judge run's directory")
+    p.add_argument("--out", required=True)
 
     p = sub.add_parser("export", help="ONNX + INT8 export of a trained model, with checks")
     p.add_argument("--model", required=True, help="a trained model directory (best/ or partial/)")

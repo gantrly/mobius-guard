@@ -28,6 +28,32 @@ source on 2026-11-04.
 "Trained on by" lists published classifiers whose model cards name the set; ProtectAI v2
 also used 15 sets it doesn't name.
 
+## Label cleaning (2026-11-05)
+
+Every item was then labelled by two LLM judges (Kimi K2.5 and DeepSeek v3.2), and the
+disagreements were settled by a rule that a blind spot check decided. The method, the noise
+found and the costs are in [decision 0012](decisions/0012-classifier-v0.2.md#label-cleaning-2026-11-05).
+Commands: `mobiusguard-eval judge` (paid) and `apply-judges`.
+
+| Source | Items | Kept | What changed |
+|---|---|---|---|
+| Salad-Data base | 20,000 | 19,969 | 5,647 harmful labels corrected (topic-based at the source) |
+| UltraChat | 20,000 | 19,879 | almost nothing |
+| WildJailbreak plain harmful | 20,000 | 19,856 | 3,017 harmful labels made unknown |
+| WildChat | 20,000 | 19,455 | 360 dropped (judges disagreed on attack) |
+| HackAPrompt | 17,933 | 16,272 | judges' attack flips reverted: the source was right |
+| Mosscap | 20,000 | 13,648 | 3,717 dropped (unreliable attack flips) |
+| WildJailbreak harmless | 20,000 | 13,292 | 4,372 dropped |
+| SaTML | 20,000 | 12,553 | 5,036 dropped (harmless probing turns) |
+| WildJailbreak (attack side) | 20,000 | 12,121 | 3,700 dropped; 1,517 harmful labels made unknown |
+| In-the-wild regular | 12,726 | 8,563 | 2,998 dropped |
+| Salad-Data jailbreaks | 1,008 | 738 | 172 attack labels corrected |
+| In-the-wild jailbreaks | 587 | 447 | 91 dropped |
+| Gandalf summarisation | 139 | 122 | 6 dropped |
+| JailbreakBench harmful / harmless | 99 / 99 | 99 / 99 | a few harmful labels made unknown |
+
+"Dropped" also counts items the two judges disagreed on (15,151 in all).
+
 ## Attacks (attack = 1)
 
 | ID | Source | Licence | Access | Harmful | Planned use | Trained on by |

@@ -58,6 +58,10 @@ train = [
     "onnxruntime>=1.20",
     "onnxscript>=0.2",
 ]
+# The label-cleaning judges (Amazon Bedrock).
+judge = [
+    "boto3>=1.40",
+]
 
 [build-system]
 requires = ["hatchling>=1.32.4"]

@@ -54,6 +54,14 @@ uv run mobiusguard-eval score --suite runs/suite --detector "local:runs/model-mm
     --out runs/score-mmbert-harmful --device cuda    # #attack (default) or #harmful
 ```
 
+Label cleaning (paid, Amazon Bedrock; the small run first with `--limit`):
+
+```sh
+uv run mobiusguard-eval judge --data runs/train --out runs/judged --limit 2000
+uv run mobiusguard-eval judge --data runs/train --out runs/judged          # resumes
+uv run mobiusguard-eval apply-judges --data runs/train --judged runs/judged --out runs/train-clean
+```
+
 Two gated sources (HackAPrompt, WildJailbreak) need a Hugging Face login that has accepted
 their terms. Download them where that login is, and copy the cached *files* (not the
 token) to the training machine. Each step runs on small random samples first, and those are
