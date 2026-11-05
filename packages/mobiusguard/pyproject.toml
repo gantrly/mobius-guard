@@ -1,13 +1,13 @@
 [project]
 name = "mobiusguard"
 dynamic = ["version"]
-description = "Mobius Guard: an OpenAI-compatible LLM firewall proxy with streaming redaction and an honest, held-out evaluation."
+description = "Open-source LLM firewall proxy for OpenAI and Anthropic APIs: prompt-injection checks on the way in, streaming secret and PII redaction on the way out, audit log; one base URL to change."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.11"
 authors = [{ name = "SK Imtiaj Uddin" }]
-keywords = ["llm", "security", "prompt-injection", "guardrails", "redaction"]
+keywords = ["llm", "firewall", "proxy", "prompt-injection", "jailbreak", "guardrails", "redaction", "pii", "ai-security", "openai", "anthropic", "llm-gateway"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
@@ -17,10 +17,16 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Topic :: Security",
   "Typing :: Typed",
+  "Operating System :: OS Independent",
+  "Environment :: Console",
+  "Environment :: Web Environment",
+  "Intended Audience :: System Administrators",
+  "Topic :: Internet :: Proxy Servers",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
     "httpx>=0.28",
-    "mobiusguard-redact>=0.1.1,<0.2",
+    "mobiusguard-redact>=0.1.2,<0.2",
     "starlette>=0.46",
     "uvicorn>=0.34",
 ]
@@ -30,7 +36,12 @@ mobiusguard = "mobiusguard.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/gantrly/mobius-guard"
+Documentation = "https://github.com/gantrly/mobius-guard/tree/main/docs"
+Changelog = "https://github.com/gantrly/mobius-guard/blob/main/CHANGELOG.md"
+Source = "https://github.com/gantrly/mobius-guard"
 Issues = "https://github.com/gantrly/mobius-guard/issues"
+Security = "https://github.com/gantrly/mobius-guard/blob/main/SECURITY.md"
+Releases = "https://github.com/gantrly/mobius-guard/releases"
 
 [project.optional-dependencies]
 classifier = [

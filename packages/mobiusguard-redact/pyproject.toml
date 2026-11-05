@@ -1,13 +1,13 @@
 [project]
 name = "mobiusguard-redact"
 dynamic = ["version"]
-description = "Streaming redaction for LLM output: rewrites secrets and PII that are split across chunks, without buffering the reply."
+description = "Streaming secret and PII redaction for LLM output: rewrites API keys, tokens, private keys, cards and IBANs in a streamed reply, even split across chunks, without stopping the stream."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.11"
 authors = [{ name = "SK Imtiaj Uddin" }]
-keywords = ["llm", "security", "prompt-injection", "guardrails", "redaction"]
+keywords = ["llm", "redaction", "streaming", "secrets", "pii", "dlp", "data-loss-prevention", "gitleaks", "guardrails", "ai-security", "openai", "anthropic"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
@@ -17,6 +17,9 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Topic :: Security",
   "Typing :: Typed",
+  "Operating System :: OS Independent",
+  "Topic :: Text Processing :: Filters",
+  "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
     "regex>=2024.11.6",
@@ -24,7 +27,12 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/gantrly/mobius-guard"
+Documentation = "https://github.com/gantrly/mobius-guard/tree/main/docs"
+Changelog = "https://github.com/gantrly/mobius-guard/blob/main/CHANGELOG.md"
+Source = "https://github.com/gantrly/mobius-guard"
 Issues = "https://github.com/gantrly/mobius-guard/issues"
+Security = "https://github.com/gantrly/mobius-guard/blob/main/SECURITY.md"
+Releases = "https://github.com/gantrly/mobius-guard/releases"
 
 [build-system]
 requires = ["hatchling>=1.32.4"]
