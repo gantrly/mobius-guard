@@ -17,6 +17,9 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
   the proxy brings this fix.
 - README: the PyPI badge reads the version from PyPI's JSON and is cached for 10 minutes;
   the standard PyPI badge is cached for 6 hours, so it showed the old version after a release.
+- PyPI pages: fuller descriptions for all three packages (what each does, measured numbers,
+  links to the docs, changelog, security policy and releases), with sharper summaries,
+  keywords and classifiers.
 
 ## 0.1.1 (2026-11-04)
 

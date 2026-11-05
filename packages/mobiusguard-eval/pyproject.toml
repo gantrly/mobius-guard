@@ -1,13 +1,13 @@
 [project]
 name = "mobiusguard-eval"
 dynamic = ["version"]
-description = "Evaluation harness for LLM guardrails: held-out attack families, false-positive sets, recall at fixed FPR and CPU latency."
+description = "Honest evaluation harness for LLM guardrails: prompt-injection detectors scored on held-out attack families at a fixed false-positive rate, with pinned datasets, a provenance ledger and CPU latency."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.11"
 authors = [{ name = "SK Imtiaj Uddin" }]
-keywords = ["llm", "security", "prompt-injection", "guardrails", "redaction"]
+keywords = ["llm", "evaluation", "benchmark", "prompt-injection", "guardrails", "ai-security", "red-teaming", "redaction"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
@@ -17,6 +17,9 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Topic :: Security",
   "Typing :: Typed",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
     "huggingface-hub>=0.26",
@@ -31,7 +34,12 @@ mobiusguard-eval = "mobiusguard_eval.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/gantrly/mobius-guard"
+Documentation = "https://github.com/gantrly/mobius-guard/tree/main/docs"
+Changelog = "https://github.com/gantrly/mobius-guard/blob/main/CHANGELOG.md"
+Source = "https://github.com/gantrly/mobius-guard"
 Issues = "https://github.com/gantrly/mobius-guard/issues"
+Security = "https://github.com/gantrly/mobius-guard/blob/main/SECURITY.md"
+Releases = "https://github.com/gantrly/mobius-guard/releases"
 
 [project.optional-dependencies]
 sklearn = [
