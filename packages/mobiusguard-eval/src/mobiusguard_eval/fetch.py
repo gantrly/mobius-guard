@@ -44,9 +44,22 @@ def _fetch_columns(remote: Remote) -> Path:
         return dest
     hub: Any = importlib.import_module("huggingface_hub")
     pq: Any = importlib.import_module("pyarrow.parquet")
+    pa: Any = importlib.import_module("pyarrow")
     fs = hub.HfFileSystem()
-    with fs.open(f"datasets/{remote.location}@{remote.revision}/{remote.path}", "rb") as fh:
-        table = pq.read_table(fh, columns=list(remote.columns))
+    path = f"datasets/{remote.location}@{remote.revision}/{remote.path}"
+    with fs.open(path, "rb", block_size=1 << 18) as fh:
+        groups = pq.ParquetFile(fh).metadata.num_row_groups
+
+    def group(i: int) -> Any:
+        # One connection per row group and small blocks: only the named columns' bytes are
+        # read, not the large columns stored between them (BrowseSafe++'s screenshots).
+        with fs.open(path, "rb", block_size=1 << 18) as fh:
+            return pq.ParquetFile(fh).read_row_group(i, columns=list(remote.columns))
+
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        table = pa.concat_tables(list(pool.map(group, range(groups))))
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_suffix(".part")
     pq.write_table(table, tmp)

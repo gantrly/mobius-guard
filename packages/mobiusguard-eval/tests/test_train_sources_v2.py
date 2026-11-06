@@ -159,7 +159,7 @@ def test_column_fetch_reads_only_the_named_columns(
     pq.write_table(pa.Table.from_pylist([{"a": "x", "big": b"\0" * 100, "b": 1}]), src)
 
     class FS:
-        def open(self, path: str, mode: str):
+        def open(self, path: str, mode: str, **_kw: object):
             assert path == "datasets/org/set@" + "c" * 40 + "/data/f.parquet"
             return src.open(mode)
 
