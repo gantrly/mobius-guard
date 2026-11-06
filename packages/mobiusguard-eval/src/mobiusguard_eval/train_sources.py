@@ -544,38 +544,48 @@ def control_window(text: str, width: int, rng: random.Random, view: str,
 def _browsesafe(view: str, source: str) -> Callable[[list[Path]], Iterator[Item]]:
     width = WINDOW_CHARS[view]
 
+    cols = ["entry_id", "arm", "label", "split", "language_page", "page_type", "attack_type",
+            view, "injection_text_fragments_json"]  # fmt: skip
+
     def parse(paths: list[Path]) -> Iterator[Item]:
-        pages: dict[str, dict[str, dict[str, Any]]] = defaultdict(dict)
+        # File by file, one view only: all pages with both views at once is several GB.
+        # A pair's two pages are in the same file.
         for path in paths:
-            for r in _rows_parquet(path):
+            pages: dict[str, dict[str, dict[str, Any]]] = defaultdict(dict)
+            for r in _rows_parquet(path, cols):
                 if r["split"] == "train":
                     pages[r["entry_id"].rsplit("_", 1)[0]][r["arm"]] = r
-        for pair, p in sorted(pages.items()):
-            a, c = p.get("attack"), p.get("control")
-            if not a or not c or a["label"] != "yes" or c["label"] != "no":
-                continue
-            rng = random.Random(f"{source}:{pair}")  # noqa: S311 - a sample, not a secret
-            frags = [f for f in json.loads(a["injection_text_fragments_json"] or "[]")
-                     if isinstance(f, str)]  # fmt: skip
-            # The control's window sits at the same relative place as the attack's, so the
-            # model can't tell them apart by which part of a page a window comes from.
-            hit = attack_window_at(a[view] or "", frags, width, rng, view)
-            if not hit:
-                continue
-            where, bad = hit
-            good = control_window(c[view] or "", width, rng, view, where)
-            if junk(good) or _BSP_CANARY in bad + good:
-                continue
-            if any(f and f in good for f in frags):
-                continue  # the control must not hold the injection
-            langs = [str(x) for x in cast("list[Any]", a["language_page"] or [])]
-            lang = langs[0] if len(langs) == 1 else "und"
-            common = {"pair": f"bsp:{pair}", "page_type": a["page_type"] or "", "view": view}
-            yield make_item(bad, ATTACK, source, lang=lang,
-                            meta=_m("", attack_type=a["attack_type"] or "", **common))  # fmt: skip
-            yield make_item(good, BENIGN, source, lang=lang, meta=_m("0", **common))
+            yield from _browsesafe_pairs(pages, view, source, width)
 
     return parse
+
+
+def _browsesafe_pairs(pages: dict[str, dict[str, dict[str, Any]]], view: str, source: str,
+                      width: int) -> Iterator[Item]:  # fmt: skip
+    for pair, p in sorted(pages.items()):
+        a, c = p.get("attack"), p.get("control")
+        if not a or not c or a["label"] != "yes" or c["label"] != "no":
+            continue
+        rng = random.Random(f"{source}:{pair}")  # noqa: S311 - a sample, not a secret
+        frags = [f for f in json.loads(a["injection_text_fragments_json"] or "[]")
+                 if isinstance(f, str)]  # fmt: skip
+        # The control's window sits at the same relative place as the attack's, so the
+        # model can't tell them apart by which part of a page a window comes from.
+        hit = attack_window_at(a[view] or "", frags, width, rng, view)
+        if not hit:
+            continue
+        where, bad = hit
+        good = control_window(c[view] or "", width, rng, view, where)
+        if junk(good) or _BSP_CANARY in bad + good:
+            continue
+        if any(f and f in good for f in frags):
+            continue  # the control must not hold the injection
+        langs = [str(x) for x in cast("list[Any]", a["language_page"] or [])]
+        lang = langs[0] if len(langs) == 1 else "und"
+        common = {"pair": f"bsp:{pair}", "page_type": a["page_type"] or "", "view": view}
+        yield make_item(bad, ATTACK, source, lang=lang,
+                        meta=_m("", attack_type=a["attack_type"] or "", **common))  # fmt: skip
+        yield make_item(good, BENIGN, source, lang=lang, meta=_m("0", **common))
 
 
 for _view, _id, _cap in (
