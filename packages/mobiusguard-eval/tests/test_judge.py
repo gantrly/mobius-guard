@@ -91,23 +91,40 @@ def test_the_rule() -> None:
 
 
 def test_trusted_sources_keep_their_labels() -> None:
-    rule = judge.Rule(
-        trust_attack=frozenset({"pairs"}),
-        trust_harmful=frozenset({"pairs", "human"}),
-        judges=("j1", "j2"),
-    )
+    rule = judge.Rule(trust_attack=frozenset({"pairs"}),
+                      harmful_split_keeps_source=frozenset({"pairs", "human"}),
+                      keep_harmful_flips=frozenset({"human"}), judges=("j1", "j2"))  # fmt: skip
     injected = _item("an injected window the judges miss", 1, "pairs", "")
     twin = _item("its clean twin the judges disagree on", 0, "pairs", "0")
-    human = _item("a human-labelled safe prompt", 0, "human", "0")
+    split = _item("a human-labelled prompt the judges split on", 0, "human", "0")
+    overruled = _item("a human-labelled prompt both judges overrule", 0, "human", "0")
     yes, no = {"attack": 1, "harmful": 1}, {"attack": 0, "harmful": 1}
-    labels = _labels((injected, no, no), (twin, yes, no), (human, no, no))
-    kept, stats = judge.apply([injected, twin, human], labels, rule)
+    no_safe = {"attack": 0, "harmful": 0}
+    labels = _labels(
+        (injected, no, no), (twin, yes, no_safe), (split, no, no_safe), (overruled, no, no)
+    )
+    kept, stats = judge.apply([injected, twin, split, overruled], labels, rule)
     out = {it.id: it for it in kept}
     assert out[injected.id].label == 1  # kept: constructed and checked
     assert out[twin.id].label == 0  # the judges split; the source's label stands
-    assert out[human.id].meta["harmful"] == "0"  # the human label, not the judges' 1
+    assert out[twin.id].meta["harmful"] == "0"  # split harmful votes keep the source
+    assert out[split.id].meta["harmful"] == "0"
+    assert out[overruled.id].meta["harmful"] == "1"  # both judges agree: their label
     assert stats["pairs"]["judges_dispute_attack"] == 2
-    assert stats["human"]["judges_dispute_harmful"] == 1
+
+
+def test_a_disputed_pair_is_dropped_with_its_twin() -> None:
+    rule = judge.Rule(trust_attack=frozenset({"html"}), drop_disputed_pairs=frozenset({"html"}),
+                      judges=("j1", "j2"))  # fmt: skip
+    meta = {"harmful": "", "pair": "p1"}
+    bad = make_item("an injected window", ATTACK, "html", meta=meta)
+    good = make_item("its clean twin", BENIGN, "html", meta={**meta, "harmful": "0"})
+    other = make_item("an undisputed window", ATTACK, "html", meta={"harmful": "", "pair": "p2"})
+    yes, no = {"attack": 1, "harmful": 0}, {"attack": 0, "harmful": 0}
+    labels = _labels((bad, yes, no), (good, no, no), (other, yes, yes))
+    kept, stats = judge.apply([bad, good, other], labels, rule)
+    assert [it.id for it in kept] == [other.id]
+    assert stats["html"]["dropped_disputed_pair"] == 2
 
 
 def test_the_new_rule_treats_the_old_sources_like_the_old_rule() -> None:
@@ -117,5 +134,11 @@ def test_the_new_rule_treats_the_old_sources_like_the_old_rule() -> None:
     olds = {"hackaprompt", "mosscap", "satml", "wild_jb", "wildjailbreak", "salad", "salad_base",
             "wildchat", "ultrachat", "wild_regular", "gandalf_sum", "jbb_harmful", "jbb_benign",
             "wildjailbreak_benign", "wildjailbreak_harmful"}  # fmt: skip
-    added = (new.keep_attack_flips - old.keep_attack_flips) | new.trust_attack | new.trust_harmful
+    added = (
+        (new.keep_attack_flips - old.keep_attack_flips)
+        | (new.keep_harmful_flips - old.keep_harmful_flips)
+        | new.trust_attack
+        | new.drop_disputed_pairs
+        | new.harmful_split_keeps_source
+    )
     assert not added & olds

@@ -193,16 +193,18 @@ class Rule:
     ``keep_harmful_flips``; any other change makes it unknown.
 
     Sources in ``trust_attack`` keep their own attack label whatever the judges say (it is
-    constructed and checked, like an injected window and its clean twin), and sources in
-    ``trust_harmful`` keep their own harmful label (human-labelled, or constructed). The
-    judges' disagreements with them are only counted, for the spot check.
+    constructed and checked, like an injected window and its clean twin); their disputes are
+    counted. In ``drop_disputed_pairs``, an item whose attack label either judge disputes is
+    dropped with its twins (``meta["pair"]``). In ``harmful_split_keeps_source``, a harmful
+    label the judges split on keeps the source's value instead of becoming unknown.
     """
 
     keep_attack_flips: frozenset[str] = frozenset()
     revert_attack_flips: frozenset[str] = frozenset()
     keep_harmful_flips: frozenset[str] = frozenset()
     trust_attack: frozenset[str] = frozenset()
-    trust_harmful: frozenset[str] = frozenset()
+    drop_disputed_pairs: frozenset[str] = frozenset()
+    harmful_split_keeps_source: frozenset[str] = frozenset()
     note: str = ""
     judges: tuple[str, ...] = field(default=tuple(JUDGES))
 
@@ -217,21 +219,28 @@ RULE_2026_11_05 = Rule(
 )
 
 
-# The rule of 2026-11-06: the 2026-11-05 rule, plus the sources added that day.
-# - Indirect-injection pairs: attack labels constructed (every injected window was checked
-#   to hold its injection), so kept; harmful too (unknown on injected, 0 on clean twins).
-# - Aegis 2.0 and PHTest: human harmful labels kept. Aegis has no attack labels: its jailbreak
-#   rows become attacks where both judges agree (its flips are kept).
+# The rule of 2026-11-06: the 2026-11-05 rule, plus the sources added that day, as decided by
+# a blind spot check of 231 disputed items (Claude Sonnet 4.6):
+# - Constructed attack labels kept: right 37/40 for BrowseSafe++ Markdown windows, 21/25 for
+#   rgeada. Not for BrowseSafe++ HTML windows (right 14/40: one fragment of a scattered HTML
+#   injection is often a harmless-looking piece), so a disputed HTML pair is dropped.
+# - Aegis 2.0: where both judges overrule the human harmful label they were right 46/50, so
+#   their label is used; where they split, the human label stays. Its attack flips (its
+#   jailbreak prompts) were right 27/30 and are kept.
+# - PHTest (7 vs 7 of 17) and clean twins the judges call harmful (6/9): unknown when both
+#   judges overrule the source; the source's label when they split.
 # - CyberSecEval and CoCoNot: the default rule, like the older sources.
 _PAIRS = frozenset({"browsesafe_md", "browsesafe_html", "nemotron_ipi", "rgeada_tool"})
 RULE_2026_11_06 = Rule(
     keep_attack_flips=frozenset({"salad", "aegis2"}),
     revert_attack_flips=frozenset({"hackaprompt"}),
-    keep_harmful_flips=frozenset({"salad_base"}),
+    keep_harmful_flips=frozenset({"salad_base", "aegis2"}),
     trust_attack=_PAIRS,
-    trust_harmful=_PAIRS | {"aegis2", "phtest"},
-    note=RULE_2026_11_05.note + "; 2026-11-06 sources: constructed pairs and human harmful "
-    "labels kept, Aegis attack flips kept, the rest by the default rule",
+    drop_disputed_pairs=frozenset({"browsesafe_html"}),
+    harmful_split_keeps_source=_PAIRS | {"aegis2", "phtest"},
+    note=RULE_2026_11_05.note + "; 2026-11-06 sources (spot check of 231 disputes): constructed "
+    "attack labels kept except disputed BrowseSafe++ HTML pairs (dropped); Aegis harmful from "
+    "the judges where both agree; split harmful votes keep the source on the new sources",
 )
 
 
@@ -246,6 +255,13 @@ def apply(
     """The cleaned items and, per source, what happened to them."""
     stats: dict[str, Counter[str]] = defaultdict(Counter)
     kept: list[Item] = []
+    items = list(items)
+    disputed_pairs = {
+        it.meta["pair"]
+        for it in items
+        if it.source in rule.drop_disputed_pairs and it.meta.get("pair")
+        and any((labels[m].get(it.id) or {}).get("attack") != it.label for m in rule.judges)
+    }  # fmt: skip
     for it in items:
         s = stats[it.source]
         s["items"] += 1
@@ -256,6 +272,9 @@ def apply(
         votes = {int(a["attack"]) for a in answers if a}
         harms = {harmful_value(a.get("harmful")) for a in answers if a}
         harmful = harms.pop() if len(harms) == 1 else ""
+        if it.meta.get("pair") in disputed_pairs and it.source in rule.drop_disputed_pairs:
+            s["dropped_disputed_pair"] += 1
+            continue
         if it.source in rule.trust_attack:
             if votes != {it.label}:
                 s["judges_dispute_attack"] += 1
@@ -277,10 +296,9 @@ def apply(
                 s["dropped_attack_flip"] += 1
                 continue
         old = it.meta.get("harmful", "")
-        if it.source in rule.trust_harmful:
-            if harmful != old:
-                s["judges_dispute_harmful"] += 1
-            harmful = old
+        if len(harms) > 1 and it.source in rule.harmful_split_keeps_source:
+            harmful = old  # the judges split: the source's label stands
+            s["harmful_split_kept_source"] += 1
         if harmful != old:
             if harmful and old and it.source in rule.keep_harmful_flips:
                 s["harmful_flip_kept"] += 1
