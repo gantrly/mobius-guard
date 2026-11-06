@@ -27,8 +27,8 @@ held-text fix (#17); 0.1.2 (2026-11-05), the second of two space-separated IBANs
 | Dress rehearsal on the full data (build, audit, speed and memory, kill and resume, export, label-noise review) | **done** 2026-11-05: about 140 items/s on an L4 for both bases; INT8 needs per-channel + reduce_range |
 | Label cleaning with LLM judges (decision 0012) | **done** 2026-11-05: 157,113 items |
 | Small runs of the whole training path on the cleaned set (sweep, seed choice, export, scoring; hard kill, time limits, one base failing) | **done** 2026-11-05; mmBERT's INT8 export failed its gate on a barely trained model |
-| Learning-rate sweep and three seeds on the cleaned public data (the baseline) | **running** since 2026-11-05 |
-| Final evaluation once on the suite, results note | pending |
+| Learning-rate sweep, three seeds and one suite evaluation on the cleaned public data (the baseline) | **done** 2026-11-06: DeBERTa-v3-xsmall selected; [results](results/2026-11-06-classifier-v0.2-baseline.md). Weak on indirect injection; the harmful output over-blocks |
+| Hard-benign training data for the harmful output (over-refusal sets outside the suite) | next, with the indirect-injection data |
 | Indirect-injection training data (synthetic generator not built; published sets found, see [research note](research/2026-11-05-indirect-injection-datasets.md)) | after the baseline: licence checks, rebuild, judges, retrain from scratch |
 | Model card, release | pending |
 
