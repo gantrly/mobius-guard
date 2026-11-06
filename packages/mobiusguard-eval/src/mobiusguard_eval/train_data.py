@@ -15,8 +15,12 @@ The rules, in order:
    (CONTRAST: a harmful request and its harmless twin, an injected document and the same
    document clean), whose near-identical texts with opposite labels are the point.
    Every drop is written out for review.
-4. Each source is capped, chosen by hash, so no single game or style dominates.
-5. Whole clusters go to ``train`` or ``val`` (10%), so near copies never straddle the two.
+4. Each source is capped, chosen by hash, so no single game or style dominates. Twins
+   (an injected document and its clean version, ``meta["pair"]``) are ranked together,
+   so a cap keeps both or neither.
+5. Whole clusters go to ``train`` or ``val`` (10%), so near copies never straddle the two;
+   twins count as one cluster, so a clean twin never sits in ``val`` while its injected
+   version is in ``train``.
    Model selection uses ``val``; the suite scores only the final candidates.
 """
 
@@ -42,11 +46,17 @@ CAP = 20_000
 VAL_FRACTION = 0.1
 SHINGLE_WORDS = 8
 CONTAINMENT = 0.5
-BUILD = 5  # bump when the rules change
+BUILD = 6  # bump when the rules change
 # Sources whose items are near-identical twins with opposite labels, on purpose.
 CONTRAST = (
     frozenset({"jbb_harmful", "jbb_benign"}),
     frozenset({"syn_indirect", "syn_twin"}),
+    frozenset({"browsesafe_md"}),
+    frozenset({"browsesafe_html"}),
+    frozenset({"nemotron_ipi"}),
+    frozenset({"rgeada_tool"}),
+    frozenset({"coconot"}),
+    frozenset({"cse_frr", "cse_mitre"}),
 )
 
 
@@ -87,9 +97,15 @@ def _unit(key: str) -> float:
     return int.from_bytes(hashlib.sha256(f"split:{key}".encode()).digest()[:8], "big") / 2**64
 
 
-def _rank(it: Item, seed: str) -> str:
-    """The order a cap takes items in. A seed draws a different random sample."""
-    return hashlib.sha256(f"{seed}:{it.id}".encode() if seed else it.id.encode()).hexdigest()
+def _rank(it: Item, seed: str) -> tuple[str, str]:
+    """The order a cap takes items in: twins share a key, so they stay together. A seed
+    draws a different random sample."""
+    key = it.meta.get("pair") or it.id
+    return hashlib.sha256(f"{seed}:{key}".encode() if seed else key.encode()).hexdigest(), it.id
+
+
+def _source_cap(source: Source, cap: int) -> int:
+    return min(cap, source.cap) if source.cap else cap
 
 
 def suite_key(suite: Sequence[Item]) -> str:
@@ -135,7 +151,7 @@ def build(
     for s in sources:
         mine = by_source[s.id]
         counts[s.id]["after_dedupe"] = len(mine)
-        pre += sorted(mine, key=lambda it: _rank(it, seed))[: 3 * cap]
+        pre += sorted(mine, key=lambda it: _rank(it, seed))[: 3 * _source_cap(s, cap)]
 
     log(f"train-data: clustering {len(pre):,} training texts with {len(suite):,} suite texts")
     idx = clusters([it.text for it in suite] + [it.text for it in pre])
@@ -184,9 +200,27 @@ def build(
         per_source[it.source].append((it, c))
     for s in sources:
         mine = sorted(per_source[s.id], key=lambda p: _rank(p[0], seed))
-        for it, c in mine[:cap]:
+        for it, c in mine[: _source_cap(s, cap)]:
             # Name a cluster by its first training member's ID: stable across rebuilds.
             final.append(replace(it, cluster=str(c)))
+    # Twins join their clusters into one unit for the split (union-find over clusters).
+    parent: dict[str, str] = {}
+
+    def root(c: str) -> str:
+        while parent.get(c, c) != c:
+            c = parent[c] = parent.get(parent[c], parent[c])
+        return c
+
+    twin_of: dict[str, str] = {}
+    for it in final:
+        if pair := it.meta.get("pair"):
+            if pair in twin_of:
+                a, b = root(twin_of[pair]), root(it.cluster)
+                if a != b:
+                    parent[b] = a
+            else:
+                twin_of[pair] = it.cluster
+    final = [replace(it, cluster=root(it.cluster)) for it in final]
     first_id: dict[str, str] = {}
     for it in final:
         first_id.setdefault(it.cluster, it.id)

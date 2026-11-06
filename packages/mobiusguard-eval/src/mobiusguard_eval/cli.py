@@ -8,6 +8,8 @@
     redaction --suite S --out runs/redaction [--per-pattern 200]
     pipeline --out runs [--tag v0.1] [--device cuda]   all of the above, in order
     train-sources                    list the v0.2 training ledger
+    train-fetch --sources ID…        download training sources' files only (e.g. a gated one
+                                     where the login is), without building anything
     train-data --suite S --out runs/train-v0.2 [--cap 20000]   build the training set
     train --data D --base B --seed N --out runs/model-B-sN [--limit N]   fine-tune one run
     export --model DIR --out DIR [--val D/val.jsonl]   ONNX + INT8, parity, CPU latency
@@ -311,12 +313,25 @@ def _sources(_: argparse.Namespace) -> int:
     return 0
 
 
+def _train_fetch(a: argparse.Namespace) -> int:
+    from .fetch import fetch
+    from .train_sources import training_sources
+
+    for s in training_sources(a.sources):
+        paths = fetch(s)
+        size = sum(p.stat().st_size for p in paths) / 1e6
+        log(f"train-fetch: {s.id}: {len(paths)} files, {size:,.0f} MB")
+    return 0
+
+
 def _run(a: argparse.Namespace) -> int:
     cmd: str = a.command
     if cmd == "sources":
         return _sources(a)
     if cmd == "train-sources":
         return _train_sources(a)
+    if cmd == "train-fetch":
+        return _train_fetch(a)
     if cmd == "train-data":
         step_train_data(Path(a.suite), Path(a.out), cap=a.cap, source_ids=a.sources,
                         seed=a.sample_seed, force=a.force)  # fmt: skip
@@ -395,6 +410,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--force", action="store_true")
 
     sub.add_parser("train-sources")
+
+    p = sub.add_parser("train-fetch", help="download training sources' files, nothing else")
+    p.add_argument("--sources", nargs="+", required=True, help="training source IDs")
 
     p = sub.add_parser("train-data", help="build the v0.2 training set")
     p.add_argument("--suite", required=True, help="the evaluation suite, held out")

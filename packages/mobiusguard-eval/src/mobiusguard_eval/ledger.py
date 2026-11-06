@@ -28,6 +28,9 @@ class Remote:
     path: str = ""  # file inside the repo (hf_dataset)
     revision: str = ""
     sha256: str = ""
+    # hf_dataset Parquet only: fetch just these columns (a dataset whose images would
+    # otherwise be most of the download)
+    columns: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,6 +46,7 @@ class Source:
     trained_on_by: tuple[str, ...] = ()  # detector names known to have trained on it
     redistributable: bool = True
     notes: str = ""
+    cap: int = 0  # training sources only: items kept at most, when below the build's cap
 
 
 LEDGER: dict[str, Source] = {}
