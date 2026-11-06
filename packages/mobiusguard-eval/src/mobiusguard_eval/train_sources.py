@@ -487,7 +487,9 @@ _BSP_FILES = tuple(
     for i in range(21)
 )
 _BSP_CANARY = "a3f0c1de-7b52-4e8e-9d61-2f84c5b9e017"
-WINDOW_CHARS = {"content_markdown": 1600, "content_html": 1200}
+# About 900 characters fits 512 tokens for both bases (measured on a 300-page sample:
+# 1,600 Markdown characters ran past 512 tokens on 44-48% of windows).
+WINDOW_CHARS = {"content_markdown": 900, "content_html": 900}
 
 
 def _snap(text: str, start: int, view: str) -> int:
@@ -657,6 +659,7 @@ def _rgeada(paths: list[Path]) -> Iterator[Item]:
     with paths[0].open(encoding="utf-8", newline="") as f:
         for r in csv.DictReader(f):
             rows[r["response_id"]][r["label"]] = r
+    width = WINDOW_CHARS["content_markdown"]
     for rid, p in sorted(rows.items()):
         bad, good = p.get("injection"), p.get("safe")
         if not bad or not good:
@@ -665,7 +668,20 @@ def _rgeada(paths: list[Path]) -> Iterator[Item]:
         if not origin or not origin <= _NEURALCHEMY_OK:
             continue
         meta = {"pair": f"rgeada:{rid}", "injection_source": "+".join(sorted(origin))}
-        if (t := _keep(bad["text"])) and (u := _keep(good["text"])):
+        t, u, inj = bad["text"], good["text"], bad["injection"]
+        if len(t) > width and inj and (o := t.find(inj)) >= 0:
+            # A long response: a window around the injection. The clean response is the
+            # same text without it, so its twin is the same span when the two agree before
+            # the injection, else a window from a random place.
+            rng = random.Random(f"rgeada:{rid}")  # noqa: S311 - a sample, not a secret
+            start = max(0, min(o - rng.randint(0, max(0, width - len(inj))), len(t) - width))
+            aligned = u[:o] == t[:o]
+            t = t[start : start + width]
+            if aligned:
+                u = u[start : start + width - len(inj)]
+            else:
+                u = control_window(u, width, rng, "content_markdown")
+        if (t := _keep(t)) and (u := _keep(u)):
             yield make_item(t, ATTACK, "rgeada_tool", lang="en", meta=_m("", **meta))
             yield make_item(u, BENIGN, "rgeada_tool", lang="en", meta=_m("0", **meta))
 
