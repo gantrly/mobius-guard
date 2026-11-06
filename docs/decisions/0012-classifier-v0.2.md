@@ -153,6 +153,33 @@ The result is **157,113 items** (141,497 train, 15,616 val, 35% attacks); each i
 its source labels in `meta`. Noise the judges agreed with cannot be found this way. The
 evaluation suite was never judged: it stays the honest test.
 
+## Label cleaning of the added sources (2026-11-06)
+
+The nine sources added for the retrain ([training-data.md](../training-data.md#added-2026-11-06-indirect-injection-and-hard-benign-text))
+were labelled by the same two judges ($13.38 for 55,127 items). Their labels are of
+different kinds, so the rule starts from what each source's label is:
+- **Constructed attack labels** (BrowseSafe++, Nemotron, rgeada): every injected window was
+  checked to hold its injection, so the judges' disagreements were spot-checked, not
+  applied.
+- **Human harmful labels** (Aegis 2.0) and PHTest's: checked the same way.
+
+**Spot check** (231 disputed items, Claude Sonnet 4.6, blind, $0.72):
+
+| Disputed | Referee sides with | Applied |
+|---|---|---|
+| BrowseSafe++ Markdown attack labels (40) | the construction 37 | constructed labels kept |
+| rgeada attack labels (25) | the construction 21 | kept |
+| BrowseSafe++ HTML attack labels (40) | the construction only 14 | pairs either judge disputes dropped (4,613 items): one fragment of an injection scattered through HTML is often a harmless-looking piece |
+| Aegis 2.0 harmful labels both judges overrule (50) | the judges 46 | the judges' label where both agree; the human label where they split |
+| Aegis rows both judges call attacks (30) | attack 27 | kept as attacks (its jailbreak prompts) |
+| PHTest harmful labels (17), clean twins called harmful (9) | split | unknown where both judges overrule; the source's label where they split |
+| CyberSecEval MITRE harmful labels (20) | the judges 14 | the default rule: unknown |
+
+On the older sources the rule is the 2026-11-05 one: the 156,523 items carried over keep
+identical labels and splits. The cleaned set has **206,438 items**, 33% attacks, and it
+passed a final audit: no duplicate IDs, no text shared between train and val or with the
+suite, no twins split across them.
+
 ## Status of the synthetic data (2026-11-05)
 
 The synthetic generator was not built in this round. The first training run uses the cleaned

@@ -84,6 +84,35 @@ Commands: `mobiusguard-eval judge` (paid) and `apply-judges`.
 | wildjailbreak_benign | WildJailbreak (above) | ODC-BY | gated | 0 | Adversarial benign (jailbreak-style wording around harmless requests) and vanilla benign |
 | jbb_benign | JailbreakBench (above) | MIT | open | 0 | 100 harmless requests on the same topics as the harmful ones |
 
+## Added 2026-11-06: indirect injection and hard benign text
+
+Chosen in the research notes on [indirect injection](research/2026-11-05-indirect-injection-datasets.md)
+and [over-refusal](research/2026-11-06-over-refusal-datasets.md); licences re-checked on
+2026-11-06. Twins (an injected document and its clean version) share `meta["pair"]`: the
+build caps them together and keeps them in one split.
+
+| ID | Source | Licence | Access | Kept | What |
+|---|---|---|---|---|---|
+| browsesafe_md | [perplexity-ai/browsesafe-plus-plus](https://huggingface.co/datasets/perplexity-ai/browsesafe-plus-plus), **train split only** | CC-BY-4.0 | gated | 6,233 | Web pages as ~900-character Markdown windows: an injected window holds an injection fragment (checked); its control is a window at the same relative place. Only pages whose Markdown keeps the injection verbatim (3,130 of 29,500) |
+| browsesafe_html | same | CC-BY-4.0 | gated | 5,385 | The same as HTML windows, capped at 10,000; pairs either judge disputed are dropped (see below) |
+| nemotron_ipi | [nvidia/Nemotron-RL-Agentic-Indirect-Prompt-Injection-v1](https://huggingface.co/datasets/nvidia/Nemotron-RL-Agentic-Indirect-Prompt-Injection-v1) | CC-BY-4.0 | open | 2,542 | The tool-returned record holding the injection, and the same record without it |
+| rgeada_tool | [rgeada/tool-response-injections](https://huggingface.co/datasets/rgeada/tool-response-injections) | Apache-2.0 | open | 10,377 | JSON tool responses with an inserted injection, and the clean response. Only injections traced to neuralchemy's Apache, MIT or CC-BY parts (its WildGuard part is "Research"); long responses cut to a window around the injection |
+| aegis2 | [nvidia/Aegis-AI-Content-Safety-Dataset-2.0](https://huggingface.co/datasets/nvidia/Aegis-AI-Content-Safety-Dataset-2.0) | CC-BY-4.0 | open | 19,586 | Red-team prompts with human safe/unsafe labels (train and validation splits) |
+| phtest | [furonghuang-lab/PHTest](https://huggingface.co/datasets/furonghuang-lab/PHTest) | MIT (card; no licence file in the repository) | open | 2,044 | Harmless prompts made to trigger refusals |
+| cse_frr | [CyberSecEval MITRE-FRR](https://github.com/meta-llama/PurpleLlama/tree/main/CybersecurityBenchmarks) | MIT | open | 736 | Borderline security-research requests, benign. Written by Llama-2-70b-chat |
+| cse_mitre | CyberSecEval MITRE (base prompts) | MIT | open | 860 | Requests for help with cyber attacks: harmful |
+| coconot | [allenai/coconot](https://huggingface.co/datasets/allenai/coconot) | ODC-BY-1.0 (LICENSE.md) | open | 1,928 | Safety subcategories: the original requests (harmful) and the contrast set (benign) |
+
+BrowseSafe++'s card ends with a canary line asking that benchmark data stay out of
+training corpora. Its train split is CC BY 4.0, and it is used as training data for a
+detector (decided 2026-11-06); its test split, under an evaluation-only licence, is never
+downloaded. The model card says so.
+
+**Label cleaning of these sources (2026-11-06):** the same two judges ($13.38), then a blind
+spot check of 231 disputed items by Claude Sonnet 4.6 ($0.72); the rule is
+`judge.RULE_2026_11_06` and [decision 0012](decisions/0012-classifier-v0.2.md) has the
+numbers. The cleaned set has **206,438 items** (185,852 train, 20,586 val; 68,754 attacks).
+
 ## Synthetic (Claude on Bedrock, see decision 0012)
 
 **Not built** (2026-11-05): the first training run uses the public data above; see
