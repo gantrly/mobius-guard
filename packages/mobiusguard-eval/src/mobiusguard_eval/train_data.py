@@ -207,8 +207,11 @@ def build(
     parent: dict[str, str] = {}
 
     def root(c: str) -> str:
-        while parent.get(c, c) != c:
-            c = parent[c] = parent.get(parent[c], parent[c])
+        while (up := parent.get(c, c)) != c:
+            # Halve the path: point c at its grandparent, then move up. (A chained
+            # assignment ``c = parent[c] = ...`` would assign c first and corrupt the tree.)
+            parent[c] = parent.get(up, up)
+            c = up
         return c
 
     twin_of: dict[str, str] = {}

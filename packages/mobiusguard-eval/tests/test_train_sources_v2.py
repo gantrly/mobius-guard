@@ -220,3 +220,36 @@ def test_a_control_window_sits_where_its_twin_does() -> None:
         return int(w[i + 1 : i + 6])
 
     assert abs(first(good) - first(bad)) < 20  # the same part of the page
+
+
+def test_twins_chained_across_many_clusters_land_in_one_split(tmp_path: Path) -> None:
+    # Like site boilerplate on many pages: pair k's clean window is a near copy of pair k+1's
+    # injected window (same MinHash cluster), so pairs chain into groups of 12 that must
+    # share one split. Deep chains broke a faulty union-find.
+    rng = random.Random(5)
+    items: list[Item] = []
+    for g in range(40):
+        link = _words(rng, 30)
+        for k in range(12):
+            pair = f"g{g}p{k}"
+            items.append(
+                make_item(
+                    link + f" end{k}", ATTACK, "browsesafe_md", meta={"pair": pair, "harmful": ""}
+                )
+            )
+            link = _words(rng, 30)
+            items.append(
+                make_item(link, BENIGN, "browsesafe_md", meta={"pair": pair, "harmful": "0"})
+            )
+    src = Source(id="browsesafe_md", title="t", homepage="", licence="MIT", role="mixed",
+                 files=(), parse=lambda _p: [])  # fmt: skip
+    train_data.build([src], {"browsesafe_md": items}, [], tmp_path, cap=10_000)
+    got = [*read_jsonl(tmp_path / "train.jsonl"), *read_jsonl(tmp_path / "val.jsonl")]
+    by_pair: dict[str, set[str]] = {}
+    by_group: dict[str, set[str]] = {}
+    for it in got:
+        by_pair.setdefault(it.meta["pair"], set()).add(it.split)
+        by_group.setdefault(it.meta["pair"].split("p")[0], set()).add(it.split)
+    assert len(got) == 960
+    assert all(len(s) == 1 for s in by_pair.values())
+    assert all(len(s) == 1 for s in by_group.values())  # the chained pairs stay together
