@@ -505,6 +505,13 @@ def attack_window(text: str, fragments: list[str], width: int, rng: random.Rando
                   view: str) -> str | None:  # fmt: skip
     """A window of ``width`` characters that holds the most fragments whole (at least
     one), placed at a random offset around them; None when no fragment is in the text."""
+    found = attack_window_at(text, fragments, width, rng, view)
+    return found[1] if found else None
+
+
+def attack_window_at(text: str, fragments: list[str], width: int, rng: random.Random,
+                     view: str) -> tuple[float, str] | None:  # fmt: skip
+    """``attack_window``, with where it starts as a fraction of the room the text has."""
     found = [(text.find(f), f) for f in fragments if f and f in text]
     if not found:
         return None
@@ -516,15 +523,20 @@ def attack_window(text: str, fragments: list[str], width: int, rng: random.Rando
         if held > best[1]:
             best = (start, held)
     start = best[0]
+    where = start / max(1, len(text) - width)
     snapped = _snap(text, start, view)
     window = text[snapped : snapped + width]
     if any(f in window for _, f in found):
-        return window
-    return text[start : start + width]
+        return where, window
+    return where, text[start : start + width]
 
 
-def control_window(text: str, width: int, rng: random.Random, view: str) -> str:
-    start = rng.randint(0, max(0, len(text) - width))
+def control_window(text: str, width: int, rng: random.Random, view: str,
+                   where: float | None = None) -> str:  # fmt: skip
+    """A window of ``width`` characters: at ``where`` (a fraction of the room the text
+    has, to match its injected twin's position), else at a random place."""
+    room = max(0, len(text) - width)
+    start = round(min(1.0, max(0.0, where)) * room) if where is not None else rng.randint(0, room)
     start = _snap(text, start, view)
     return text[start : start + width]
 
@@ -545,9 +557,14 @@ def _browsesafe(view: str, source: str) -> Callable[[list[Path]], Iterator[Item]
             rng = random.Random(f"{source}:{pair}")  # noqa: S311 - a sample, not a secret
             frags = [f for f in json.loads(a["injection_text_fragments_json"] or "[]")
                      if isinstance(f, str)]  # fmt: skip
-            bad = attack_window(a[view] or "", frags, width, rng, view)
-            good = control_window(c[view] or "", width, rng, view)
-            if not bad or junk(good) or _BSP_CANARY in bad + good:
+            # The control's window sits at the same relative place as the attack's, so the
+            # model can't tell them apart by which part of a page a window comes from.
+            hit = attack_window_at(a[view] or "", frags, width, rng, view)
+            if not hit:
+                continue
+            where, bad = hit
+            good = control_window(c[view] or "", width, rng, view, where)
+            if junk(good) or _BSP_CANARY in bad + good:
                 continue
             if any(f and f in good for f in frags):
                 continue  # the control must not hold the injection

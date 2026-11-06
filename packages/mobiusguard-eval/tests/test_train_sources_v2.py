@@ -202,3 +202,21 @@ def test_a_long_tool_response_is_windowed_around_its_injection(tmp_path: Path) -
     assert len(a.text) <= 900
     assert inj not in b.text
     assert b.text in safe  # the same span of the clean response
+
+
+def test_a_control_window_sits_where_its_twin_does() -> None:
+    page = "".join(f"[{i:05d}] " for i in range(2000))  # position is readable from the text
+    frag = "INJECTED fragment here"
+    bad_page = page[:12000] + frag + page[12000:]
+    from mobiusguard_eval.train_sources import attack_window_at
+
+    hit = attack_window_at(bad_page, [frag], 900, random.Random(3), "content_markdown")
+    assert hit is not None
+    where, bad = hit
+    good = control_window(page, 900, random.Random(3), "content_markdown", where)
+
+    def first(w: str) -> int:
+        i = w.index("[")
+        return int(w[i + 1 : i + 6])
+
+    assert abs(first(good) - first(bad)) < 20  # the same part of the page
