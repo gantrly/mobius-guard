@@ -88,3 +88,34 @@ def test_the_rule() -> None:
     assert stats["plain"]["dropped_disagree"] == 1
     assert stats["plain"]["dropped_attack_flip"] == 1
     assert stats["revert_src"]["attack_reverted"] == 1
+
+
+def test_trusted_sources_keep_their_labels() -> None:
+    rule = judge.Rule(
+        trust_attack=frozenset({"pairs"}),
+        trust_harmful=frozenset({"pairs", "human"}),
+        judges=("j1", "j2"),
+    )
+    injected = _item("an injected window the judges miss", 1, "pairs", "")
+    twin = _item("its clean twin the judges disagree on", 0, "pairs", "0")
+    human = _item("a human-labelled safe prompt", 0, "human", "0")
+    yes, no = {"attack": 1, "harmful": 1}, {"attack": 0, "harmful": 1}
+    labels = _labels((injected, no, no), (twin, yes, no), (human, no, no))
+    kept, stats = judge.apply([injected, twin, human], labels, rule)
+    out = {it.id: it for it in kept}
+    assert out[injected.id].label == 1  # kept: constructed and checked
+    assert out[twin.id].label == 0  # the judges split; the source's label stands
+    assert out[human.id].meta["harmful"] == "0"  # the human label, not the judges' 1
+    assert stats["pairs"]["judges_dispute_attack"] == 2
+    assert stats["human"]["judges_dispute_harmful"] == 1
+
+
+def test_the_new_rule_treats_the_old_sources_like_the_old_rule() -> None:
+    old, new = judge.RULE_2026_11_05, judge.RULE_2026_11_06
+    for name in ("keep_attack_flips", "revert_attack_flips", "keep_harmful_flips"):
+        assert getattr(old, name) <= getattr(new, name)
+    olds = {"hackaprompt", "mosscap", "satml", "wild_jb", "wildjailbreak", "salad", "salad_base",
+            "wildchat", "ultrachat", "wild_regular", "gandalf_sum", "jbb_harmful", "jbb_benign",
+            "wildjailbreak_benign", "wildjailbreak_harmful"}  # fmt: skip
+    added = (new.keep_attack_flips - old.keep_attack_flips) | new.trust_attack | new.trust_harmful
+    assert not added & olds

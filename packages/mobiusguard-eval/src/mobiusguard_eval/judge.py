@@ -191,11 +191,18 @@ class Rule:
     source's label for sources in ``revert_attack_flips``, and otherwise the item is dropped.
     A harmful label both judges agree on replaces the source's only for sources in
     ``keep_harmful_flips``; any other change makes it unknown.
+
+    Sources in ``trust_attack`` keep their own attack label whatever the judges say (it is
+    constructed and checked, like an injected window and its clean twin), and sources in
+    ``trust_harmful`` keep their own harmful label (human-labelled, or constructed). The
+    judges' disagreements with them are only counted, for the spot check.
     """
 
     keep_attack_flips: frozenset[str] = frozenset()
     revert_attack_flips: frozenset[str] = frozenset()
     keep_harmful_flips: frozenset[str] = frozenset()
+    trust_attack: frozenset[str] = frozenset()
+    trust_harmful: frozenset[str] = frozenset()
     note: str = ""
     judges: tuple[str, ...] = field(default=tuple(JUDGES))
 
@@ -207,6 +214,24 @@ RULE_2026_11_05 = Rule(
     keep_harmful_flips=frozenset({"salad_base"}),
     note="flips right: salad attack 100%, salad_base harmful 100%; hackaprompt flips wrong "
     "(source right 93%); other sources 37-88%, so their flips are not trained on",
+)
+
+
+# The rule of 2026-11-06: the 2026-11-05 rule, plus the sources added that day.
+# - Indirect-injection pairs: attack labels constructed (every injected window was checked
+#   to hold its injection), so kept; harmful too (unknown on injected, 0 on clean twins).
+# - Aegis 2.0 and PHTest: human harmful labels kept. Aegis has no attack labels: its jailbreak
+#   rows become attacks where both judges agree (its flips are kept).
+# - CyberSecEval and CoCoNot: the default rule, like the older sources.
+_PAIRS = frozenset({"browsesafe_md", "browsesafe_html", "nemotron_ipi", "rgeada_tool"})
+RULE_2026_11_06 = Rule(
+    keep_attack_flips=frozenset({"salad", "aegis2"}),
+    revert_attack_flips=frozenset({"hackaprompt"}),
+    keep_harmful_flips=frozenset({"salad_base"}),
+    trust_attack=_PAIRS,
+    trust_harmful=_PAIRS | {"aegis2", "phtest"},
+    note=RULE_2026_11_05.note + "; 2026-11-06 sources: constructed pairs and human harmful "
+    "labels kept, Aegis attack flips kept, the rest by the default rule",
 )
 
 
@@ -229,12 +254,16 @@ def apply(
             s["dropped_unlabelled"] += 1
             continue
         votes = {int(a["attack"]) for a in answers if a}
+        harms = {harmful_value(a.get("harmful")) for a in answers if a}
+        harmful = harms.pop() if len(harms) == 1 else ""
+        if it.source in rule.trust_attack:
+            if votes != {it.label}:
+                s["judges_dispute_attack"] += 1
+            votes = {it.label}
         if len(votes) > 1:
             s["dropped_disagree"] += 1
             continue
         attack = votes.pop()
-        harms = {harmful_value(a.get("harmful")) for a in answers if a}
-        harmful = harms.pop() if len(harms) == 1 else ""
         meta = dict(it.meta)
         meta["source_attack"], meta["source_harmful"] = str(it.label), it.meta.get("harmful", "")
         meta["judged"] = "+".join(rule.judges)
@@ -248,6 +277,10 @@ def apply(
                 s["dropped_attack_flip"] += 1
                 continue
         old = it.meta.get("harmful", "")
+        if it.source in rule.trust_harmful:
+            if harmful != old:
+                s["judges_dispute_harmful"] += 1
+            harmful = old
         if harmful != old:
             if harmful and old and it.source in rule.keep_harmful_flips:
                 s["harmful_flip_kept"] += 1
@@ -265,7 +298,7 @@ def apply(
 
 
 def apply_build(
-    build: Path, judged: Path, out: Path, rule: Rule = RULE_2026_11_05
+    build: Path, judged: Path, out: Path, rule: Rule = RULE_2026_11_06
 ) -> dict[str, Any]:
     """Clean a training build with saved judge labels; write train/val and a summary."""
     labels = {m: read_labels(judged / f"labels.{m}.jsonl") for m in rule.judges}
