@@ -700,6 +700,8 @@ def _rgeada(paths: list[Path]) -> Iterator[Item]:
                 u = u[start : start + width - len(inj)]
             else:
                 u = control_window(u, width, rng, "content_markdown")
+        elif len(t) > width:
+            continue  # long, and the injection can't be found: truncation might cut it off
         if (t := _keep(t)) and (u := _keep(u)):
             yield make_item(t, ATTACK, "rgeada_tool", lang="en", meta=_m("", **meta))
             yield make_item(u, BENIGN, "rgeada_tool", lang="en", meta=_m("0", **meta))
