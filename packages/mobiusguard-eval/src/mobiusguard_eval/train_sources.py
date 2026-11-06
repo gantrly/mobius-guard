@@ -686,6 +686,8 @@ def _rgeada(paths: list[Path]) -> Iterator[Item]:
             continue
         meta = {"pair": f"rgeada:{rid}", "injection_source": "+".join(sorted(origin))}
         t, u, inj = bad["text"], good["text"], bad["injection"]
+        if inj and inj not in t:
+            inj = json.dumps(inj, ensure_ascii=False)[1:-1]  # inside a JSON string: escaped
         if len(t) > width and inj and (o := t.find(inj)) >= 0:
             # A long response: a window around the injection. The clean response is the
             # same text without it, so its twin is the same span when the two agree before
