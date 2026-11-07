@@ -56,7 +56,7 @@
 | **Redacts mid-stream** | Secrets and personal data are replaced as the reply streams, even when split across chunks. The stream never stops. |
 | **Handles what models really write** | Tokens with characters added or dropped, keys in backticks, URLs without a host: still caught. |
 | **Honest numbers** | Recall at a fixed false-positive rate, on pinned datasets the models were not trained on, with the weak spots published. |
-| **Its own classifier** | [Fortress-XS](https://huggingface.co/gantrly/fortress-xs): prompt injection and harmful requests, 81 MB, 183 ms on a CPU at 512 tokens, Apache-2.0. |
+| **Its own classifier** | [Fortress-XS](https://huggingface.co/gantrly/fortress-xs): prompt injection and harmful requests, 81 MB, 183 ms on a CPU at 512 tokens, Apache-2.0. [Try it in your browser](https://huggingface.co/spaces/gantrly/fortress-xs). |
 | **Drop-in proxy** | OpenAI Chat Completions, OpenAI Responses and Anthropic Messages, streamed or not. Change one base URL. |
 
 ## How it works
@@ -114,13 +114,38 @@ logged in plain text unless you ask. Details: [architecture](docs/architecture.m
 - **Where each detector wins:** Fortress-XS leads on obfuscation and direct injection. On
   the four non-obfuscated families it is level with PIGuard (48.1 vs 48.7). PIGuard wins
   BIPIA and ProtectAI v2 wins SPML.
-- **The second output**, harmful requests, catches 84–90% of them but also flags 48% of
-  harmless prompts that only sound harmful. The proxy only logs it unless you ask it to
-  block.
-- **More:** the full scorecard, data and limits are in the
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/fortress-false-positives-dark.svg">
+  <img src="docs/assets/fortress-false-positives-light.svg" alt="False positives at the same threshold: ordinary messages about 1% for every classifier; NotInject Fortress-XS 6.8%, PIGuard 8.3%, ProtectAI v2 4.7%, keyword rules 2.1%; OR-Bench hard Fortress-XS 0.0%, PIGuard 11.1%, ProtectAI v2 0.8%; LLMail benign emails 0% for all" width="760">
+</picture>
+
+| False positives at the same threshold (%) | **Fortress-XS** | PIGuard | ProtectAI v2 | Keyword rules |
+|---|---:|---:|---:|---:|
+| Ordinary messages (oasst1 test half, 16,061) | 0.9 | 1.0 | 0.9 | 0.3 |
+| NotInject: harmless text with attack trigger words (339) | 6.8 | 8.3 | **4.7** | 2.1 |
+| OR-Bench hard: harmless prompts that sound harmful (1,319) | **0.0** | 11.1 | 0.8 | 0.0 |
+| LLMail-Inject benign emails (160) | 0.0 | 0.0 | 0.0 | 0.0 |
+| English ordinary messages (7,668) | 1.3 | 0.6 | **0.1** | 0.5 |
+
+**The second output: harmful requests.** Same threshold rule. It isn't compared with other
+detectors: none of the three above has this output.
+
+| Fortress-XS harmful output, at 1% false positives (%) | |
+|---|---:|
+| Caught: OR-Bench toxic (655) | 90.4 |
+| Caught: XSTest unsafe (200) | 84.0 |
+| Flagged by mistake: XSTest safe prompts (250) | 8.0 |
+| Flagged by mistake: OR-Bench hard, harmless but sounding harmful (1,319) | **48.2** |
+| The attack output firing on these harmful requests | 0.0 |
+
+The harmful output over-blocks prompts that only sound harmful, so the proxy only logs it
+unless you set `harmful = "block"`.
+
+- **More:** the full scorecard, training data and limits are in the
   [model card](https://huggingface.co/gantrly/fortress-xs) and the
   [results note](docs/results/2026-11-07-classifier-v0.2-retrain.md). You can try it in the
-  [demo](https://huggingface.co/spaces/gantrly/fortress-xs).
+  [demo](https://huggingface.co/spaces/gantrly/fortress-xs): the model runs in your browser.
 
 ### The proxy and the redactor
 

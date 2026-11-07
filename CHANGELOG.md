@@ -15,6 +15,9 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
   1,151 ms. Weak spots, published with it: plain-language indirect injection (BIPIA 15%)
   and harmless prompts that only sound harmful (the harmful output flags 48% of them).
   [Results](docs/results/2026-11-07-classifier-v0.2-retrain.md).
+- **A demo that runs in your browser:**
+  [huggingface.co/spaces/gantrly/fortress-xs](https://huggingface.co/spaces/gantrly/fortress-xs).
+  It uses the same INT8 file with onnxruntime-web, so text never leaves the page.
 - `pip install "mobiusguard[onnx]"` and `classifier = "fortress-xs"`: onnxruntime and
   tokenizers, no torch. The model downloads at a pinned commit, or loads from
   `classifier_dir` for offline installs.
@@ -26,6 +29,9 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
   - A threshold in the config still wins.
   - PIGuard and ProtectAI v2 behave as before: scores are logged until
     `classifier_threshold` is set.
+- Each checked text is scored on its own, so a text always gets the same score. The INT8
+  model quantizes a batch as a whole, so a text's score could move by up to 0.55 with the
+  other texts of the same request.
 - The audit log, spans and `mobiusguard check` add the harmful score (`harmful`) and
   `flagged`: the scores over a threshold, including those that only log.
 - `mobiusguard-eval` trains and exports the classifier:
@@ -36,6 +42,8 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
   - `export` writes ONNX and INT8 with a parity gate.
   - The suite adds XSTest unsafe and OR-Bench toxic as harmful-request families.
   - `score --limit` takes a random subset, not the first items.
+- The README and the proxy's PyPI page linked to a private repository; they now link to
+  the Gantrly organisation.
 
 ## 0.1.2 (2026-11-05)
 
