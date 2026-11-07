@@ -173,8 +173,11 @@ class OnnxClassifier:
     rate named in ``fortress.json``), set on ordinary user messages."""
 
     def __init__(
-        self, spec: OnnxModel, *, directory: str = "", threads: int = 0, batch_size: int = 8
+        self, spec: OnnxModel, *, directory: str = "", threads: int = 0, batch_size: int = 1
     ) -> None:
+        # One text per run by default: dynamic INT8 quantizes each batch as a whole, so in a
+        # batch a text's score moves (up to ~0.5 log-odds) with its neighbours and padding.
+        # Alone, a text always gets the same score.
         self.spec = spec
         self.name = spec.name
         self.batch_size = batch_size

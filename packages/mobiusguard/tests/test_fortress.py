@@ -155,3 +155,12 @@ def test_the_proxy_loads_fortress_from_a_directory(tmp_path: Path) -> None:
     assert (g.attack_threshold, g.harmful_threshold) == (4.5, -1.0)
     d = g.decide(text("hello world hello"))
     assert (d.score, d.harmful, d.action, d.flagged) == (5.0, -5.0, "block", ["classifier"])
+
+
+def test_texts_are_scored_one_at_a_time_by_default(tmp_path: Path) -> None:
+    # In a batch, dynamic INT8 quantization would let other texts move a text's score.
+    _tiny_model(tmp_path)
+    from mobiusguard.classifier import ONNX_MODELS, OnnxClassifier
+
+    c = OnnxClassifier(ONNX_MODELS["fortress-xs"], directory=str(tmp_path))
+    assert c.batch_size == 1
