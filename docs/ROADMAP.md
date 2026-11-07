@@ -32,9 +32,22 @@ held-text fix (#17); 0.1.2 (2026-11-05), the second of two space-separated IBANs
 | Retrain from scratch on all the data: both bases, three seeds each (DeBERTa 5e-5, mmBERT 2e-5), one suite evaluation | done 2026-11-07: DeBERTa selected again; LLMail 12 → 44%, BIPIA flat, OR-Bench hard over-blocking 55 → 48% ([results](results/2026-11-07-classifier-v0.2-retrain.md)) |
 | Release as **Fortress-XS v1** in Mobius Guard 0.2.0 ([decision 0013](decisions/0013-releasing-fortress-v0.2.md)): proxy support (`mobiusguard[onnx]`), model card, charts, demo Space | **released** 2026-11-07 as 0.2.0; model at [gantrly/fortress-xs](https://huggingface.co/gantrly/fortress-xs), [demo](https://huggingface.co/spaces/gantrly/fortress-xs) |
 
-- Red-team runner (mutation families, with garak/PyRIT adapters rather than re-writing them).
-- Patch proposals (rules or threshold changes) as reviewable diffs, gated on the benign
-  canary set and a sealed holdout.
+Plan for the red-team loop: [decision 0014](decisions/0014-red-team-runner.md) (proposed
+2026-11-07).
+
+| Red-team step | Status |
+|---|---|
+| Decision: targets, garak/PyRIT sources, local attacker in development and a paid one for the measured run, patches as reviewed diffs, gate, sealed holdout | proposed 2026-11-07 |
+| Target adapters (in-process `Guard`, HTTP proxy) | planned |
+| garak and PyRIT adapters, stacked mutations, ledger entries | planned |
+| Resumable runner, one row per attempt | planned |
+| Small run on the box (fixed probes, then the local attacker) | planned |
+| Findings grouped by family, mutation and cluster | planned |
+| Patch proposals: thresholds computed, rules written by a person and measured | planned |
+| Gate on the four harmless-text sets; sealed holdout with its hash committed first | planned |
+| CLI `mobiusguard-eval redteam`, user guide, tests | planned |
+| First measured run against 0.2.0 with Fortress (paid attacker, after approval), results note | planned |
+
 - Train a small permissive classifier (DeBERTa-v3-xsmall / mmBERT-small class) on the GPU
   box; INT8 ONNX; model card with held-out numbers.
 
