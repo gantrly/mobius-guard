@@ -853,6 +853,13 @@ classifier = [
     { name = "torch" },
     { name = "transformers" },
 ]
+onnx = [
+    { name = "huggingface-hub" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "onnxruntime" },
+    { name = "tokenizers" },
+]
 otel = [
     { name = "opentelemetry-api" },
 ]
@@ -860,14 +867,18 @@ otel = [
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.28" },
+    { name = "huggingface-hub", marker = "extra == 'onnx'", specifier = ">=0.26" },
     { name = "mobiusguard-redact", editable = "packages/mobiusguard-redact" },
+    { name = "numpy", marker = "extra == 'onnx'", specifier = ">=1.26" },
+    { name = "onnxruntime", marker = "extra == 'onnx'", specifier = ">=1.20" },
     { name = "opentelemetry-api", marker = "extra == 'otel'", specifier = ">=1.28" },
     { name = "starlette", specifier = ">=0.46" },
+    { name = "tokenizers", marker = "extra == 'onnx'", specifier = ">=0.20" },
     { name = "torch", marker = "extra == 'classifier'", specifier = ">=2.5" },
     { name = "transformers", marker = "extra == 'classifier'", specifier = ">=4.46" },
     { name = "uvicorn", specifier = ">=0.34" },
 ]
-provides-extras = ["classifier", "otel"]
+provides-extras = ["classifier", "onnx", "otel"]
 
 [[package]]
 name = "mobiusguard-eval"

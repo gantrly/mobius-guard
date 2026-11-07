@@ -36,6 +36,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         text = a.text if a.text is not None else sys.stdin.read()
         d = Guard(cfg).decide([Text("user", text, "input")])
         print(json.dumps({"decision": d.action, "reason": d.reason, "score": d.score,
+                          "harmful": d.harmful, "flagged": d.flagged,
                           "rules": [{"id": h.rule, "severity": h.severity, "view": h.view}
                                     for h in d.hits]}, indent=2))  # fmt: skip
         return 1 if d.action == "block" else 0

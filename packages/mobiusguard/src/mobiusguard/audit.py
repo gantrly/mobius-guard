@@ -45,6 +45,10 @@ def record(state: Json) -> Json:
         out["rules"] = [{"id": h.rule, "severity": h.severity, "view": h.view, "where": h.where}
                         for h in d.hits]  # fmt: skip
         out["score"] = None if d.score is None else round(d.score, 4)
+        if d.harmful is not None:
+            out["harmful"] = round(d.harmful, 4)
+        if d.flagged:
+            out["flagged"] = list(d.flagged)
         out["checked"] = d.checked
         out["prompt_sha256"] = d.prompt_hash
         if d.error:
@@ -93,6 +97,10 @@ def emit_span(rec: Json, started_ns: int) -> None:
     }
     if rec.get("score") is not None:
         attrs["mobiusguard.score"] = rec["score"]
+    if rec.get("harmful") is not None:
+        attrs["mobiusguard.harmful_score"] = rec["harmful"]
+    if rec.get("flagged"):
+        attrs["mobiusguard.flagged"] = rec["flagged"]
     if "upstream_status" in rec:
         attrs["http.response.status_code"] = rec["upstream_status"]
     for k, v in attrs.items():

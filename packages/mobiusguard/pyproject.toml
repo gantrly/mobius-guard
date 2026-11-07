@@ -44,6 +44,12 @@ Security = "https://github.com/gantrly/mobius-guard/blob/main/SECURITY.md"
 Releases = "https://github.com/gantrly/mobius-guard/releases"
 
 [project.optional-dependencies]
+onnx = [
+    "huggingface-hub>=0.26",
+    "numpy>=1.26",
+    "onnxruntime>=1.20",
+    "tokenizers>=0.20",
+]
 classifier = [
     "torch>=2.5",
     "transformers>=4.46",
