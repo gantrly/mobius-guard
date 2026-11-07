@@ -16,9 +16,11 @@ was not tuned on.
 **Where it lives.**
 - Inside `mobiusguard-eval`, as `mobiusguard-eval redteam run | findings | propose`, so it
   reuses the suite, metrics, ledger, near-duplicate clustering and resumable checkpoints.
-- garak and PyRIT are separate optional extras, `[garak]` and `[pyrit]`. Each brings 60–70
-  dependencies, and the two may conflict with each other. A default install does not
+- PyRIT is an optional extra, `[pyrit]` (69 more packages). A default install does not
   change.
+- garak cannot be an extra: it pins transformers below 5.20, and the training extras need
+  5.22. It runs in its own environment, and `redteam/garak_export.py` (standard library and
+  garak only, run with garak's Python) writes its prompts to a seeds file the runner reads.
 
 **Targets.**
 - **In-process:** a `Guard` built from any config, with no network. This is the loop's
@@ -32,14 +34,27 @@ was not tuned on.
   the guard allows it.
 
 **Attack sources. We do not write attacks.**
-- **garak** probes (Apache-2.0, pinned version) and **PyRIT** datasets and converters (MIT,
-  pinned version).
+- **garak 0.17.1** probes (Apache-2.0) and **PyRIT 1.1.0** converters (MIT).
+- The first garak families are the static, injection-focused ones (maintainer, 2026-11-07):
+  `latentinjection` (injections hidden in documents, emails, resumes and translations),
+  `promptinject`, `encoding` and `sysprompt_extraction`. That is 19,418 prompts once
+  duplicates across probe classes are dropped. The export turns garak's 256-prompt sample
+  off and fixes its random seed, so it is complete and repeatable.
+- Not yet: community jailbreaks (garak's `dan`: they target model safety more than
+  injection, and their licences are unclear), and probes that need a generator model,
+  which come with the adaptive attacks.
   - They are read at run time from the installed package and never copied into git.
   - Each probe set used gets a provenance-ledger entry: its licence, the dataset it comes
     from, and the known models trained on that dataset.
 - **Mutations:** the harness's five obfuscation transforms (base64, spaced letters,
-  leetspeak, look-alike letters, invisible characters), stackable two deep, plus PyRIT's
-  converters. A mutated attack keeps its parent's label.
+  leetspeak, look-alike letters, invisible characters), alone or two different ones
+  stacked in order: 25 chains, plus the plain prompt. PyRIT's converters can be added as
+  steps, but only ones that call no model. A mutated attack keeps its parent's label.
+- **Delivery:** each variant goes once as the user's message and once as a tool result
+  after a neutral request, the way an indirect injection arrives.
+- **Volume:** every chain for every prompt (maintainer, 2026-11-07): 52 attempts per
+  prompt, about 1.0 million for the four families, a few hours on the box's CPU in
+  process. A small run comes first.
 - **Adaptive attacks:** PyRIT's multi-turn attackers, which rewrite an attempt after each
   block.
   - During development the attacker is a **local model on the box** (Ollama), so the code
