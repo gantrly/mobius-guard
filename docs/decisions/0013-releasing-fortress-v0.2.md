@@ -27,6 +27,8 @@ Vigil, Shield, Guardian, Defender, Gatekeeper.
 - The tokenizer.
 - `fortress.json`: the outputs, the maximum length, the thresholds at 0.1%, 1% and 5% false
   positives on ordinary user messages, and the training data's hash.
+- The proxy scores each text on its own. Dynamic INT8 quantizes a batch as a whole, so in
+  a batch a text's score moved by up to 0.55 log-odds with its neighbours.
 - The model card's numbers are the held-out suite's, scored once (decision 0012). They come
   from the PyTorch model; the INT8 file agrees with it at a correlation of 0.9996 / 0.9991
   (export gate). The suite was not re-scored with the INT8 file.
@@ -49,8 +51,12 @@ Texts are cut at 512 tokens, as in training.
 
 **Publishing.**
 - The model, its card and the charts go to the `gantrly` organisation on Hugging Face.
-- A demo Space, `gantrly/fortress-xs`, runs the INT8 file on CPU and does not store
-  inputs.
+- A demo Space, `gantrly/fortress-xs`, runs the same INT8 file **in the visitor's
+  browser** (onnxruntime-web), so text never leaves their device.
+  - It is a static Space because Hugging Face hosts server-side (Gradio) Spaces under an
+    organisation only on a paid plan.
+  - The browser runtime's scores differ from the server's by at most 0.7 log-odds; the
+    verdicts were the same on the examples.
 - The packages are released as in decision 0011.
 - The card, the charts' script and the Space's code live in this repository
   (`model-cards/`, `scripts/release_charts.py`, `spaces/`), so they are reviewed like code.
