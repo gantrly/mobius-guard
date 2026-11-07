@@ -29,7 +29,47 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def _fetch_columns(remote: Remote) -> Path:
+    """Only some columns of a pinned Parquet file, read with HTTP range requests, so a
+    dataset's screenshots are never downloaded. Cached by repo, revision, file and columns."""
+    key = hashlib.sha256("\0".join(remote.columns).encode()).hexdigest()[:12]
+    dest = (
+        cache_dir()
+        / "hf-columns"
+        / remote.location
+        / remote.revision
+        / f"{remote.path}.{key}.parquet"
+    )
+    if dest.exists():
+        return dest
+    hub: Any = importlib.import_module("huggingface_hub")
+    pq: Any = importlib.import_module("pyarrow.parquet")
+    pa: Any = importlib.import_module("pyarrow")
+    fs = hub.HfFileSystem()
+    path = f"datasets/{remote.location}@{remote.revision}/{remote.path}"
+    with fs.open(path, "rb", block_size=1 << 18) as fh:
+        groups = pq.ParquetFile(fh).metadata.num_row_groups
+
+    def group(i: int) -> Any:
+        # One connection per row group and small blocks: only the named columns' bytes are
+        # read, not the large columns stored between them (BrowseSafe++'s screenshots).
+        with fs.open(path, "rb", block_size=1 << 18) as fh:
+            return pq.ParquetFile(fh).read_row_group(i, columns=list(remote.columns))
+
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        table = pa.concat_tables(list(pool.map(group, range(groups))))
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_suffix(".part")
+    pq.write_table(table, tmp)
+    tmp.replace(dest)
+    return dest
+
+
 def fetch_file(remote: Remote) -> Path:
+    if remote.kind == "hf_dataset" and remote.columns:
+        return _fetch_columns(remote)
     if remote.kind == "hf_dataset":
         hub: Any = importlib.import_module("huggingface_hub")
         return Path(

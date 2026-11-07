@@ -248,3 +248,39 @@ def test_the_proxys_rules_see_through_the_obfuscation_families() -> None:
         assert det.score_text(obfuscate(attack, name).text) >= 2, name
     assert det.score_text("What's a good name for a cat?") == 0
     assert "rules" in det.fingerprint()
+
+
+def test_a_score_limit_is_a_random_mix_of_sources(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from mobiusguard_eval import cli, run
+
+    items = [
+        make_item(f"text {s} {i}", BENIGN, s) for s in "abcd" for i in range(50)
+    ]  # sorted by source
+    seen: list[list[Item]] = []
+
+    def load(_: Path) -> list[Item]:
+        return items
+
+    def get(*_: object, **__: object) -> None:
+        return None
+
+    def score(its: list[Item], *_: object, **__: object) -> None:
+        seen.append(its)
+
+    monkeypatch.setattr(cli, "load_suite", load)
+    monkeypatch.setattr(detectors, "get", get)
+    monkeypatch.setattr(run, "score", score)
+    cli.step_score(tmp_path, "keyword", tmp_path / "out", limit=40)
+    cli.step_score(tmp_path, "keyword", tmp_path / "out", limit=40)
+    assert len(seen[0]) == 40
+    assert {it.source for it in seen[0]} == set("abcd")  # the first 40 would all be "a"
+    assert [it.id for it in seen[0]] == [it.id for it in seen[1]]  # the same items every run
+
+
+def test_the_commit_can_come_from_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    from mobiusguard_eval.run import git_commit
+
+    monkeypatch.setenv("MOBIUSGUARD_COMMIT", "abc1234")
+    assert git_commit() == "abc1234"  # the box has the code without its git history

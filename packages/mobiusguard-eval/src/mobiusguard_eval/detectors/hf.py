@@ -4,7 +4,9 @@ with the methods the harness needs (fingerprint, groups). Needs the ``hf`` extra
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Sequence
+from pathlib import Path
 
 from mobiusguard.classifier import HF_MODELS, HFModel
 from mobiusguard.classifier import HFClassifier as _ProxyClassifier
@@ -12,7 +14,7 @@ from mobiusguard.classifier import HFClassifier as _ProxyClassifier
 from ..items import Item
 from . import chunks
 
-__all__ = ["HF_MODELS", "HFClassifier", "HFModel"]
+__all__ = ["HF_MODELS", "HFClassifier", "HFModel", "local_classifier"]
 
 
 class HFClassifier(_ProxyClassifier):
@@ -36,3 +38,19 @@ class HFClassifier(_ProxyClassifier):
         for k, s in zip(order, scores, strict=True):
             result[k] = s
         return result
+
+
+def local_classifier(path: str, *, device: str = "cpu", batch_size: int = 32) -> HFClassifier:
+    """A model trained here (``train``), from its directory; ``DIR#harmful`` scores its
+    harmful output instead of the attack output. Its fingerprint holds the weights' hash,
+    so a retrained model is never mistaken for the old one's scores."""
+    path, _, output = path.partition("#")
+    d = Path(path)
+    h = hashlib.sha256()
+    for f in sorted(d.glob("*.safetensors")) + sorted(d.glob("*.bin")):
+        h.update(f.read_bytes())
+    label = output or "attack"
+    spec = HFModel(name=f"local:{d.parent.name}#{label}", repo=str(d),
+                   revision=h.hexdigest()[:40], licence="Apache-2.0",
+                   positive_label=label)  # fmt: skip
+    return HFClassifier(spec, device=device, batch_size=batch_size)

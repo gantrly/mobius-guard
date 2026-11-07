@@ -289,7 +289,16 @@ register(
 def _xstest(paths: list[Path]) -> Iterator[Item]:
     for r in _rows_csv(paths[0]):
         if r["label"] == "safe" and (text := _keep(r["prompt"])):
-            yield make_item(text, BENIGN, "xstest", meta={"type": r.get("type", "")})
+            yield make_item(
+                text, BENIGN, "xstest", meta={"type": r.get("type", ""), "harmful": "0"}
+            )
+
+
+def _xstest_unsafe(paths: list[Path]) -> Iterator[Item]:
+    for r in _rows_csv(paths[0]):
+        if r["label"] == "unsafe" and (text := _keep(r["prompt"])):
+            meta = {"type": r.get("type", ""), "harmful": "1"}
+            yield make_item(text, BENIGN, "xstest_unsafe", meta=meta)
 
 
 register(
@@ -303,16 +312,35 @@ register(
         parse=_xstest,
         trained_on_by=(PROTECTAI, PIGUARD),
         notes="Safe prompts that sound unsafe ('How do I kill a Python process?'). The 200 "
-        "unsafe prompts are harmful requests, not injections, and are left out. Both baselines "
-        "trained on a copy of these prompts (natolambert/xstest-v2-copy).",
+        "unsafe prompts are the xstest_unsafe family. Both baselines trained on a copy of "
+        "these prompts (natolambert/xstest-v2-copy).",
+    )
+)
+
+register(
+    Source(
+        id="xstest_unsafe",
+        title="XSTest (unsafe prompts)",
+        homepage="https://huggingface.co/datasets/Paul/XSTest",
+        licence="CC-BY-4.0",
+        role="benign",
+        files=_hf("Paul/XSTest", "f600c994b256f12867dfa5b3eb3d545a3e62f8b5", "xstest_prompts.csv"),
+        parse=_xstest_unsafe,
+        trained_on_by=(PROTECTAI, PIGUARD),
+        notes="Added 2026-11-04 (decision 0012): the 200 unsafe prompts, the safe prompts' "
+        "contrasts. Harmful requests, not injections: harmful 1, attack 0. They measure the "
+        "v0.2 classifier's harmful output; for the attack output they are hard benign.",
     )
 )
 
 
 def _orbench(paths: list[Path]) -> Iterator[Item]:
+    toxic = "toxic" in paths[0].name
+    source = "orbench_toxic" if toxic else "orbench"
     for r in _rows_csv(paths[0]):
         if text := _keep(r["prompt"]):
-            yield make_item(text, BENIGN, "orbench", meta={"category": r.get("category", "")})
+            meta = {"category": r.get("category", ""), "harmful": "1" if toxic else "0"}
+            yield make_item(text, BENIGN, source, meta=meta)
 
 
 register(
@@ -327,6 +355,23 @@ register(
         ),
         parse=_orbench,
         notes="Prompts that seem harmful but are not; built to measure over-refusal.",
+    )
+)
+
+register(
+    Source(
+        id="orbench_toxic",
+        title="OR-Bench toxic",
+        homepage="https://huggingface.co/datasets/bench-llm/or-bench",
+        licence="CC-BY-4.0",
+        role="benign",
+        files=_hf(
+            "bench-llm/or-bench", "e36d8b80e81837c8a8f264bbb2a49f1b32c7e272", "or-bench-toxic.csv"
+        ),
+        parse=_orbench,
+        notes="Added 2026-11-04 (decision 0012): 655 harmful prompts on the same topics as "
+        "OR-Bench hard-1k. Harmful 1, attack 0: they measure the v0.2 classifier's harmful "
+        "output; for the attack output they are hard benign.",
     )
 )
 

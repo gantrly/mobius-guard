@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 Label = Literal[0, 1]  # 1 = attack, 0 = benign
-Split = Literal["dev", "test", ""]
+Split = Literal["dev", "test", "train", "val", ""]  # train/val: the v0.2 training set
 
 ATTACK: Label = 1
 BENIGN: Label = 0

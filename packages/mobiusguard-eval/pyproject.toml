@@ -1,13 +1,13 @@
 [project]
 name = "mobiusguard-eval"
 dynamic = ["version"]
-description = "Honest evaluation harness for LLM guardrails: prompt-injection detectors scored on held-out attack families at a fixed false-positive rate, with pinned datasets, a provenance ledger and CPU latency."
+description = "Honest evaluation harness for LLM guardrails: prompt-injection detectors scored on held-out attack families at a fixed false-positive rate, with pinned datasets, a provenance ledger and CPU latency; trains and exports small ONNX classifiers."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.11"
 authors = [{ name = "SK Imtiaj Uddin" }]
-keywords = ["llm", "evaluation", "benchmark", "prompt-injection", "guardrails", "ai-security", "red-teaming", "redaction"]
+keywords = ["llm", "evaluation", "benchmark", "prompt-injection", "guardrails", "ai-security", "red-teaming", "redaction", "training", "onnx", "classifier"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
@@ -23,8 +23,8 @@ classifiers = [
 ]
 dependencies = [
     "huggingface-hub>=0.26",
-    "mobiusguard>=0.1.2,<0.2",
-    "mobiusguard-redact>=0.1.2,<0.2",
+    "mobiusguard>=0.2.0,<0.3",
+    "mobiusguard-redact>=0.2.0,<0.3",
     "numpy>=2.0",
     "pyarrow>=18",
 ]
@@ -40,6 +40,8 @@ Source = "https://github.com/gantrly/mobius-guard"
 Issues = "https://github.com/gantrly/mobius-guard/issues"
 Security = "https://github.com/gantrly/mobius-guard/blob/main/SECURITY.md"
 Releases = "https://github.com/gantrly/mobius-guard/releases"
+Model = "https://huggingface.co/gantrly/fortress-xs"
+Demo = "https://huggingface.co/spaces/gantrly/fortress-xs"
 
 [project.optional-dependencies]
 sklearn = [
@@ -48,6 +50,19 @@ sklearn = [
 hf = [
     "torch>=2.5",
     "transformers>=4.46",
+]
+# Fine-tuning the v0.2 classifier (decision 0012): DeBERTa-v3's tokenizer needs
+# sentencepiece and protobuf; the ONNX export, INT8 quantisation and parity check need the rest.
+train = [
+    "sentencepiece>=0.2",
+    "protobuf>=5",
+    "onnx>=1.17",
+    "onnxruntime>=1.20",
+    "onnxscript>=0.2",
+]
+# The label-cleaning judges (Amazon Bedrock).
+judge = [
+    "boto3>=1.40",
 ]
 
 [build-system]

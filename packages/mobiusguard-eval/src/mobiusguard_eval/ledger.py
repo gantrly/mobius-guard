@@ -28,6 +28,9 @@ class Remote:
     path: str = ""  # file inside the repo (hf_dataset)
     revision: str = ""
     sha256: str = ""
+    # hf_dataset Parquet only: fetch just these columns (a dataset whose images would
+    # otherwise be most of the download)
+    columns: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,18 +46,22 @@ class Source:
     trained_on_by: tuple[str, ...] = ()  # detector names known to have trained on it
     redistributable: bool = True
     notes: str = ""
+    cap: int = 0  # training sources only: items kept at most, when below the build's cap
 
 
 LEDGER: dict[str, Source] = {}
+# Training sources for the v0.2 classifier (decision 0012). Kept apart from LEDGER, so the
+# evaluation suite never includes them; none of LEDGER's sources may appear here.
+TRAINING: dict[str, Source] = {}
 
 
-def register(source: Source) -> Source:
-    if source.id in LEDGER:
+def register(source: Source, *, ledger: dict[str, Source] = LEDGER) -> Source:
+    if source.id in LEDGER or source.id in TRAINING:
         raise ValueError(f"duplicate source {source.id}")
     for f in source.files:
         if f.kind == "url" and not f.sha256:
             raise ValueError(f"{source.id}: url files need a sha256")
         if f.kind == "hf_dataset" and len(f.revision) != 40:
             raise ValueError(f"{source.id}: pin Hugging Face files to a commit hash")
-    LEDGER[source.id] = source
+    ledger[source.id] = source
     return source

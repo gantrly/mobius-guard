@@ -93,6 +93,10 @@ def get(name: str, *, device: str = "cpu", batch_size: int = 32) -> Detector:
     factories["mobiusguard-rules"] = rules
     factories["protectai-v2-norm"] = norm("protectai-v2")
     factories["piguard-norm"] = norm("piguard")
+    if name.startswith("local:"):
+        from .hf import local_classifier
+
+        return local_classifier(name.removeprefix("local:"), device=device, batch_size=batch_size)
     if name not in factories:
         raise KeyError(f"unknown detector {name!r}; choose from {sorted(factories)}")
     return factories[name]()

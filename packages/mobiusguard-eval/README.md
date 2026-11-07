@@ -23,6 +23,29 @@ Or everything in order: `mobiusguard-eval pipeline --out runs --device cuda`. Ev
 saves its work as it goes and skips what is already done for the same inputs, so a crash
 or a fix never means starting over (`--force` redoes a step).
 
+## Train and export a classifier
+
+The same harness built [Fortress-XS](https://huggingface.co/gantrly/fortress-xs), Mobius
+Guard's own classifier, and measured it against the published ones:
+
+```sh
+mobiusguard-eval train-data --suite runs/suite --out runs/train   # licensed sources, suite overlap removed
+mobiusguard-eval judge --data runs/train --out runs/judge         # optional: two LLM judges label it
+mobiusguard-eval apply-judges --data runs/train --judged runs/judge --out runs/clean
+mobiusguard-eval train --data runs/clean --base deberta-v3-xsmall --out runs/model
+mobiusguard-eval export --model runs/model/best --out runs/onnx --val runs/clean/val.jsonl
+mobiusguard-eval score --suite runs/suite --detector local:runs/model/best --out runs/mine
+```
+
+Training needs a GPU (`[train]`); the judges need `[judge]` and are paid model calls.
+Export writes ONNX and INT8 and refuses an INT8 model that disagrees with PyTorch. Every
+step resumes after a crash. Each training source is
+in the ledger with its licence, and any source of the evaluation suite is refused.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/gantrly/mobius-guard/main/docs/assets/fortress-recall.png" alt="Recall at 1% false positives per attack family for Fortress-XS, PIGuard, ProtectAI v2 and keyword rules" width="760">
+</p>
+
 ## What makes the numbers honest
 
 - **A provenance ledger.** Every dataset is pinned to a commit or a SHA-256, with its
@@ -50,6 +73,7 @@ or a fix never means starting over (`--force` redoes a step).
   `[hf]`.
 - `mobiusguard-rules`, and the normalised variants `*-norm` (Mobius Guard's clean-up in
   front of a classifier).
+- `local:<dir>`: a model trained here; `local:<dir>#harmful` scores its harmful output.
 - `redaction`: how often each of the 245 redaction patterns fires on ~57,000 real texts,
   and recall on 15,000 synthetic secrets (exact and garbled) streamed in random chunks.
   Includes near misses that must not be redacted.

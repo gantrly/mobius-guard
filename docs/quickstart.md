@@ -93,7 +93,8 @@ what was redacted, never the prompt or the secrets ([audit-log.md](audit-log.md)
 ## Next
 
 - [configuration.md](configuration.md): every setting, holding the upstream keys in the
-  proxy, adding a classifier and choosing its threshold.
+  proxy, adding the Fortress-XS classifier (`pip install "mobiusguard[onnx]"`, then
+  `classifier = "fortress-xs"`) and choosing thresholds.
 - [redaction.md](redaction.md): what gets redacted, switching patterns off, using the
   redactor on its own.
 - [deploy.md](deploy.md): the container image and running it as a service.

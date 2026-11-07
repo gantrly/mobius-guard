@@ -14,6 +14,24 @@ Each part is finished, tested and reviewed before the next one starts.
 
 ## v0.2: closed loop and our own model
 
+Plan for the classifier: [decision 0012](decisions/0012-classifier-v0.2.md) (accepted 2026-11-04)
+and its [training data](training-data.md). Released so far: 0.1.1 (2026-11-04), the redactor's
+held-text fix (#17); 0.1.2 (2026-11-05), the second of two space-separated IBANs (#20).
+
+| Classifier step | Status |
+|---|---|
+| Decision and training-data ledger (16 sources, two labels: attack, harmful) | **done** 2026-11-04 |
+| Training-data builder with suite filters (MinHash, word shingles), contrast pairs, cap, split | **done**; audited on three random samples |
+| Two-output fine-tuning (DeBERTa-v3-xsmall, mmBERT-small), 512 tokens | **done** on small samples |
+| Length-bucketed batches, resume points every ~20 min, ONNX INT8 export with parity, harmful families in the suite | **done** 2026-11-05 |
+| Dress rehearsal on the full data (build, audit, speed and memory, kill and resume, export, label-noise review) | **done** 2026-11-05: about 140 items/s on an L4 for both bases; INT8 needs per-channel + reduce_range |
+| Label cleaning with LLM judges (decision 0012) | **done** 2026-11-05: 157,113 items |
+| Small runs of the whole training path on the cleaned set (sweep, seed choice, export, scoring; hard kill, time limits, one base failing) | **done** 2026-11-05; mmBERT's INT8 export failed its gate on a barely trained model |
+| Learning-rate sweep, three seeds and one suite evaluation on the cleaned public data (the baseline) | **done** 2026-11-06: DeBERTa-v3-xsmall selected; [results](results/2026-11-06-classifier-v0.2-baseline.md). Weak on indirect injection; the harmful output over-blocks |
+| Indirect-injection and hard-benign training data (9 sources, see [training-data.md](training-data.md#added-2026-11-06-indirect-injection-and-hard-benign-text)) | **done** 2026-11-06: built, judged ($13.38), spot-checked ($0.72), cleaned: 206,438 items |
+| Retrain from scratch on all the data: both bases, three seeds each (DeBERTa 5e-5, mmBERT 2e-5), one suite evaluation | done 2026-11-07: DeBERTa selected again; LLMail 12 → 44%, BIPIA flat, OR-Bench hard over-blocking 55 → 48% ([results](results/2026-11-07-classifier-v0.2-retrain.md)) |
+| Release as **Fortress-XS v1** in Mobius Guard 0.2.0 ([decision 0013](decisions/0013-releasing-fortress-v0.2.md)): proxy support (`mobiusguard[onnx]`), model card, charts, demo Space | **prepared** 2026-11-07; publishing waits for the maintainer |
+
 - Red-team runner (mutation families, with garak/PyRIT adapters rather than re-writing them).
 - Patch proposals (rules or threshold changes) as reviewable diffs, gated on the benign
   canary set and a sealed holdout.

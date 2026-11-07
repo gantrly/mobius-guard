@@ -6,6 +6,45 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
 
 ## Unreleased
 
+- **Fortress-XS, Mobius Guard's own classifier.** An 81 MB INT8 ONNX model
+  ([gantrly/fortress-xs](https://huggingface.co/gantrly/fortress-xs), Apache-2.0) with two
+  outputs: attack (prompt injection and jailbreaks, also inside documents and tool results)
+  and harmful (requests for harmful content). At 1% false positives on ordinary messages it
+  catches 66% of attacks on average over 9 held-out families, against PIGuard's 44% and
+  ProtectAI v2's 29%. It takes 183 ms at 512 tokens on 4 CPU threads, where they take
+  1,151 ms. Weak spots, published with it: plain-language indirect injection (BIPIA 15%)
+  and harmless prompts that only sound harmful (the harmful output flags 48% of them).
+  [Results](docs/results/2026-11-07-classifier-v0.2-retrain.md).
+- **A demo that runs in your browser:**
+  [huggingface.co/spaces/gantrly/fortress-xs](https://huggingface.co/spaces/gantrly/fortress-xs).
+  It uses the same INT8 file with onnxruntime-web, so text never leaves the page.
+- `pip install "mobiusguard[onnx]"` and `classifier = "fortress-xs"`: onnxruntime and
+  tokenizers, no torch. The model downloads at a pinned commit, or loads from
+  `classifier_dir` for offline installs.
+- New policy settings:
+  - `classifier_action` (block or log): the attack output blocks at the model's own
+    threshold by default;
+  - `harmful` (block, log or off): log by default;
+  - `harmful_threshold`.
+  - A threshold in the config still wins.
+  - PIGuard and ProtectAI v2 behave as before: scores are logged until
+    `classifier_threshold` is set.
+- Each checked text is scored on its own, so a text always gets the same score. The INT8
+  model quantizes a batch as a whole, so a text's score could move by up to 0.55 with the
+  other texts of the same request.
+- The audit log, spans and `mobiusguard check` add the harmful score (`harmful`) and
+  `flagged`: the scores over a threshold, including those that only log.
+- `mobiusguard-eval` trains and exports the classifier:
+  - `train-data` builds the training set from 24 licensed sources, with suite-overlap
+    filters, contrast pairs and twins kept in one split;
+  - `judge` cleans labels with two LLM judges and per-source rules;
+  - `train` fine-tunes with resume points;
+  - `export` writes ONNX and INT8 with a parity gate.
+  - The suite adds XSTest unsafe and OR-Bench toxic as harmful-request families.
+  - `score --limit` takes a random subset, not the first items.
+- The README and the proxy's PyPI page linked to a private repository; they now link to
+  the Gantrly organisation.
+
 ## 0.1.2 (2026-11-05)
 
 - Fix: of two IBANs written in groups of four with only a space between them, the second

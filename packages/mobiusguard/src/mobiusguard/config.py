@@ -9,8 +9,14 @@
 
     [policy]
     rules = "block"              # block | log | off
-    classifier = ""              # "", "piguard" or "protectai-v2" (needs mobiusguard[classifier])
-    classifier_threshold = ""    # a log-odds score; empty = log scores only
+    classifier = ""              # "", "fortress-xs" (needs mobiusguard[onnx]),
+                                 # "piguard" or "protectai-v2" (need mobiusguard[classifier])
+    classifier_dir = ""          # a local copy of Fortress's files; "" = download the pinned one
+    classifier_action = "block"  # block | log: what an attack score over the threshold does
+    classifier_threshold = ""    # attack log-odds; "" = the model's own (Fortress: 1% false
+                                 # positives), or log scores only for a model without one
+    harmful = "log"              # block | log | off: Fortress's harmful-request output
+    harmful_threshold = ""       # harmful log-odds; "" = the model's own
     on_error = "block"           # block | allow: what a failing detector does
 
     [redaction]
@@ -54,7 +60,11 @@ class Upstream:
 class Policy:
     rules: Action = "block"
     classifier: str = ""
+    classifier_dir: str = ""
+    classifier_action: Literal["block", "log"] = "block"
     classifier_threshold: float | None = None
+    harmful: Action = "log"
+    harmful_threshold: float | None = None
     on_error: Literal["block", "allow"] = "block"
 
 
@@ -113,6 +123,12 @@ def load(path: Path | None = None, env: dict[str, str] | None = None) -> Config:
     aud, lim = _section(data, "audit"), _section(data, "limits")
 
     threshold = pol.get("classifier_threshold", "")
+    harmful_threshold = pol.get("harmful_threshold", "")
+    classifier_action = pol.get("classifier_action", "block")
+    if classifier_action != "block" and classifier_action != "log":
+        raise ValueError(
+            f"policy.classifier_action must be block or log, not {classifier_action!r}"
+        )
     on_error = pol.get("on_error", "block")
     if on_error != "block" and on_error != "allow":
         raise ValueError(f"policy.on_error must be block or allow, not {on_error!r}")
@@ -131,7 +147,11 @@ def load(path: Path | None = None, env: dict[str, str] | None = None) -> Config:
         policy=Policy(
             rules=_action(pol.get("rules", "block"), "policy.rules"),
             classifier=str(pol.get("classifier", "")),
+            classifier_dir=str(pol.get("classifier_dir", "")),
+            classifier_action=classifier_action,
             classifier_threshold=None if threshold in ("", None) else float(threshold),
+            harmful=_action(pol.get("harmful", "log"), "policy.harmful"),
+            harmful_threshold=None if harmful_threshold in ("", None) else float(harmful_threshold),
             on_error=on_error,
         ),
         redaction=Redaction(

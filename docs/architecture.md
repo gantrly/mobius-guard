@@ -12,10 +12,10 @@ client ──► /v1/chat/completions · /v1/responses · /v1/messages
         │ normalise   decode/strip what attackers use to hide text           │
         │             (zero-width, homoglyphs, spaced letters, base64, …)    │
         │ rules       8 named regex rules, high or medium severity           │
-        │ classifier  optional: PIGuard or ProtectAI v2, log-odds score      │
-        │             (our own small CPU model replaces them in v0.2)        │
-        │ policy      ALLOW / BLOCK with reasons; high rules block, scores   │
-        │             block only above a threshold you set                   │
+        │ classifier  optional: Fortress-XS (attack + harmful), PIGuard, ... │
+        │             Fortress ships its thresholds; the others have none    │
+        │ policy      ALLOW / BLOCK with reasons; high rules block; attack   │
+        │             scores over the threshold block, harmful ones log      │
         └────────────────────────────────────────────────────────────────────┘
              │ BLOCK → 403 with a machine-readable reason, audit record
              │ ALLOW

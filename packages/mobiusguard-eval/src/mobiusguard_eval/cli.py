@@ -7,6 +7,14 @@
     latency --detector D [--threads N] --out runs/latency-D.json [--suite S]
     redaction --suite S --out runs/redaction [--per-pattern 200]
     pipeline --out runs [--tag v0.1] [--device cuda]   all of the above, in order
+    train-sources                    list the v0.2 training ledger
+    train-fetch --sources ID…        download training sources' files only (e.g. a gated one
+                                     where the login is), without building anything
+    train-data --suite S --out runs/train-v0.2 [--cap 20000]   build the training set
+    train --data D --base B --seed N --out runs/model-B-sN [--limit N]   fine-tune one run
+    export --model DIR --out DIR [--val D/val.jsonl]   ONNX + INT8, parity, CPU latency
+    judge --data D --out runs/judged            two LLM judges label a training build (paid)
+    apply-judges --data D --judged J --out D2   clean a build with the judges' labels
 
 Every step saves its work as it goes and skips what is already done for the same inputs,
 so running a command again resumes it. ``--force`` redoes a step from the start.
@@ -15,8 +23,10 @@ so running a command again resumes it. ``--force`` redoes a step from the start.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib
 import json
+import random
 import sys
 import time
 import traceback
@@ -30,6 +40,9 @@ from .checkpoint import fingerprint, write_atomic
 from .fetch import fetch
 from .items import Item
 from .suite import build, is_built, ledger_sources, load_suite
+from .train import TrainConfig
+
+TRAIN_DEFAULTS = TrainConfig(base="")  # a slots dataclass: its class attributes are descriptors
 
 
 def log(message: str) -> None:
@@ -65,8 +78,8 @@ def step_score(
     from .run import score
 
     items = load_suite(suite)
-    if limit:
-        items = items[:limit]
+    if limit:  # the suite is sorted by source: a small run needs a fair mix of every family
+        items = sorted(items, key=lambda it: hashlib.sha256(it.id.encode()).hexdigest())[:limit]
     score(items, detectors.get(detector, device=device, batch_size=batch_size), out,
           force=force, log=log)  # fmt: skip
     log(f"score: wrote {out}")
@@ -226,6 +239,73 @@ def pipeline(
 # ------------------------------------------------------------------------------ main
 
 
+def step_train_data(suite: Path, out: Path, *, cap: int, source_ids: Sequence[str] | None = None,
+                    seed: str = "", force: bool = False) -> None:  # fmt: skip
+    from . import train_data
+    from .train_sources import training_sources
+
+    sources = training_sources(list(source_ids) if source_ids else None)
+    items = load_suite(suite)
+    key = train_data.build_key(sources, train_data.suite_key(items), cap, seed)
+    if not force and train_data.is_built(out, key):
+        log(f"train-data: {out} is up to date, skipping (--force to rebuild)")
+        return
+    loaded: dict[str, list[Item]] = {}
+    for s in sources:
+        loaded[s.id] = list(s.parse(fetch(s)))
+        log(f"train-data: {s.id} {len(loaded[s.id]):,} items")
+    summary = train_data.build(sources, loaded, items, out, cap=cap, seed=seed, log=log)
+    log(f"train-data: {summary['items']}, labels {dict(summary['labels'])}")
+
+
+def step_train(data: Path, out: Path, *, base: str, seed: int, epochs: int, lr: float,
+               batch_size: int, max_length: int, limit: int, device: str,
+               checkpoint_minutes: float, stop_after_minutes: float) -> None:  # fmt: skip
+    from .train import train
+
+    cfg = TrainConfig(base=base, seed=seed, epochs=epochs, lr=lr, batch_size=batch_size,
+                      max_length=max_length, limit=limit, checkpoint_minutes=checkpoint_minutes,
+                      stop_after_minutes=stop_after_minutes)  # fmt: skip
+    result = train(data, cfg, out, device=device, log=log)
+    if "best_epoch" in result:
+        log(f"train: best epoch {result['best_epoch']}, wrote {out / 'best'}")
+
+
+def step_export(model: Path, out: Path, *, val: Path | None, threads: int) -> None:
+    from .export import export
+
+    result = export(model, out, val=val, threads=threads, log=log)
+    if not result["parity"]["fp32_ok"]:
+        raise SystemExit("export: float32 ONNX does not match PyTorch")
+    if not result["parity"]["int8_ok"]:
+        raise SystemExit("export: the INT8 model does not agree with PyTorch (see export.json)")
+
+
+def step_judge(data: Path, out: Path, *, workers: int, limit: int) -> None:
+    from . import judge
+    from .items import read_jsonl
+
+    items = [*read_jsonl(data / "train.jsonl"), *read_jsonl(data / "val.jsonl")]
+    rng = random.Random(0)  # noqa: S311 - an order, not a secret
+    rng.shuffle(items)  # the files are sorted by source: a --limit chunk should be a fair mix
+    judge.run(items[:limit] if limit else items, out, workers=workers, log=log)
+
+
+def step_apply_judges(data: Path, judged: Path, out: Path) -> None:
+    from . import judge
+
+    s = judge.apply_build(data, judged, out)
+    log(f"apply-judges: {s['items']}, labels {dict(s['labels'])}")
+
+
+def _train_sources(_: argparse.Namespace) -> int:
+    from .train_sources import training_sources
+
+    for s in training_sources():
+        print(f"{s.id:<21} {s.role:<7} {s.licence:<11} {s.title}")
+    return 0
+
+
 def _sources(_: argparse.Namespace) -> int:
     for s in ledger_sources():
         trained = ", ".join(s.trained_on_by) or "-"
@@ -233,11 +313,41 @@ def _sources(_: argparse.Namespace) -> int:
     return 0
 
 
+def _train_fetch(a: argparse.Namespace) -> int:
+    from .fetch import fetch
+    from .train_sources import training_sources
+
+    for s in training_sources(a.sources):
+        paths = fetch(s)
+        size = sum(p.stat().st_size for p in paths) / 1e6
+        log(f"train-fetch: {s.id}: {len(paths)} files, {size:,.0f} MB")
+    return 0
+
+
 def _run(a: argparse.Namespace) -> int:
     cmd: str = a.command
     if cmd == "sources":
         return _sources(a)
-    if cmd == "build":
+    if cmd == "train-sources":
+        return _train_sources(a)
+    if cmd == "train-fetch":
+        return _train_fetch(a)
+    if cmd == "train-data":
+        step_train_data(Path(a.suite), Path(a.out), cap=a.cap, source_ids=a.sources,
+                        seed=a.sample_seed, force=a.force)  # fmt: skip
+    elif cmd == "judge":
+        step_judge(Path(a.data), Path(a.out), workers=a.workers, limit=a.limit)
+    elif cmd == "apply-judges":
+        step_apply_judges(Path(a.data), Path(a.judged), Path(a.out))
+    elif cmd == "export":
+        step_export(Path(a.model), Path(a.out), val=Path(a.val) if a.val else None,
+                    threads=a.threads)  # fmt: skip
+    elif cmd == "train":
+        step_train(Path(a.data), Path(a.out), base=a.base, seed=a.seed, epochs=a.epochs, lr=a.lr,
+                   batch_size=a.batch_size, max_length=a.max_length, limit=a.limit,
+                   device=a.device, checkpoint_minutes=a.checkpoint_minutes,
+                   stop_after_minutes=a.stop_after_minutes)  # fmt: skip
+    elif cmd == "build":
         step_build(Path(a.out), a.sources, force=a.force)
     elif cmd == "score":
         step_score(Path(a.suite), a.detector, Path(a.out), device=a.device,
@@ -257,7 +367,7 @@ def _run(a: argparse.Namespace) -> int:
     return 0
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="mobiusguard-eval", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)  # fmt: skip
     sub = ap.add_subparsers(dest="command", required=True)
@@ -271,11 +381,13 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     p = sub.add_parser("score")
     p.add_argument("--suite", required=True)
-    p.add_argument("--detector", required=True, choices=detectors.NAMES)
+    p.add_argument("--detector", required=True, help=f"{', '.join(detectors.NAMES)}, or local:DIR")
     p.add_argument("--out", required=True)
     p.add_argument("--device", default="cpu")
     p.add_argument("--batch-size", type=int, default=32)
-    p.add_argument("--limit", type=int, default=0, help="score only the first N items")
+    p.add_argument(
+        "--limit", type=int, default=0, help="score a fixed random N items only (small run)"
+    )
     p.add_argument("--force", action="store_true")
 
     p = sub.add_parser("report")
@@ -297,6 +409,52 @@ def main(argv: Sequence[str] | None = None) -> int:
     p.add_argument("--per-pattern", type=int, default=200)
     p.add_argument("--force", action="store_true")
 
+    sub.add_parser("train-sources")
+
+    p = sub.add_parser("train-fetch", help="download training sources' files, nothing else")
+    p.add_argument("--sources", nargs="+", required=True, help="training source IDs")
+
+    p = sub.add_parser("train-data", help="build the v0.2 training set")
+    p.add_argument("--suite", required=True, help="the evaluation suite, held out")
+    p.add_argument("--out", required=True)
+    p.add_argument("--cap", type=int, default=20_000, help="items per source")
+    p.add_argument("--sources", nargs="*", help="training source IDs (default: all)")
+    p.add_argument("--sample-seed", default="", help="draw a different random sample")
+    p.add_argument("--force", action="store_true")
+
+    p = sub.add_parser("train", help="fine-tune one base model with one seed")
+    p.add_argument("--data", required=True)
+    p.add_argument("--out", required=True)
+    p.add_argument("--base", required=True, choices=["deberta-v3-xsmall", "mmbert-small"])
+    p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--epochs", type=int, default=TRAIN_DEFAULTS.epochs)
+    p.add_argument("--lr", type=float, default=TRAIN_DEFAULTS.lr)
+    p.add_argument("--batch-size", type=int, default=TRAIN_DEFAULTS.batch_size)
+    p.add_argument("--max-length", type=int, default=TRAIN_DEFAULTS.max_length)
+    p.add_argument("--limit", type=int, default=0, help="train on N items only (small run)")
+    p.add_argument("--device", default="cuda")
+    p.add_argument("--checkpoint-minutes", type=float, default=TRAIN_DEFAULTS.checkpoint_minutes,
+                   help="write a resume point this often")  # fmt: skip
+    p.add_argument("--stop-after-minutes", type=float, default=0.0,
+                   help="rehearsal: stop, score val, save the model in partial/")  # fmt: skip
+
+    p = sub.add_parser("judge", help="two LLM judges label a training build (paid, Bedrock)")
+    p.add_argument("--data", required=True, help="a train-data build")
+    p.add_argument("--out", required=True)
+    p.add_argument("--workers", type=int, default=64, help="parallel calls per judge")
+    p.add_argument("--limit", type=int, default=0, help="label N items only (the small run)")
+
+    p = sub.add_parser("apply-judges", help="clean a training build with saved judge labels")
+    p.add_argument("--data", required=True)
+    p.add_argument("--judged", required=True, help="the judge run's directory")
+    p.add_argument("--out", required=True)
+
+    p = sub.add_parser("export", help="ONNX + INT8 export of a trained model, with checks")
+    p.add_argument("--model", required=True, help="a trained model directory (best/ or partial/)")
+    p.add_argument("--out", required=True)
+    p.add_argument("--val", help="val.jsonl of its training set, for the parity check")
+    p.add_argument("--threads", type=int, default=4, help="CPU threads for the latency test")
+
     p = sub.add_parser("pipeline", help="every step in order, resuming what was saved")
     p.add_argument("--out", default="runs")
     p.add_argument("--tag", default="v0.1")
@@ -310,7 +468,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     p.add_argument("--no-redaction", action="store_true")
     p.add_argument("--force", action="store_true", help="redo every step")
 
-    return _run(ap.parse_args(argv))
+    return ap
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    return _run(build_parser().parse_args(argv))
 
 
 if __name__ == "__main__":
