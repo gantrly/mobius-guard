@@ -21,7 +21,7 @@
   <img alt="Python 3.11 to 3.13" src="https://img.shields.io/badge/Python-3.11%20%C2%B7%203.12%20%C2%B7%203.13-3776ab?style=flat-square&logo=python&logoColor=white">
   <img alt="Pyright strict" src="https://img.shields.io/badge/types-pyright%20strict-3178c6?style=flat-square">
   <img alt="Property-based tests" src="https://img.shields.io/badge/tests-Hypothesis-1e7f4a?style=flat-square">
-  <a href="https://github.com/gantrly/gantrly"><img alt="A Gantrly project" src="https://img.shields.io/badge/a-Gantrly%20project-f5b301?style=flat-square"></a>
+  <a href="https://github.com/gantrly"><img alt="A Gantrly project" src="https://img.shields.io/badge/a-Gantrly%20project-f5b301?style=flat-square"></a>
 </p>
 
 <p align="center">
@@ -204,7 +204,7 @@ More in [ROADMAP.md](docs/ROADMAP.md) and the [changelog](CHANGELOG.md).
 
 ## Part of Gantrly
 
-Built by the people behind [Gantrly](https://github.com/gantrly/gantrly), whose AI agent will
+Built by the people behind [Gantrly](https://github.com/gantrly), whose AI agent will
 run behind it. Mobius Guard has no dependency on Gantrly and works with any LLM app.
 
 ## Contributing

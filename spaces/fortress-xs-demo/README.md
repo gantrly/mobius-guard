@@ -9,6 +9,12 @@ pinned: false
 license: apache-2.0
 models:
   - gantrly/fortress-xs
+tags:
+  - prompt-injection
+  - llm-security
+  - guardrails
+  - onnxruntime-web
+  - in-browser
 short_description: Prompt-injection classifier that runs in your browser
 ---
 

@@ -5,13 +5,20 @@ language:
 library_name: onnx
 pipeline_tag: text-classification
 base_model: microsoft/deberta-v3-xsmall
+base_model_relation: finetune
 tags:
   - prompt-injection
+  - indirect-prompt-injection
   - jailbreak-detection
   - llm-security
+  - ai-safety
+  - safety
   - guardrails
+  - llm-firewall
+  - mobius-guard
   - onnx
   - int8
+  - cpu
   - deberta-v3
 datasets:
   - hackaprompt/hackaprompt-dataset
@@ -37,6 +44,10 @@ datasets:
 **A small, fast prompt-injection and harmful-request classifier that runs on a CPU.**
 It is the model inside [Mobius Guard](https://github.com/gantrly/mobius-guard), an
 open-source LLM firewall, and it works on its own too.
+
+**[Try it in your browser](https://huggingface.co/spaces/gantrly/fortress-xs)** (your text
+never leaves the page) · [Use it](#use-it) · [How it compares](#how-it-compares) ·
+[Limits](#limits)
 
 - **Two outputs from one pass:**
   - **attack**: prompt injection or a jailbreak, direct or hidden in a document, an email or

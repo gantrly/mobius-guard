@@ -90,4 +90,4 @@ CPU classifier is for.
 Alpha: settings and APIs may still change before 1.0. Apache-2.0. Every release is built by
 CI and published with PyPI trusted publishing; each file carries a build-provenance
 attestation (`gh attestation verify <file> -R gantrly/mobius-guard`). Made by the people
-behind [Gantrly](https://github.com/gantrly/gantrly).
+behind [Gantrly](https://github.com/gantrly).
