@@ -64,6 +64,15 @@ was not tuned on.
 
 **Runs.**
 - Resumable and seeded, on the box, never on a developer's machine.
+- **On the CPU, with the runtime the proxy ships.** On 2,000 attempt texts, the same
+  INT8 file under onnxruntime-gpu 1.31.1 (NVIDIA L4) flipped 30 attack verdicts (1.5%)
+  against the CPU runtime: scores differed by up to 2.35 log-odds (p99 0.89), and it was
+  only about twice as fast, because many nodes fall back to the CPU. A 1.5% shift would
+  move the bypass rates being measured, so the GPU is not used.
+- Each distinct text is scored once and its score reused (a user message and a tool
+  result carrying the same variant are the same text to the classifier). Texts are still
+  scored one at a time, so the cache changes the run's length, not its result: about
+  466,000 distinct texts, roughly 12 hours on the box's two cores.
 - One row per attempt: attempt ID, parent item ID, source, mutation chain, target, decision,
   the layer that caught it (rule ID, `classifier` or `harmful`), scores, milliseconds.
 - Attack text stays in the run files on the box. Reports, chat and git show counts and IDs
