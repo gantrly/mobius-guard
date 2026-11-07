@@ -83,8 +83,19 @@ def test_the_config_reads_the_new_settings(tmp_path: Path) -> None:
 
 
 def test_an_unpublished_model_needs_a_local_directory() -> None:
+    from mobiusguard.classifier import OnnxClassifier, OnnxModel
+
+    spec = OnnxModel(name="x", repo="gantrly/x", revision="", licence="Apache-2.0")
     with pytest.raises(ValueError, match="classifier_dir"):
-        Guard(Config(policy=Policy(classifier="fortress-xs")))
+        OnnxClassifier(spec)
+
+
+def test_fortress_is_pinned_to_a_full_commit() -> None:
+    from mobiusguard.classifier import ONNX_MODELS
+
+    rev = ONNX_MODELS["fortress-xs"].revision
+    assert len(rev) == 40
+    assert all(c in "0123456789abcdef" for c in rev)
 
 
 # ------------------------------------------------------------------------------ ONNX loader

@@ -151,7 +151,7 @@ class HFClassifier:
 class OnnxModel:
     name: str
     repo: str
-    revision: str  # "" until the model is published; then only ``classifier_dir`` works
+    revision: str  # a Hugging Face commit; "" = not published, only ``classifier_dir`` works
     licence: str
     file: str = "model.int8.onnx"
 
@@ -160,7 +160,7 @@ ONNX_MODELS = {
     "fortress-xs": OnnxModel(
         name="fortress-xs",
         repo="gantrly/fortress-xs",
-        revision="",
+        revision="420ca0aa43fdee63ae6d7be44524a890f275c12a",  # v1
         licence="Apache-2.0",
     ),
 }
