@@ -9,6 +9,12 @@ recognises, and a reply that echoes a fake AWS key and database password must co
 redacted. The same echo is first sent straight to the model, to show the secrets really were
 in its reply. Tool-call arguments are checked through Chat Completions. Fake secrets only;
 no paid API is called. Results go to live-check.json.
+
+With a classifier (examples/ollama-fortress.toml), two more inputs can be given in
+LIVE_ITEMS, a JSON file of {"attack": {"id", "text"}, "benign": {"id", "text"}}: an email
+from the held-out suite with an injection no rule matches, which only the classifier can
+block, and a harmless email, which must be answered. Only their IDs are printed.
+LIVE_OVERHEAD=N times N one-token requests straight to the model and N through the proxy.
 """
 
 import json
@@ -93,6 +99,14 @@ def messages(text: str, stream: bool, system: str | None = None) -> str:
     return out
 
 
+def details(e: openai.APIStatusError | anthropic.APIStatusError) -> dict[str, object]:
+    """Mobius Guard's details (rules, score) from a 403 the SDK raised."""
+    body = e.body if isinstance(e.body, dict) else {}
+    err = body.get("error", body)
+    mg = err.get("mobiusguard") if isinstance(err, dict) else None
+    return mg if isinstance(mg, dict) else {}
+
+
 def run_api(api: str, call) -> None:  # noqa: ANN001
     for stream in (False, True):
         t0 = time.perf_counter()
@@ -128,15 +142,14 @@ def run_api(api: str, call) -> None:  # noqa: ANN001
                 (time.perf_counter() - t0) * 1000,
             )
         except (openai.PermissionDeniedError, anthropic.PermissionDeniedError) as e:
-            body = e.body if isinstance(e.body, dict) else {}
-            err = body.get("error", body) if isinstance(body, dict) else {}
-            rules = (err.get("mobiusguard") or {}).get("rules") if isinstance(err, dict) else None
+            mg = details(e)
             record(
                 api,
                 "attack",
                 stream,
-                e.status_code == 403 and bool(rules),
-                f"403, SDK raised {type(e).__name__}, rules={rules}",
+                e.status_code == 403 and bool(mg.get("rules")),
+                f"403, SDK raised {type(e).__name__}, rules={mg.get('rules')}"
+                f" score={mg.get('score')}",
                 (time.perf_counter() - t0) * 1000,
             )
 
@@ -223,8 +236,53 @@ for stream in (False, True):
         "chat", "tool-args", stream, ok, f"args={args[:90]!r}", (time.perf_counter() - t0) * 1000
     )
 
+EMAIL = "Summarise this email for me in one sentence.\n\n"
+CALLS = {
+    "chat": lambda t, s: chat_call(t, s, None),
+    "responses": lambda t, s: responses(t, s),
+    "anthropic": lambda t, s: messages(t, s),
+}
+items: dict[str, dict[str, str]] = {}
+if os.environ.get("LIVE_ITEMS"):
+    with open(os.environ["LIVE_ITEMS"]) as f:
+        items = json.load(f)
+for api, call in CALLS.items() if items else ():
+    for stream in (False, True):
+        for case in ("attack", "benign"):
+            item = items[case]
+            name, t0 = f"email-{case}", time.perf_counter()
+            try:
+                out = call(EMAIL + item["text"], stream)
+                ok = case == "benign" and bool(out.strip())
+                note = f"id={item['id']} answered" + ("" if ok else ": NOT BLOCKED")
+            except (openai.PermissionDeniedError, anthropic.PermissionDeniedError) as e:
+                mg = details(e)
+                # Only the classifier may catch it: no rule matched when it was chosen.
+                ok = case == "attack" and not mg.get("rules") and mg.get("score") is not None
+                note = f"id={item['id']} 403 rules={mg.get('rules')} score={mg.get('score')}"
+            except Exception as e:
+                ok, note = False, f"id={item['id']} {type(e).__name__}: {e}"[:120]
+            record(api, name, stream, ok, note, (time.perf_counter() - t0) * 1000)
+
+overhead: dict[str, object] = {}
+n = int(os.environ.get("LIVE_OVERHEAD", "0"))
+if n:
+    ask1 = [{"role": "user", "content": BENIGN}]
+    times: dict[str, list[float]] = {"direct": [], "proxy": []}
+    for i in range(n + 2):  # two warm-up rounds, not counted
+        for where, client in (("direct", oai_direct), ("proxy", oai)):
+            t0 = time.perf_counter()
+            client.chat.completions.create(model=MODEL, messages=ask1, max_tokens=1, seed=1)
+            if i >= 2:
+                times[where].append((time.perf_counter() - t0) * 1000)
+    for where, ts in times.items():
+        ts.sort()
+        overhead[where] = {"p50": round(ts[len(ts) // 2], 1), "p95": round(ts[-1 - n // 20], 1)}
+    overhead["n"] = n
+    print(f"\none-token requests, ms: {overhead}")
+
 passed = sum(r["ok"] for r in results)
 print(f"\n{passed}/{len(results)} passed")
 with open("live-check.json", "w") as f:
-    json.dump(results, f, indent=2)
+    json.dump({"results": results, "overhead": overhead} if n else results, f, indent=2)
 raise SystemExit(0 if passed == len(results) else 1)
