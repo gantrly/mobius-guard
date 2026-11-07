@@ -215,26 +215,34 @@ tools = [
     }
 ]
 ask = [{"role": "user", "content": f"Call save_note with the text exactly: deploy token {TOKEN}"}]
-for stream in (False, True):
-    t0 = time.perf_counter()
+
+
+def tool_args(stream: bool) -> str:
     if not stream:
         r = oai.chat.completions.create(
             model=MODEL, messages=ask, tools=tools, temperature=0, seed=1
         )
         calls = r.choices[0].message.tool_calls or []
-        args = "".join(c.function.arguments for c in calls)
-    else:
-        args = ""
-        for ch in oai.chat.completions.create(
-            model=MODEL, messages=ask, tools=tools, temperature=0, seed=1, stream=True
-        ):
-            for tc in (ch.choices[0].delta.tool_calls or []) if ch.choices else []:
-                if tc.function and tc.function.arguments:
-                    args += tc.function.arguments
-    ok = bool(args) and TOKEN not in args and "[REDACTED:" in args
-    record(
-        "chat", "tool-args", stream, ok, f"args={args[:90]!r}", (time.perf_counter() - t0) * 1000
-    )
+        return "".join(c.function.arguments for c in calls)
+    args = ""
+    for ch in oai.chat.completions.create(
+        model=MODEL, messages=ask, tools=tools, temperature=0, seed=1, stream=True
+    ):
+        for tc in (ch.choices[0].delta.tool_calls or []) if ch.choices else []:
+            if tc.function and tc.function.arguments:
+                args += tc.function.arguments
+    return args
+
+
+for stream in (False, True):
+    t0 = time.perf_counter()
+    try:
+        args = tool_args(stream)
+        ok = bool(args) and TOKEN not in args and "[REDACTED:" in args
+        note = f"args={args[:90]!r}"
+    except Exception as e:
+        ok, note = False, f"{type(e).__name__}: {e}"[:120]
+    record("chat", "tool-args", stream, ok, note, (time.perf_counter() - t0) * 1000)
 
 EMAIL = "Summarise this email for me in one sentence.\n\n"
 CALLS = {
