@@ -6,6 +6,8 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
 
 ## Unreleased
 
+## 0.2.0 (2026-11-07)
+
 - **Fortress-XS, Mobius Guard's own classifier.** An 81 MB INT8 ONNX model
   ([gantrly/fortress-xs](https://huggingface.co/gantrly/fortress-xs), Apache-2.0) with two
   outputs: attack (prompt injection and jailbreaks, also inside documents and tool results)
