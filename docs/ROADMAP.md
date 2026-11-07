@@ -29,7 +29,7 @@ held-text fix (#17); 0.1.2 (2026-11-05), the second of two space-separated IBANs
 | Small runs of the whole training path on the cleaned set (sweep, seed choice, export, scoring; hard kill, time limits, one base failing) | **done** 2026-11-05; mmBERT's INT8 export failed its gate on a barely trained model |
 | Learning-rate sweep, three seeds and one suite evaluation on the cleaned public data (the baseline) | **done** 2026-11-06: DeBERTa-v3-xsmall selected; [results](results/2026-11-06-classifier-v0.2-baseline.md). Weak on indirect injection; the harmful output over-blocks |
 | Indirect-injection and hard-benign training data (9 sources, see [training-data.md](training-data.md#added-2026-11-06-indirect-injection-and-hard-benign-text)) | **done** 2026-11-06: built, judged ($13.38), spot-checked ($0.72), cleaned: 206,438 items |
-| Retrain from scratch on all the data: both bases, three seeds each (DeBERTa 5e-5, mmBERT 2e-5), one suite evaluation | **running** since 2026-11-06 |
+| Retrain from scratch on all the data: both bases, three seeds each (DeBERTa 5e-5, mmBERT 2e-5), one suite evaluation | done 2026-11-07: DeBERTa selected again; LLMail 12 → 44%, BIPIA flat, OR-Bench hard over-blocking 55 → 48% ([results](results/2026-11-07-classifier-v0.2-retrain.md)) |
 | Model card, release | pending |
 
 - Red-team runner (mutation families, with garak/PyRIT adapters rather than re-writing them).
