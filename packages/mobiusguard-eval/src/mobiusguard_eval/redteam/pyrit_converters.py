@@ -25,10 +25,20 @@ PREFIX = "pyrit:"
 
 
 def _module() -> Any:
-    try:
-        return importlib.import_module("pyrit.prompt_converter")
-    except ImportError as e:  # pragma: no cover - depends on the extra
-        raise ImportError("PyRIT converters need: pip install 'mobiusguard-eval[pyrit]'") from e
+    """PyRIT's converter module: ``pyrit.converter`` from 1.0, ``pyrit.prompt_converter`` before."""
+    for name in ("pyrit.converter", "pyrit.prompt_converter"):
+        try:
+            return importlib.import_module(name)
+        except ImportError:
+            continue
+    raise ImportError("PyRIT converters need: pip install 'mobiusguard-eval[pyrit]'")
+
+
+def _base(mod: Any) -> type:
+    base = getattr(mod, "Converter", None) or getattr(mod, "PromptConverter", None)
+    if not isinstance(base, type):
+        raise ImportError("PyRIT's converter base class was not found")
+    return base
 
 
 def needs_model(cls: type) -> bool:
@@ -43,7 +53,7 @@ def needs_model(cls: type) -> bool:
 def available() -> list[str]:
     """Names of PyRIT's converters that need no model."""
     mod = _module()
-    base = mod.PromptConverter
+    base = _base(mod)
     return sorted(
         name
         for name, cls in inspect.getmembers(mod, inspect.isclass)
@@ -53,8 +63,9 @@ def available() -> list[str]:
 
 def converter_step(name: str, **kwargs: Any) -> Step:
     """A mutation step that runs PyRIT's ``name`` converter on the text."""
-    cls = getattr(_module(), name, None)
-    if cls is None:
+    mod = _module()
+    cls = getattr(mod, name, None)
+    if not (isinstance(cls, type) and issubclass(cls, _base(mod))):
         raise KeyError(f"PyRIT has no converter {name!r}")
     if needs_model(cls):
         raise ValueError(f"{name} calls a model (converter_target); only model-free converters")

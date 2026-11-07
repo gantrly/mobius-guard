@@ -14,6 +14,9 @@ the settings, counts per probe, and the commit of every Hugging Face dataset a p
   turned off and its random seed fixed, so an export is complete and repeatable.
 - garak's "Full" variants contain the others' prompts; a prompt that two probes share is
   kept once, under the first probe (sorted by name) that produced it.
+- Some probes sample from a Python ``set`` (``sysprompt_extraction`` picks its system
+  prompts that way), whose order depends on the interpreter's hash seed, so the script
+  re-runs itself with ``PYTHONHASHSEED=0`` when it is not set.
 - Prompt text is written to the seeds file only; the script prints counts.
 """
 
@@ -24,6 +27,7 @@ import hashlib
 import importlib
 import inspect
 import json
+import os
 import pkgutil
 import platform
 import random
@@ -144,6 +148,7 @@ def export(modules: list[str], out: Path) -> dict[str, Any]:
         "python": platform.python_version(),
         "modules": modules,
         "seed": SEED,
+        "pythonhashseed": os.environ.get("PYTHONHASHSEED", ""),
         "prompt_cap": None,
         "seeds": len(seen),
         "probes": probes,
@@ -155,6 +160,10 @@ def export(modules: list[str], out: Path) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> None:
+    if argv is None and os.environ.get("PYTHONHASHSEED") != "0":
+        # set iteration order (and so garak's sampling) depends on the hash seed
+        env = {**os.environ, "PYTHONHASHSEED": "0"}
+        os.execve(sys.executable, [sys.executable, *sys.argv], env)  # noqa: S606 - re-run self
     ap = argparse.ArgumentParser(description=(__doc__ or "").split("\n")[0])
     ap.add_argument("modules", nargs="+", help="garak probe modules, e.g. latentinjection")
     ap.add_argument("--out", type=Path, required=True)

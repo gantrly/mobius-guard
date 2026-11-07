@@ -167,7 +167,7 @@ class Rewriter(FakeBase):
 
 
 def test_pyrit_steps_refuse_converters_that_call_a_model(monkeypatch: pytest.MonkeyPatch) -> None:
-    fake = SimpleNamespace(PromptConverter=FakeBase, Upper=Upper, Rewriter=Rewriter)
+    fake = SimpleNamespace(Converter=FakeBase, Upper=Upper, Rewriter=Rewriter, Other=str)
     monkeypatch.setattr(pyrit_converters, "_module", lambda: fake)
     step = pyrit_converters.converter_step("Upper")
     assert step("abc", random.Random(0)) == "ABC"
@@ -175,3 +175,6 @@ def test_pyrit_steps_refuse_converters_that_call_a_model(monkeypatch: pytest.Mon
         pyrit_converters.converter_step("Rewriter")
     with pytest.raises(KeyError):
         pyrit_converters.converter_step("Missing")
+    with pytest.raises(KeyError):  # a class, but not a converter
+        pyrit_converters.converter_step("Other")
+    assert pyrit_converters.available() == ["Upper"]
