@@ -25,14 +25,19 @@ Arguments after the image name go to `mobiusguard serve`. The working directory 
 `/data`, so the default audit log is `/data/mobiusguard-audit.jsonl`. The container has a
 health check on `/healthz`.
 
-To include a classifier (adds PyTorch, a few GB):
+To include Fortress-XS, our classifier (adds onnxruntime and tokenizers, about 60 MB, plus
+the 81 MB model):
 
 ```sh
-docker build -t mobiusguard:classifier --build-arg EXTRAS=classifier .
+docker build -t mobiusguard:fortress --build-arg EXTRAS=onnx .
 ```
 
-Set `policy.classifier` in the settings; the model downloads on first use, so mount a
-volume on `/data/.cache/huggingface` to keep it between restarts.
+For PIGuard or ProtectAI v2 instead (adds PyTorch, a few GB), use `--build-arg
+EXTRAS=classifier`.
+
+Set `policy.classifier` in the settings. The model downloads on first use, so mount a
+volume on `/data/.cache/huggingface` to keep it between restarts. Without network access,
+copy the model's files in and set `policy.classifier_dir`.
 
 ## With a local model
 
@@ -78,8 +83,9 @@ would let anyone who can reach the proxy use the key.
   send large documents or images inline.
 - **Cost.** On one CPU core, the request rules take under a millisecond per prompt, and
   the redactor about 0.15 ms per 4-character chunk of the reply at the median (about 150 ms
-  over a 1,000-token reply, spread across the stream). A classifier on CPU adds about a
-  second per long prompt.
+  over a 1,000-token reply, spread across the stream). Fortress-XS adds 36 ms at 128
+  tokens and 183 ms at 512 on 4 CPU threads. PIGuard or ProtectAI v2 add about a second per
+  long prompt.
 - **Failure.** If a detector fails, the request is refused (`on_error = "block"`). If the
   upstream cannot be reached, the client gets 502 in the API's error format.
 

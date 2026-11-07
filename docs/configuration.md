@@ -15,8 +15,14 @@ api_key_env = ""
 
 [policy]
 rules = "block"                  # block | log | off
-classifier = ""                  # "" | "piguard" | "protectai-v2" (needs mobiusguard[classifier])
-classifier_threshold = ""        # a log-odds score; "" = log scores, never block on them
+classifier = ""                  # "" | "fortress-xs" (needs mobiusguard[onnx])
+                                 #    | "piguard" | "protectai-v2" (need mobiusguard[classifier])
+classifier_dir = ""              # a local copy of Fortress's files; "" = download the pinned one
+classifier_action = "block"      # block | log: what an attack score over the threshold does
+classifier_threshold = ""        # attack log-odds; "" = the model's own (Fortress), or for
+                                 # PIGuard / ProtectAI v2: log scores, never block on them
+harmful = "log"                  # block | log | off: Fortress's harmful-request output
+harmful_threshold = ""           # harmful log-odds; "" = the model's own
 on_error = "block"               # block | allow: what happens when a detector fails
 
 [redaction]
@@ -84,8 +90,45 @@ variable is not set.
 ## Adding a classifier
 
 The rules are precise but narrow (they block none of 23,221 benign texts in the
-evaluation, and block 0–36% of attacks depending on the set). A classifier catches more
-and needs a threshold chosen for your traffic.
+evaluation, and block 0–36% of attacks depending on the set). A classifier catches more.
+
+### Fortress-XS (recommended)
+
+Our own model ([model card](https://huggingface.co/gantrly/fortress-xs)): 81 MB, INT8 ONNX,
+about 36 ms at 128 tokens and 183 ms at 512 on 4 CPU threads, with no torch.
+
+```sh
+pip install "mobiusguard[onnx]"   # onnxruntime, tokenizers; the model downloads once
+```
+
+```toml
+[policy]
+classifier = "fortress-xs"
+```
+
+It has two outputs, each with its own threshold, which ships with the model. The
+thresholds are set so that 1% of ordinary user messages go over them.
+
+| Output | What it flags | Default |
+|---|---|---|
+| attack | Prompt injection or a jailbreak, also inside documents and tool results | **block** (`classifier_action`) |
+| harmful | A request for harmful content | **log** (`harmful`) |
+
+The harmful output only logs by default because it also flags about half of the harmless
+prompts that only *sound* harmful (48% on OR-Bench hard). Set `harmful = "block"` if your
+traffic tolerates that, or `"off"` to leave it out.
+
+A score over a threshold whose action is `log` is recorded in the audit log's `flagged`
+list without blocking. Run with `classifier_action = "log"` for a few days to see what the
+attack output would block before you let it.
+
+- **Offline installs:** download the model's files once and point `classifier_dir` at
+  them. Otherwise the model is fetched from Hugging Face at the commit this version of
+  Mobius Guard pins.
+- **Long inputs:** Fortress reads the first 512 tokens of each checked text. An injection
+  after that is not seen.
+
+### PIGuard and ProtectAI v2
 
 ```sh
 pip install "mobiusguard[classifier]"    # torch + transformers; the model downloads once
@@ -103,6 +146,9 @@ answer for heavy traffic. PIGuard is MIT-licensed, ProtectAI v2 Apache-2.0; both
 to a model revision and load without running downloaded code.
 
 ### Choosing the threshold
+
+Fortress's own thresholds are a starting point: they come from ordinary chat messages
+(oasst1), not from your traffic. PIGuard and ProtectAI v2 have none.
 
 Do not take a threshold from someone else's traffic: what counts as ordinary differs by
 application, and the false-positive rate is what you live with. Instead:

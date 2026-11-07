@@ -2,8 +2,9 @@
 
     uv run python scripts/release_charts.py runs/report-v0.3-attack/metrics.json docs/assets
 
-Static SVG (GitHub and Hugging Face show them as images), light and dark from the viewer's
-colour scheme. Every chart has a table of the same numbers next to it in the docs. Latency
+Static SVG. ``fortress-*.svg`` follows the viewer's colour scheme (for Hugging Face);
+``-light`` and ``-dark`` are fixed, for GitHub's ``<picture>``, which follows GitHub's own
+theme. Every chart has a table of the same numbers next to it in the docs. Latency
 is not in metrics.json: it is copied from the results notes (CPU, batch 1, 512 tokens).
 """
 
@@ -45,17 +46,19 @@ BENIGN = [
     ("llmail_benign", "LLMail benign emails"),
 ]
 
-STYLE = """<style>
-  .bg{fill:#fcfcfb} .t1{fill:#0b0b0b} .t2{fill:#52514e} .grid{stroke:#e4e3df}
+LIGHT = """.bg{fill:#fcfcfb} .t1{fill:#0b0b0b} .t2{fill:#52514e} .grid{stroke:#e4e3df}
   .axis{stroke:#b9b8b2} .s1{fill:#2a78d6} .s2{fill:#eb6834} .s3{fill:#1baf7a}
-  .s4{fill:#eda100} .muted{fill:#8f8e88} .ring{stroke:#fcfcfb}
-  text{font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-  @media (prefers-color-scheme: dark){
-    .bg{fill:#1a1a19} .t1{fill:#f0efec} .t2{fill:#c3c2b7} .grid{stroke:#383835}
-    .axis{stroke:#5a5955} .s1{fill:#3987e5} .s2{fill:#d95926} .s3{fill:#199e70}
-    .s4{fill:#c98500} .muted{fill:#8f8e88} .ring{stroke:#1a1a19}
-  }
-</style>"""
+  .s4{fill:#eda100} .muted{fill:#8f8e88} .ring{stroke:#fcfcfb}"""
+DARK = """.bg{fill:#1a1a19} .t1{fill:#f0efec} .t2{fill:#c3c2b7} .grid{stroke:#383835}
+  .axis{stroke:#5a5955} .s1{fill:#3987e5} .s2{fill:#d95926} .s3{fill:#199e70}
+  .s4{fill:#c98500} .muted{fill:#8f8e88} .ring{stroke:#1a1a19}"""
+FONT = 'text{font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}'
+THEMES = {
+    "": f"<style>{LIGHT} {FONT} @media (prefers-color-scheme: dark){{{DARK}}}</style>",
+    "-light": f"<style>{LIGHT} {FONT}</style>",
+    "-dark": f"<style>{DARK} {FONT}</style>",
+}
+STYLE = "@STYLE@"
 
 
 def _at(entry: dict[str, Any], fpr: float = 0.01) -> float:
@@ -184,8 +187,11 @@ def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
     for name, fn in (("recall", recall_chart), ("false-positives", fpr_chart),
                      ("speed", speed_chart)):  # fmt: skip
-        (out / f"fortress-{name}.svg").write_text(fn(metrics))
-        print(out / f"fortress-{name}.svg")
+        svg = fn(metrics)
+        for suffix, style in THEMES.items():
+            path = out / f"fortress-{name}{suffix}.svg"
+            path.write_text(svg.replace(STYLE, style))
+            print(path)
 
 
 if __name__ == "__main__":

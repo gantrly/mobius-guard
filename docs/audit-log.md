@@ -33,9 +33,11 @@ An allowed request whose reply had two secrets redacted:
 | `stream` | Whether the reply was streamed |
 | `decision` | `allow` or `block` |
 | `ms` | Time in the proxy, upstream included |
-| `reason` | Why it was blocked: `rule`, `classifier` or `detector_error`; empty when allowed |
+| `reason` | Why it was blocked: `rule`, `classifier`, `harmful` or `detector_error`; empty when allowed |
 | `rules` | Every rule hit: its ID, severity, the view it matched in (`original`, `normalized`, `base64`) and where in the request (`messages[2].content`, `input[0].content[1]`, …) |
-| `score` | The highest classifier score over the checked texts (log-odds), or `null` without a classifier |
+| `score` | The highest attack score over the checked texts (log-odds), or `null` without a classifier |
+| `harmful` | Fortress only: the highest harmful-request score (log-odds); absent when `harmful = "off"` |
+| `flagged` | Scores over their threshold, `classifier` and/or `harmful`, whether or not they blocked; absent when none |
 | `checked` | How many texts were checked (user messages and tool results) |
 | `prompt_sha256` | A hash of the checked texts, to match repeats without storing them |
 | `error` | The detector error, when one failed |

@@ -2,6 +2,7 @@
 # The Mobius Guard proxy (packages/mobiusguard). See docs/deploy.md.
 #
 #   docker build -t mobiusguard .
+#   docker build -t mobiusguard:fortress --build-arg EXTRAS=onnx .           # + Fortress-XS
 #   docker build -t mobiusguard:classifier --build-arg EXTRAS=classifier .   # + PIGuard/ProtectAI
 #   docker run -p 8787:8787 mobiusguard
 #
