@@ -1,8 +1,9 @@
 ---
 title: Fortress-XS
 emoji: 🏰
-colorFrom: blue
+colorFrom: yellow
 colorTo: gray
+thumbnail: https://huggingface.co/spaces/gantrly/fortress-xs/resolve/main/thumbnail.png
 sdk: static
 app_file: index.html
 pinned: false
