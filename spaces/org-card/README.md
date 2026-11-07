@@ -8,14 +8,17 @@ pinned: false
 ---
 
 <p align="center">
-  <img src="https://huggingface.co/gantrly/fortress-xs/resolve/main/assets/fortress-speed.svg" alt="Fortress-XS: 66% average recall on 9 held-out attack families at 1% false positives, 183 ms on a CPU; PIGuard 44% and ProtectAI v2 29% at 1,151 ms" width="680">
+  <img src="https://huggingface.co/spaces/gantrly/README/resolve/main/assets/gantrly-lockup.png" alt="Gantrly" width="300" class="dark:hidden">
+  <img src="https://huggingface.co/spaces/gantrly/README/resolve/main/assets/gantrly-lockup-dark.png" alt="Gantrly" width="300" class="hidden dark:block mx-auto">
 </p>
 
-# Gantrly
+<p align="center"><b>Self-hostable project tracking for teams that build — on sites, not just in code.</b></p>
 
-Open-source tools for teams that build. On Hugging Face, we publish the models behind
-**[Mobius Guard](https://github.com/gantrly/mobius-guard)**, an open-source firewall for LLM
-apps.
+<p align="center">
+  On Hugging Face we publish the models behind
+  <a href="https://github.com/gantrly/mobius-guard"><b>Mobius Guard</b></a>, our open-source
+  firewall for LLM apps.
+</p>
 
 ### 🏰 Fortress-XS: prompt-injection and harmful-request detection on a CPU
 
@@ -26,6 +29,10 @@ apps.
 | **Speed** | 36 ms at 128 tokens, 183 ms at 512 on 4 CPU threads; no GPU, no torch |
 | **Held-out results** | 66% of attacks caught on average over 9 test families no compared detector trained on, at 1% false positives, against 44% for PIGuard and 29% for ProtectAI v2 |
 | **Use it** | `pip install "mobiusguard[onnx]"`, then `classifier = "fortress-xs"` |
+
+<p align="center">
+  <img src="https://huggingface.co/gantrly/fortress-xs/resolve/main/assets/fortress-speed.svg" alt="Fortress-XS: 66% average recall on 9 held-out attack families at 1% false positives, 183 ms on a CPU; PIGuard 44% and ProtectAI v2 29% at 1,151 ms" width="680">
+</p>
 
 ### How we publish
 
