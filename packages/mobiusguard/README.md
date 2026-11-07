@@ -33,9 +33,11 @@ OpenAI, Anthropic, or a compatible server such as Ollama.
 - **On the way in:**
   - user messages and tool results are cleaned of hiding tricks: invisible characters,
     look-alike letters, spaced-out letters, leetspeak, base64;
-  - they are checked against 8 named rules, and optionally a classifier;
+  - they are checked against 8 named rules, and optionally a classifier: our own
+    [Fortress-XS](https://huggingface.co/gantrly/fortress-xs), or PIGuard or ProtectAI v2;
   - a clear hit is refused with HTTP 403 in the API's own error format, naming the rule.
-    Classifier scores are only logged until you choose a threshold.
+    Fortress blocks attacks at its own threshold; its harmful-request output only logs
+    unless you set it to block.
 - **On the way out:** secrets and personal data in the reply are replaced as it streams,
   even when split across events: 245 patterns, from
   [`mobiusguard-redact`](https://pypi.org/project/mobiusguard-redact/).
@@ -59,18 +61,24 @@ mobiusguard serve --config mobiusguard.toml
 - **0 of 15,000 secrets leaked**, exact or garbled, streamed in random chunks.
 - **No false blocks on 23,221 benign texts** from the request rules, under a millisecond
   each.
+- **Fortress-XS, our classifier:** at 1% false positives on ordinary messages it catches
+  66% of attacks on average over 9 held-out families, against 44% for PIGuard and 29% for
+  ProtectAI v2. It takes 183 ms at 512 tokens on 4 CPU threads, where they take 1,151 ms.
+  It is 81 MB and Apache-2.0. [Try it in your browser](https://huggingface.co/spaces/gantrly/fortress-xs).
 - **Normalising text in front of existing classifiers** lifts their recall on obfuscated
   attacks from 0–17% to 38–61%, at 1% false positives.
 - **20 of 20 live checks** with the official OpenAI and Anthropic SDKs against a real model.
 
 Results and how they were measured:
 [docs/results](https://github.com/gantrly/mobius-guard/tree/main/docs/results). **The weak
-spot is published too:** indirect and adaptive prompt injection (LLMail-Inject, BIPIA) is
-still hard for every detector we measured, ours included. That is what v0.2's own small
-CPU classifier is for.
+spots are published too:**
+- Fortress-XS catches 15% of BIPIA's plain-language indirect injections; PIGuard catches 54%.
+- Its harmful output flags 48% of harmless prompts that only sound harmful.
 
 ## Extras
 
+- `pip install "mobiusguard[onnx]"`: the Fortress-XS classifier (onnxruntime and
+  tokenizers, no torch), then `classifier = "fortress-xs"` in the `[policy]` settings.
 - `pip install "mobiusguard[classifier]"`: PIGuard or ProtectAI v2 as the optional
   classifier (torch; about a second per long prompt on a CPU).
 - `pip install "mobiusguard[otel]"`: OpenTelemetry spans.

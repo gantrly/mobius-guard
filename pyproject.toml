@@ -18,8 +18,9 @@ mobiusguard-eval = { workspace = true }
 [dependency-groups]
 dev = [
   "mobiusguard-redact",
-  "mobiusguard",
+  "mobiusguard[onnx]",
   "mobiusguard-eval[sklearn]",
+  "onnx>=1.17",  # the Fortress tests build a tiny ONNX model
   "pytest>=8.3",
   "pytest-cov>=6.0",
   "hypothesis>=6.120",

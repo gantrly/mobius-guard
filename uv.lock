@@ -948,9 +948,10 @@ source = { virtual = "." }
 [package.dev-dependencies]
 dev = [
     { name = "hypothesis" },
-    { name = "mobiusguard" },
+    { name = "mobiusguard", extra = ["onnx"] },
     { name = "mobiusguard-eval", extra = ["sklearn"] },
     { name = "mobiusguard-redact" },
+    { name = "onnx" },
     { name = "pre-commit" },
     { name = "pyright" },
     { name = "pytest" },
@@ -968,9 +969,10 @@ fuzz = [
 [package.metadata.requires-dev]
 dev = [
     { name = "hypothesis", specifier = ">=6.120" },
-    { name = "mobiusguard", editable = "packages/mobiusguard" },
+    { name = "mobiusguard", extras = ["onnx"], editable = "packages/mobiusguard" },
     { name = "mobiusguard-eval", extras = ["sklearn"], editable = "packages/mobiusguard-eval" },
     { name = "mobiusguard-redact", editable = "packages/mobiusguard-redact" },
+    { name = "onnx", specifier = ">=1.17" },
     { name = "pre-commit", specifier = ">=4.0" },
     { name = "pyright", specifier = ">=1.1.390" },
     { name = "pytest", specifier = ">=8.3" },
