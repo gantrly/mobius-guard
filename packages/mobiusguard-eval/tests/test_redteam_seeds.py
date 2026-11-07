@@ -166,13 +166,30 @@ class Rewriter(FakeBase):
         self.target = converter_target
 
 
+class CloudSpeech(FakeBase):
+    def __init__(self, azure_speech_key: str = "", azure_speech_region: str = "") -> None:
+        pass
+
+
+class ToImage(FakeBase):
+    SUPPORTED_INPUT_TYPES = ("text",)
+    SUPPORTED_OUTPUT_TYPES = ("image_path",)
+
+    def __init__(self) -> None:
+        pass
+
+
 def test_pyrit_steps_refuse_converters_that_call_a_model(monkeypatch: pytest.MonkeyPatch) -> None:
-    fake = SimpleNamespace(Converter=FakeBase, Upper=Upper, Rewriter=Rewriter, Other=str)
+    fake = SimpleNamespace(Converter=FakeBase, Upper=Upper, Rewriter=Rewriter,
+                           CloudSpeech=CloudSpeech, ToImage=ToImage, Other=str)  # fmt: skip
     monkeypatch.setattr(pyrit_converters, "_module", lambda: fake)
     step = pyrit_converters.converter_step("Upper")
     assert step("abc", random.Random(0)) == "ABC"
-    with pytest.raises(ValueError, match="calls a model"):
-        pyrit_converters.converter_step("Rewriter")
+    for name in ("Rewriter", "CloudSpeech"):
+        with pytest.raises(ValueError, match="calls a model or a service"):
+            pyrit_converters.converter_step(name)
+    with pytest.raises(ValueError, match="text into text"):
+        pyrit_converters.converter_step("ToImage")
     with pytest.raises(KeyError):
         pyrit_converters.converter_step("Missing")
     with pytest.raises(KeyError):  # a class, but not a converter
