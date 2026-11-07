@@ -14,7 +14,7 @@ from huggingface_hub import snapshot_download
 from tokenizers import Tokenizer
 
 REPO = "gantrly/fortress-xs"
-REVISION = os.environ.get("FORTRESS_REVISION", "main")
+REVISION = os.environ.get("FORTRESS_REVISION", "420ca0aa43fdee63ae6d7be44524a890f275c12a")  # v1
 FILES = ["model.int8.onnx", "tokenizer.json", "fortress.json"]
 
 d = os.environ.get("FORTRESS_DIR") or snapshot_download(
