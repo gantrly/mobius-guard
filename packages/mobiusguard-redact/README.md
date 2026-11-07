@@ -42,6 +42,10 @@ rewrites in place:
 - **Bounded:** at most 8,192 characters are held back. Past that, the held text is redacted
   rather than leaked.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/gantrly/mobius-guard/main/.github/assets/stats.png" alt="0 of 15,000 secrets leaked; 0 of 23,221 benign texts blocked by the request rules; 0.15 ms per streamed token; about one word of delay" width="760">
+</p>
+
 **Measured:** 0 of 15,000 secrets leaked, exact or garbled, streamed through real messages
 in random chunks ([results, 2026-11-02](https://github.com/gantrly/mobius-guard/blob/main/docs/results/2026-11-02-redactor.md)).
 
@@ -65,7 +69,9 @@ r = StreamRedactor(default_patterns(exclude={"generic-api-key"}), label="<{id}>"
 ## Part of Mobius Guard
 
 This package is the redaction layer of [Mobius Guard](https://github.com/gantrly/mobius-guard),
-an open-source firewall proxy for LLM apps (`pip install mobiusguard`). It is published on
+an open-source firewall proxy for LLM apps (`pip install mobiusguard`), which also checks
+prompts with its own CPU classifier,
+[Fortress-XS](https://huggingface.co/gantrly/fortress-xs). This package is published on
 its own so any gateway can embed it.
 
 - [Guide, pattern list and limits](https://github.com/gantrly/mobius-guard/blob/main/docs/redaction.md)

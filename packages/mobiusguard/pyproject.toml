@@ -1,13 +1,13 @@
 [project]
 name = "mobiusguard"
 dynamic = ["version"]
-description = "Open-source LLM firewall proxy for OpenAI and Anthropic APIs: prompt-injection checks on the way in, streaming secret and PII redaction on the way out, audit log; one base URL to change."
+description = "Open-source LLM firewall proxy for OpenAI and Anthropic APIs: prompt-injection checks on the way in (with Fortress-XS, its own CPU classifier), streaming secret and PII redaction on the way out, audit log; one base URL to change."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.11"
 authors = [{ name = "SK Imtiaj Uddin" }]
-keywords = ["llm", "firewall", "proxy", "prompt-injection", "jailbreak", "guardrails", "redaction", "pii", "ai-security", "openai", "anthropic", "llm-gateway"]
+keywords = ["llm", "firewall", "proxy", "prompt-injection", "jailbreak", "guardrails", "redaction", "pii", "ai-security", "openai", "anthropic", "llm-gateway", "classifier", "onnx", "jailbreak-detection", "llm-security"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
@@ -42,6 +42,8 @@ Source = "https://github.com/gantrly/mobius-guard"
 Issues = "https://github.com/gantrly/mobius-guard/issues"
 Security = "https://github.com/gantrly/mobius-guard/blob/main/SECURITY.md"
 Releases = "https://github.com/gantrly/mobius-guard/releases"
+Model = "https://huggingface.co/gantrly/fortress-xs"
+Demo = "https://huggingface.co/spaces/gantrly/fortress-xs"
 
 [project.optional-dependencies]
 onnx = [
