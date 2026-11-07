@@ -3,14 +3,13 @@ title: Fortress-XS
 emoji: 🏰
 colorFrom: blue
 colorTo: gray
-sdk: gradio
-sdk_version: 6.30.0
-app_file: app.py
+sdk: static
+app_file: index.html
 pinned: false
 license: apache-2.0
 models:
   - gantrly/fortress-xs
-short_description: Prompt-injection and harmful-request classifier on a CPU
+short_description: Prompt-injection classifier that runs in your browser
 ---
 
 # Fortress-XS demo
@@ -20,8 +19,9 @@ Type a prompt, or paste a document, email or tool output, and see both of
 - **attack:** prompt injection or a jailbreak;
 - **harmful:** a request for harmful content.
 
-It runs the 81 MB INT8 ONNX model on this Space's CPU, the same file
-[Mobius Guard](https://github.com/gantrly/mobius-guard) uses. Thresholds are the model's own,
-set so that 1% of ordinary user messages are flagged.
+It runs the 81 MB INT8 ONNX model **in your browser**, with onnxruntime-web: your text never
+leaves the page. It is the same file [Mobius Guard](https://github.com/gantrly/mobius-guard)
+uses, pinned to v1. The model downloads once and is cached.
 
-What you type is not stored. Inputs longer than 512 tokens are cut, as in the model.
+Thresholds are the model's own, each set so that 1% of ordinary user messages go over it.
+Inputs longer than 512 tokens are cut, as in the model.
