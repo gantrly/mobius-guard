@@ -1,4 +1,4 @@
-"""``mobiusguard-eval redteam run | summary | findings`` (decision 0014)."""
+"""``mobiusguard-eval redteam run | summary | findings | seal | verify-holdout | gate``."""
 
 from __future__ import annotations
 
@@ -6,9 +6,11 @@ import argparse
 import json
 from pathlib import Path
 
-from .findings import findings_for_run, write
+from . import holdout
+from .findings import findings_for_run, seed_groups, write
+from .gate import run_gate
 from .mutate import CHAINS, DELIVERIES, parse_chain
-from .run import Plan, parse_shard, run, summary
+from .run import Plan, parse_shard, run, sha256_file, summary
 from .seeds import read_seeds
 from .targets import API_NAMES, GuardTarget, HttpTarget, Target
 
@@ -45,11 +47,51 @@ def add_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None
     f.add_argument("--report", required=True, help="where findings.json and .md go")
     f.add_argument("--holdout", help="holdout.json: leave its sealed groups out")
 
+    h = rsub.add_parser("seal", help="set aside the holdout groups, once, before any tuning")
+    h.add_argument("--seeds", required=True)
+    h.add_argument("--out", required=True, help="where holdout.json goes (never overwritten)")
+    h.add_argument("--share", type=float, default=0.2)
+
+    v = rsub.add_parser("verify-holdout", help="check a holdout still matches its seeds")
+    v.add_argument("--seeds", required=True)
+    v.add_argument("--holdout", required=True)
+
+    g = rsub.add_parser("gate", help="does a patched config block more harmless text?")
+    g.add_argument("--suite", required=True, help="the evaluation suite (directory or items.jsonl)")
+    g.add_argument("--base", required=True, help="the current config")
+    g.add_argument("--patched", required=True, help="the proposed config")
+    g.add_argument("--report", required=True, help="where gate.json goes")
+
 
 def main(a: argparse.Namespace) -> int:
     if a.redteam_command == "summary":
         print(json.dumps(summary(Path(a.out)), indent=2))
         return 0
+    if a.redteam_command in ("seal", "verify-holdout"):
+        seeds_path = Path(a.seeds)
+        groups = seed_groups(list(read_seeds(seeds_path)))
+        if a.redteam_command == "seal":
+            record = holdout.seal(groups, sha256_file(seeds_path), share=a.share)
+            holdout.write(record, Path(a.out) / "holdout.json")
+            print(
+                f"held out {len(record['groups'])} groups, {record['held_seeds']} seeds; "
+                f"commit this hash before first use: {record['held_seeds_sha256']}"
+            )
+        else:
+            holdout.verify(json.loads(Path(a.holdout).read_text()), groups)
+            print("holdout matches its seeds")
+        return 0
+    if a.redteam_command == "gate":
+        result = run_gate(Path(a.suite), a.base, a.patched)
+        Path(a.report).mkdir(parents=True, exist_ok=True)
+        (Path(a.report) / "gate.json").write_text(json.dumps(result, indent=2) + "\n")
+        for name, r in result["sets"].items():
+            print(
+                f"{name:14} {100 * r['base']:6.2f}% -> {100 * r['patched']:6.2f}% "
+                f"(allowed +{100 * r['allowed']:.1f} pt) {'pass' if r['passed'] else 'FAIL'}"
+            )
+        print("gate:", "PASSED" if result["passed"] else "FAILED")
+        return 0 if result["passed"] else 1
     if a.redteam_command == "findings":
         held: list[str] = []
         if a.holdout:
