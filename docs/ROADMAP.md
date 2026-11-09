@@ -40,8 +40,8 @@ Plan for the red-team loop: [decision 0014](decisions/0014-red-team-runner.md) (
 | Decision: targets, garak/PyRIT sources, local attacker in development and a paid one for the measured run, patches as reviewed diffs, gate, sealed holdout | **accepted** 2026-11-09 |
 | Target adapters (in-process `Guard`, HTTP proxy) | **done** 2026-11-07: both gave the same verdict on 18/18 attempts against a real proxy with Fortress-XS |
 | garak and PyRIT adapters, stacked mutations, ledger entries | **done** 2026-11-07: 19,418 garak prompts from 4 static families (repeatable export), 26 chains × 2 deliveries, 46 PyRIT converters that call nothing |
-| Resumable runner, one row per attempt | in progress: CPU only (onnxruntime-gpu flipped 1.5% of attack verdicts), with a per-text score cache |
-| Small run on the box (fixed probes, then the local attacker) | planned |
+| Resumable runner, one row per attempt | **done** 2026-11-09: `mobiusguard-eval redteam run / summary`; CPU only (onnxruntime-gpu flipped 1.5% of attack verdicts), per-text score cache, shards |
+| Small run on the box (fixed probes, then the local attacker) | fixed probes **done** 2026-11-09: 50 seeds × 52 = 2,600 attempts on 2 shards, killed and resumed with nothing lost or repeated, identical results on two runs, ~25 attempts/s; the local attacker is next |
 | Findings grouped by family, mutation and cluster | planned |
 | Patch proposals: thresholds computed, rules written by a person and measured | planned |
 | Gate on the four harmless-text sets; sealed holdout with its hash committed first | planned |
