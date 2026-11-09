@@ -16,8 +16,8 @@ is next, and [docs/decisions/](docs/decisions/) before changing anything they co
 - `docs/research/`: dated research notes with sources.
 - `docs/results/`: dated measurements from the harness, with hardware.
 - User guides: `docs/quickstart.md`, `configuration.md`, `rules.md`, `redaction.md`,
-  `audit-log.md`, `deploy.md`; maintainers: `docs/releasing.md`. Keep them true when you
-  change behaviour, settings or numbers.
+  `audit-log.md`, `deploy.md`, `red-team.md`; maintainers: `docs/releasing.md`. Keep them
+  true when you change behaviour, settings or numbers.
 - Each package carries a copy of `LICENSE` and `NOTICE` (wheels must include them). If you
   change the root files, change the copies too.
 

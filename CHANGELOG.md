@@ -6,6 +6,21 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
 
 ## Unreleased
 
+- **Red-teaming** (`mobiusguard-eval redteam`, [guide](docs/red-team.md),
+  [decision 0014](docs/decisions/0014-red-team-runner.md)): attack a configuration with
+  garak's prompt-injection probes in 26 mutated forms, each as a user message and as a
+  tool result; resumable runs with one row per attempt and no attack text; findings
+  grouped by near-duplicate cluster and mutation; a sealed holdout; and a gate that
+  refuses a patch which blocks more harmless text. `run`, `summary`, `findings`, `seal`,
+  `verify-holdout`, `gate`.
+- `mobiusguard-eval[pyrit]`: PyRIT's prompt converters as extra mutations, limited to
+  ones that turn text into text and call no model or service.
+- `examples/ollama-fortress.toml`: the local-model example with Fortress-XS on.
+- `scripts/live_check.py` can send held-out emails (`LIVE_ITEMS`) and time the proxy
+  (`LIVE_OVERHEAD`). [Results with Fortress-XS](docs/results/2026-11-07-live-check-fortress.md):
+  the proxy adds about 9 ms, and Fortress-XS blocks some harmless developer-style messages
+  (keys, databases, tokens, tool calls), now listed in its model card's limits.
+
 ## 0.2.0 (2026-11-07)
 
 - **Fortress-XS, Mobius Guard's own classifier.** An 81 MB INT8 ONNX model
