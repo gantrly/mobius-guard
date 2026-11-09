@@ -40,6 +40,10 @@ from .targets import GuardTarget, Target
 PROGRESS_SECONDS = 60.0
 
 
+def _log(msg: str) -> None:
+    print(msg, flush=True)  # a run's log is usually a file, which Python would buffer
+
+
 def sha256_file(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as f:
@@ -141,10 +145,11 @@ def run(
     plan: Plan,
     target: Target,
     *,
-    log: Callable[[str], None] = print,
+    log: Callable[[str], None] | None = None,
     stop_after_seconds: float = 0.0,
 ) -> dict[str, Any]:
     """Send this shard's attempts; return counts for what this call sent."""
+    log = log or _log
     plan.out.mkdir(parents=True, exist_ok=True)
     key = plan.key(target, sha256_file(plan.seeds))
     _check_key(plan.out, key)
