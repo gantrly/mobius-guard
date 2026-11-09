@@ -159,3 +159,28 @@ def test_cli_end_to_end(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> N
     assert sum(total.values()) == 8
     with pytest.raises(SystemExit):
         cli_main([*args[:-4], "--chains", "rot13"])
+
+
+def test_shards_starting_together_share_one_run_key(tmp_path: Path) -> None:
+    """Both shards of a run create run.json at once (the box run found this race)."""
+    import threading
+
+    seeds = seeds_file(tmp_path, n=6)
+    out = tmp_path / "r"
+    errors: list[BaseException] = []
+
+    def shard(i: int) -> None:
+        try:
+            run(Plan(seeds=seeds, out=out, chains=((),), shard=(i, 2)),
+                GuardTarget(Guard(Config())), log=quiet)  # fmt: skip
+        except BaseException as e:
+            errors.append(e)
+
+    threads = [threading.Thread(target=shard, args=(i,)) for i in range(2)]
+    for th in threads:
+        th.start()
+    for th in threads:
+        th.join()
+    assert errors == []
+    assert len(list(latest_rows(out))) == 6 * 2
+    assert not list(out.glob(".run.json.*.tmp"))

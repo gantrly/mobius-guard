@@ -20,16 +20,18 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import platform
 import random
 import time
+import uuid
 from collections import Counter
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..checkpoint import Checkpoint, write_atomic
+from ..checkpoint import Checkpoint
 from .cache import ScoreCache
 from .mutate import CHAINS, DELIVERIES, Chain, attempts_for, chain_name
 from .seeds import Seed, read_seeds
@@ -89,15 +91,27 @@ class Plan:
 
 
 def _check_key(out: Path, key: dict[str, Any]) -> None:
+    """Create ``run.json`` with the run's key, or check the one there.
+
+    Shards start at the same time, so the file is created with a link from a temporary file
+    of its own (create-if-absent is atomic); a shard that loses the race reads
+    the winner's file and compares keys like any later run.
+    """
     path = out / "run.json"
-    if path.exists():
-        saved = json.loads(path.read_text())
-        if saved.get("key") != key:
-            raise SystemExit(f"{out} holds a different run; use a new --out")
-        return
-    info = {"key": key, "host": platform.node(), "python": platform.python_version(),
-            "machine": platform.machine(), "processor": platform.processor()}  # fmt: skip
-    write_atomic(path, json.dumps(info, indent=2) + "\n")
+    if not path.exists():
+        info = {"key": key, "host": platform.node(), "python": platform.python_version(),
+                "machine": platform.machine(), "processor": platform.processor()}  # fmt: skip
+        tmp = out / f".run.json.{os.getpid()}.{uuid.uuid4().hex}.tmp"
+        tmp.write_text(json.dumps(info, indent=2) + "\n")
+        try:
+            os.link(tmp, path)
+        except FileExistsError:
+            pass
+        finally:
+            tmp.unlink()
+    saved = json.loads(path.read_text())
+    if saved.get("key") != key:
+        raise SystemExit(f"{out} holds a different run; use a new --out")
 
 
 def row_for(attempt: Any, verdict: Any) -> dict[str, Any]:
