@@ -32,12 +32,12 @@ held-text fix (#17); 0.1.2 (2026-11-05), the second of two space-separated IBANs
 | Retrain from scratch on all the data: both bases, three seeds each (DeBERTa 5e-5, mmBERT 2e-5), one suite evaluation | done 2026-11-07: DeBERTa selected again; LLMail 12 → 44%, BIPIA flat, OR-Bench hard over-blocking 55 → 48% ([results](results/2026-11-07-classifier-v0.2-retrain.md)) |
 | Release as **Fortress-XS v1** in Mobius Guard 0.2.0 ([decision 0013](decisions/0013-releasing-fortress-v0.2.md)): proxy support (`mobiusguard[onnx]`), model card, charts, demo Space | **released** 2026-11-07 as 0.2.0; model at [gantrly/fortress-xs](https://huggingface.co/gantrly/fortress-xs), [demo](https://huggingface.co/spaces/gantrly/fortress-xs) |
 
-Plan for the red-team loop: [decision 0014](decisions/0014-red-team-runner.md) (proposed
-2026-11-07).
+Plan for the red-team loop: [decision 0014](decisions/0014-red-team-runner.md) (accepted
+2026-11-09).
 
 | Red-team step | Status |
 |---|---|
-| Decision: targets, garak/PyRIT sources, local attacker in development and a paid one for the measured run, patches as reviewed diffs, gate, sealed holdout | proposed 2026-11-07 |
+| Decision: targets, garak/PyRIT sources, local attacker in development and a paid one for the measured run, patches as reviewed diffs, gate, sealed holdout | **accepted** 2026-11-09 |
 | Target adapters (in-process `Guard`, HTTP proxy) | **done** 2026-11-07: both gave the same verdict on 18/18 attempts against a real proxy with Fortress-XS |
 | garak and PyRIT adapters, stacked mutations, ledger entries | **done** 2026-11-07: 19,418 garak prompts from 4 static families (repeatable export), 26 chains × 2 deliveries, 46 PyRIT converters that call nothing |
 | Resumable runner, one row per attempt | in progress: CPU only (onnxruntime-gpu flipped 1.5% of attack verdicts), with a per-text score cache |

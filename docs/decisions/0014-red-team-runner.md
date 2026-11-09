@@ -1,6 +1,6 @@
 # 0014: The red-team runner and reviewed patches
 
-- **Status:** proposed, 2026-11-07
+- **Status:** accepted, 2026-11-09 (proposed 2026-11-07)
 - **Builds on:** [0001](0001-what-mobius-guard-is-for.md) (contribution 3: a red-team →
   reviewed-patch loop gated on benign text), [0006](0006-evaluation-rules.md) (rule 7: no
   re-testing on patched attacks), [0009](0009-evaluation-harness-v0.1.md) (the harness),
@@ -92,8 +92,9 @@ report; a person opens the pull request.
 - **Training data:** findings also become a training source for Fortress v2. They get
   their own ledger entry and never enter the evaluation suite.
 
-**The gate.** A patch passes only if false positives do not rise on the four harmless-text
-sets: ordinary messages (oasst1), NotInject, OR-Bench hard and LLMail benign emails. Patches
+**The gate.** A patch passes only if false positives do not rise on ordinary messages
+(oasst1) and rise by at most 0.5 points on NotInject, OR-Bench hard and LLMail benign
+emails (settled below). Patches
 are tuned on the dev split and gated on the test split.
 
 **Measurement (0006 rule 7).**
@@ -115,15 +116,16 @@ are tuned on the dev split and gated on the test split.
 8. The CLI, a user guide and tests.
 9. The first measured run against 0.2.0 with Fortress, with a results note.
 
-## Open, for the maintainer
+## Settled by the maintainer, 2026-11-09
 
-- **Confirming adaptive attempts:** an attacker model's rewrite can drift into something
-  harmless, and then "got through" means nothing. Proposal: a judge model confirms each
-  adaptive attempt that got through before it counts. Unconfirmed ones are reported
-  separately. The judge is paid in the measured run, under the same approval.
-- **Gate tolerance:** proposal: no rise at all on oasst1 (the threshold set) and at most
-  0.5 percentage points on each of the other three sets, configurable.
-- **Holdout share:** proposal: 20% of the attack groups.
+- **Adaptive attempts are confirmed by a judge.** A judge model checks each adaptive
+  attempt that got through. Only confirmed ones count as bypasses; unconfirmed ones are
+  reported separately. The judge is a local model during development and a paid one in
+  the measured run, under the same approval as the attacker.
+- **The gate:** no rise in false positives on ordinary messages (oasst1, where the
+  threshold is set), and at most 0.5 percentage points on each of NotInject, OR-Bench hard
+  and LLMail benign emails.
+- **The holdout:** 20% of the attack groups, split by source family and cluster.
 
 ## Considered
 
