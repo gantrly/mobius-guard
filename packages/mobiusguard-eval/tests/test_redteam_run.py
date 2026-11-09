@@ -157,6 +157,12 @@ def test_cli_end_to_end(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> N
     assert cli_main(["redteam", "summary", "--out", str(tmp_path / "r")]) == 0
     total = json.loads(capsys.readouterr().out)["total"]
     assert sum(total.values()) == 8
+    report = tmp_path / "report"
+    assert cli_main(["redteam", "findings", "--out", str(tmp_path / "r"), "--seeds", str(seeds),
+                     "--report", str(report)]) == 0  # fmt: skip
+    f = json.loads((report / "findings.json").read_text())
+    assert f["total"]["attempts"] == 8
+    assert SPACED not in (report / "findings.md").read_text()
     with pytest.raises(SystemExit):
         cli_main([*args[:-4], "--chains", "rot13"])
 

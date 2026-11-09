@@ -1,4 +1,4 @@
-"""``mobiusguard-eval redteam run | summary`` (decision 0014)."""
+"""``mobiusguard-eval redteam run | summary | findings`` (decision 0014)."""
 
 from __future__ import annotations
 
@@ -6,8 +6,10 @@ import argparse
 import json
 from pathlib import Path
 
+from .findings import findings_for_run, write
 from .mutate import CHAINS, DELIVERIES, parse_chain
 from .run import Plan, parse_shard, run, summary
+from .seeds import read_seeds
 from .targets import API_NAMES, GuardTarget, HttpTarget, Target
 
 
@@ -37,10 +39,29 @@ def add_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None
     s = rsub.add_parser("summary", help="counts across shards")
     s.add_argument("--out", required=True)
 
+    f = rsub.add_parser("findings", help="what got through, by group and chain (no text)")
+    f.add_argument("--out", required=True, help="the run's directory")
+    f.add_argument("--seeds", required=True, help="the run's seeds.jsonl")
+    f.add_argument("--report", required=True, help="where findings.json and .md go")
+    f.add_argument("--holdout", help="holdout.json: leave its sealed groups out")
+
 
 def main(a: argparse.Namespace) -> int:
     if a.redteam_command == "summary":
         print(json.dumps(summary(Path(a.out)), indent=2))
+        return 0
+    if a.redteam_command == "findings":
+        held: list[str] = []
+        if a.holdout:
+            held = list(json.loads(Path(a.holdout).read_text())["groups"])
+        seeds = list(read_seeds(Path(a.seeds)))
+        f = findings_for_run(Path(a.out), seeds, exclude=held)
+        write(f, Path(a.report))
+        t = f["total"]
+        print(
+            f"{t['attempts']} attempts, {t['through']} got through ({100 * t['rate']:.1f}%), "
+            f"{len(f['findings'])} findings in {f['groups']} groups -> {a.report}"
+        )
         return 0
     chains = CHAINS if a.chains == "all" else tuple(parse_chain(c) for c in a.chains.split(","))
     unknown = [c for c in chains if c not in CHAINS]
