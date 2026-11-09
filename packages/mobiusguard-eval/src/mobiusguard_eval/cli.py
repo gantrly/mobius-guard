@@ -326,6 +326,10 @@ def _train_fetch(a: argparse.Namespace) -> int:
 
 def _run(a: argparse.Namespace) -> int:
     cmd: str = a.command
+    if cmd == "redteam":
+        from .redteam import cli as redteam_cli
+
+        return redteam_cli.main(a)
     if cmd == "sources":
         return _sources(a)
     if cmd == "train-sources":
@@ -468,6 +472,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-redaction", action="store_true")
     p.add_argument("--force", action="store_true", help="redo every step")
 
+    from .redteam import cli as redteam_cli
+
+    redteam_cli.add_parser(sub)
     return ap
 
 
