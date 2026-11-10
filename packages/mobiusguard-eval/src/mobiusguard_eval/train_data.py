@@ -46,7 +46,7 @@ CAP = 20_000
 VAL_FRACTION = 0.1
 SHINGLE_WORDS = 8
 CONTAINMENT = 0.5
-BUILD = 6  # bump when the rules change
+BUILD = 7  # bump when the rules change
 # Sources whose items are near-identical twins with opposite labels, on purpose.
 CONTRAST = (
     frozenset({"jbb_harmful", "jbb_benign"}),
@@ -57,6 +57,9 @@ CONTRAST = (
     frozenset({"rgeada_tool"}),
     frozenset({"coconot"}),
     frozenset({"cse_frr", "cse_mitre"}),
+    frozenset({"sep"}),
+    frozenset({"injecagent"}),
+    frozenset({"aspi"}),
 )
 
 

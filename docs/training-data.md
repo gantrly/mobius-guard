@@ -113,6 +113,46 @@ spot check of 231 disputed items by Claude Sonnet 4.6 ($0.72); the rule is
 `judge.RULE_2026_11_06` and [decision 0012](decisions/0012-classifier-v0.2.md) has the
 numbers. The cleaned set has **206,438 items** (185,852 train, 20,586 val; 68,754 attacks).
 
+## Added 2026-11-10: developer text and documents with injections (Fortress v2)
+
+Chosen in the [Fortress v2 data note](research/2026-11-10-fortress-v2-data.md) for the two
+measured gaps: injections inside documents get through, and harmless developer and agent
+text gets blocked. Licences checked on 2026-11-10; files pulled to the training box at the
+revisions below (no data on the maintainer's Mac). Not built yet: the counts kept come
+with the first build. Caps are a proposal: about 34k developer items and 11k document
+items next to the 206k of 0.2.0.
+
+From chats with tools, each conversation gives at most one user turn and one tool
+output, since those are what the proxy screens; system prompts and the assistant's turns
+are left out. Texts longer than about 900 characters become one window, as above.
+
+| ID | Source | Licence | Cap | What |
+|---|---|---|---:|---|
+| glaive_fc | [glaiveai/glaive-function-calling-v2](https://huggingface.co/datasets/glaiveai/glaive-function-calling-v2) | Apache-2.0 | 4,000 | Function-calling chats (112,960) |
+| hermes_fc | [NousResearch/hermes-function-calling-v1](https://huggingface.co/datasets/NousResearch/hermes-function-calling-v1) | Apache-2.0 | 3,000 | Function-calling and JSON-mode chats; its glaive copy left out |
+| toolace | [Team-ACE/ToolACE](https://huggingface.co/datasets/Team-ACE/ToolACE) | Apache-2.0 | 3,000 | Tool-use dialogues (11,300) |
+| when2call | [nvidia/When2Call](https://huggingface.co/datasets/nvidia/When2Call) | CC-BY-4.0 | 3,000 | Questions to a model with tools; training file only |
+| toucan | [Agent-Ark/Toucan-1.5M](https://huggingface.co/datasets/Agent-Ark/Toucan-1.5M) | Apache-2.0 | 6,000 | Agent runs against 495 real MCP servers: the SFT folder and 4 of 47 gpt-oss files |
+| magicoder | [ise-uiuc/Magicoder-OSS-Instruct-75K](https://huggingface.co/datasets/ise-uiuc/Magicoder-OSS-Instruct-75K) | MIT | 2,000 | Coding problems |
+| self_oss | [bigcode/self-oss-instruct-sc2-exec-filter-50k](https://huggingface.co/datasets/bigcode/self-oss-instruct-sc2-exec-filter-50k) | ODC-BY-1.0 | 2,000 | Python coding instructions |
+| codefeedback | [m-a-p/CodeFeedback-Filtered-Instruction](https://huggingface.co/datasets/m-a-p/CodeFeedback-Filtered-Instruction) | Apache-2.0 | 2,000 | Coding questions |
+| opencodeinstruct | [nvidia/OpenCodeInstruct](https://huggingface.co/datasets/nvidia/OpenCodeInstruct) | CC-BY-4.0 | 2,000 | Coding requests, 3 of 50 files |
+| wildchat_dev | [allenai/WildChat-4.8M](https://huggingface.co/datasets/allenai/WildChat-4.8M) | ODC-BY-1.0 | 4,000 | Real users' first messages naming two or more developer terms; not toxic, not flagged; 6 of 86 files |
+| dev_secrets | OpenCodeInstruct (a fourth file) | CC-BY-4.0 | 3,000 | Coding requests with one fake key, token, private key or connection string from the redaction harness's generators; harmless |
+| sep | [SEP](https://github.com/egozverev/Should-It-Be-Executed-Or-Processed) | CC-BY-4.0 (data), MIT (code) | 8,000 | Passages with and without an inserted harmless probe question (19,160 pairs); no 12-word overlap with the garak red-team seeds |
+| injecagent | [InjecAgent](https://github.com/uiuc-kang-lab/InjecAgent) base cases | MIT | 1,000 | Tool responses with an attacker instruction; the emptied template is the clean twin. 17 templates, 62 instructions; PIGuard trained on it |
+| aspi | [ScaleAI/aspi](https://huggingface.co/datasets/ScaleAI/aspi) | CC-BY-4.0 (card; no licence file) | 1,500 | Clarification answers, benign or with one of three injections |
+
+`plant` and `planted_pairs` in `train_sources.py` build twins the same way from licensed
+harmless documents and licensed training attacks (never garak). They are not a source
+yet: the carrier documents (résumés, reports, notes, where Fortress misses most) are
+still to be chosen.
+
+Left out: xlam-function-calling-60k and prodnull's repository files (gated, after the
+maintainer accepts their terms), SecFid (nested fields to check first), AgentDojo (its
+repository is mostly logs of other models' runs), Toucan's Kimi-K2 and Qwen3 folders, and
+nebius/SWE-agent-trajectories (its model outputs fall under the Llama 3.1 licence).
+
 ## Synthetic (Claude on Bedrock, see decision 0012)
 
 **Not built** (2026-11-05): the first training run uses the public data above; see
