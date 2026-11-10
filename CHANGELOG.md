@@ -13,6 +13,11 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
   grouped by near-duplicate cluster and mutation; a sealed holdout; and a gate that
   refuses a patch which blocks more harmless text. `run`, `summary`, `findings`, `seal`,
   `verify-holdout`, `gate`.
+- **Adaptive attacks** (`mobiusguard-eval redteam adapt`, [decision 0016](docs/decisions/0016-adaptive-attacks.md)):
+  PyRIT's PAIR rewrites each prompt up to 10 times, guided by the guard's verdict and
+  score, against one or more configs; a second model judges whether a rewrite that got
+  through still asks for the same thing. Prompts from the sealed holdout are refused; runs
+  resume; reports carry counts only (`adapt-summary`).
 - **Fortress-XS scores every view of a text** ([decision 0015](docs/decisions/0015-classifier-sees-every-view.md)):
   the normalised text and decoded base64 as well as the original, as the rules already did,
   so look-alike letters, invisible characters, spaced-out letters and leetspeak no longer

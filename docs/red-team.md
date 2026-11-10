@@ -118,3 +118,39 @@ benign emails. The command exits with 1 when the gate fails. A patch that passes
 proposed as a pull request with its findings and gate report; it is never applied
 automatically, and its effect is reported on a fresh run and on the holdout, never on the
 findings it was tuned on.
+
+## 6. Adaptive attacks
+
+The fixed run tries mutations decided in advance. In an adaptive run an attacker model
+rewrites each prompt and tries again, guided by the guard's answer, and a second model
+judges whether the rewrite still asks for the same thing
+([decision 0016](decisions/0016-adaptive-attacks.md)).
+
+```bash
+pip install "mobiusguard-eval[pyrit]"
+mobiusguard-eval redteam adapt --seeds runs/redteam/seeds/seeds.jsonl \
+    --holdout runs/redteam/holdout/holdout.json --out runs/redteam/adapt-1 \
+    --target v0.2.0=original.toml --target patched=mobiusguard.toml \
+    --endpoint http://127.0.0.1:11434/v1 --attacker mistral:7b-instruct \
+    --judge qwen2.5:7b-instruct --per-family 5
+mobiusguard-eval redteam adapt-summary --out runs/redteam/adapt-1
+```
+
+- **The attack** is PyRIT's PAIR: one stream of up to `--max-tries` rewrites per prompt
+  (10 by default). The attacker's instructions are PyRIT's; its objective is the garak
+  prompt. It stops at the first confirmed bypass.
+- **What the attacker sees:** whether the guard blocked the rewrite and why, and the attack
+  score with the threshold. A real proxy shows only a 403, so this is a worst case;
+  `--verdict-only` hides the score.
+- **A bypass** is a rewrite the guard lets through *and* the judge calls the same request.
+  One it lets through but the judge rejects is *drift*. An answer the judge gives that
+  can't be read is counted and never a bypass. The judge must be a different model.
+- **Prompts** come only from outside the sealed holdout: `--per-family` of each family by
+  a fixed seed, or `--ids`. A held-out ID is refused, and so is a holdout that no longer
+  matches its seeds.
+- **The attacker and the judge** are any models behind an OpenAI-compatible endpoint:
+  local ones through Ollama during development, paid ones only for a measured run after
+  its cost is approved. Their Ollama digests go into the run's key.
+- **Output:** `tries.jsonl` (one row per try, no text), `done.jsonl` (finished prompt and
+  target pairs; a run resumes) and `bypasses.jsonl`, the text of each confirmed bypass for
+  the person who writes a rule from it. Keep it on the machine that ran the attack.

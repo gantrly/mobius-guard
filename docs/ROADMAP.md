@@ -47,6 +47,7 @@ Plan for the red-team loop: [decision 0014](decisions/0014-red-team-runner.md) (
 | Patch proposals: thresholds computed, rules written by a person and measured | 2026-11-10: lower thresholds (2.0, 1.5) failed the gate; the classifier now scores every view ([decision 0015](decisions/0015-classifier-sees-every-view.md)) and three normalisation gaps are fixed, both gated |
 | Gate on the four harmless-text sets; sealed holdout with its hash committed first | **done**: code 2026-11-09; holdout sealed 2026-11-10 ([hash](results/2026-11-10-red-team-holdout.md)) |
 | CLI `mobiusguard-eval redteam`, user guide, tests | **done** 2026-11-09: [docs/red-team.md](red-team.md) |
+| Adaptive attacks: PyRIT PAIR with a local attacker and judge, against 0.2.0 and the patched proxy ([decision 0016](decisions/0016-adaptive-attacks.md)) | code **done** 2026-11-10 (`redteam adapt`); the PyRIT glue is checked on the box with the timing sample, then the 20-prompt small run |
 | First measured run against 0.2.0 with Fortress (paid attacker, after approval), results note | planned |
 
 - Train a small permissive classifier (DeBERTa-v3-xsmall / mmBERT-small class) on the GPU

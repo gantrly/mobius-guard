@@ -1,4 +1,5 @@
-"""``mobiusguard-eval redteam run | summary | findings | seal | verify-holdout | gate``."""
+"""``mobiusguard-eval redteam run | summary | findings | seal | verify-holdout | gate |
+adapt | adapt-summary``."""
 
 from __future__ import annotations
 
@@ -6,7 +7,7 @@ import argparse
 import json
 from pathlib import Path
 
-from . import holdout
+from . import adaptive, holdout
 from .findings import findings_for_run, seed_groups, write
 from .gate import run_gate
 from .mutate import CHAINS, DELIVERIES, parse_chain
@@ -62,8 +63,63 @@ def add_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None
     g.add_argument("--patched", required=True, help="the proposed config")
     g.add_argument("--report", required=True, help="where gate.json goes")
 
+    d = rsub.add_parser("adapt", help="adaptive attacks: PyRIT's PAIR rewrites (decision 0016)")
+    d.add_argument("--seeds", required=True)
+    d.add_argument("--holdout", required=True, help="holdout.json: its prompts are never used")
+    d.add_argument("--out", required=True)
+    d.add_argument("--target", action="append", required=True, metavar="NAME=CONFIG",
+                   help="a proxy config to attack, by name; repeat to compare configs")  # fmt: skip
+    d.add_argument(
+        "--endpoint",
+        default="http://127.0.0.1:11434/v1",
+        help="OpenAI-compatible endpoint serving the attacker and the judge",
+    )
+    d.add_argument("--attacker", required=True, help="the attacker model's name")
+    d.add_argument("--judge", required=True, help="the judge model's name (not the attacker)")
+    d.add_argument("--per-family", type=int, default=5)
+    d.add_argument("--sample-seed", type=int, default=0)
+    d.add_argument("--ids", default="", help="comma-separated seed IDs instead of a sample")
+    d.add_argument("--max-tries", type=int, default=10)
+    d.add_argument(
+        "--verdict-only",
+        action="store_true",
+        help="tell the attacker blocked or not, without the score (black box)",
+    )
+    ds = rsub.add_parser("adapt-summary", help="counts from an adaptive run")
+    ds.add_argument("--out", required=True)
+
+
+def _adapt(a: argparse.Namespace) -> int:
+    if a.attacker == a.judge:
+        raise SystemExit("the judge must be a different model from the attacker")
+    targets: dict[str, GuardTarget] = {}
+    for spec in a.target:
+        name, sep, config = spec.partition("=")
+        if not sep or not name or not config or name in targets:
+            raise SystemExit(f"--target takes NAME=CONFIG with distinct names, not {spec!r}")
+        targets[name] = GuardTarget.from_config(config)
+    from .adaptive_pyrit import PairAttack  # needs mobiusguard-eval[pyrit]
+
+    plan = adaptive.Plan(
+        seeds=Path(a.seeds), holdout=Path(a.holdout), out=Path(a.out),
+        targets=tuple((n, t.config) for n, t in targets.items()), attacker=a.attacker,
+        judge=a.judge, per_family=a.per_family, sample_seed=a.sample_seed,
+        ids=tuple(i for i in a.ids.split(",") if i), max_tries=a.max_tries,
+        white_box=not a.verdict_only,
+        models=adaptive.ollama_digests(a.endpoint, [a.attacker, a.judge]),
+    )  # fmt: skip
+    judge = adaptive.Judge(a.endpoint, a.judge)
+    counts = adaptive.run(plan, targets, judge, PairAttack(a.endpoint, a.attacker))
+    print(json.dumps(counts))
+    return 0
+
 
 def main(a: argparse.Namespace) -> int:
+    if a.redteam_command == "adapt":
+        return _adapt(a)
+    if a.redteam_command == "adapt-summary":
+        print(json.dumps(adaptive.summary(Path(a.out)), indent=2))
+        return 0
     if a.redteam_command == "summary":
         print(json.dumps(summary(Path(a.out)), indent=2))
         return 0
