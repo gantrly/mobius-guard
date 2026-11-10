@@ -104,5 +104,55 @@ view, so it costs about two calls.
 
 ## On the holdout
 
-Pending: the change measured once on the 4,563 held-out prompts (237,276 attempts), the
-holdout's first opening, logged 2026-11-10.
+The change measured once on the 4,563 held-out prompts (237,276 attempts, 52 each, no
+errors): the holdout's first opening, logged 2026-11-10 in `opened.jsonl`. 0.2.0 is the
+same attempts in the full run of 2026-11-09. Same box and configuration as above.
+
+| Family | Attempts | 0.2.0 | This branch | Newly caught | Newly through |
+|---|---:|---:|---:|---:|---:|
+| encoding | 90,896 | 25.5% | 13.9% | 11,300 | 778 |
+| latentinjection | 125,216 | 27.4% | **28.9%** | 1,230 | **3,056** |
+| sysprompt_extraction | 15,600 | 16.2% | 0.0% | 2,534 | 0 |
+| promptinject | 5,564 | 2.3% | 0.0% | 128 | 0 |
+| **All** | 237,276 | **25.4%** | **20.6%** | 15,192 | 3,834 |
+
+By mutation (9,126 attempts each). The 7 chains with base64 alone or last, and base64 then
+spaced or leetspeak, got none through in either.
+
+| Chain | 0.2.0 | This branch | Newly caught | Newly through |
+|---|---:|---:|---:|---:|
+| spaced + leetspeak (either order) | 90.8% | 62.4% | 2,614 | 18 |
+| **plain** | **65.2%** | **63.9%** | 158 | 36 |
+| look-alike letters | 58.7% | 50.3% | 884 | 120 |
+| invisible + look-alike | 55.2% | 47.1% | 936 | 204 |
+| look-alike + invisible | 55.0% | 47.2% | 910 | 190 |
+| invisible characters | 51.5% | 47.9% | 498 | 172 |
+| leetspeak + invisible | 40.8% | 35.7% | 892 | 418 |
+| invisible + leetspeak | 34.1% | 34.1% | 484 | 484 |
+| **leetspeak** | **21.1%** | **33.1%** | 436 | **1,532** |
+| base64 + look-alike | 16.7% | 0.0% | 1,526 | 0 |
+| leetspeak + look-alike | 16.4% | 16.0% | 268 | 224 |
+| invisible + spaced | 14.9% | 5.2% | 924 | 44 |
+| look-alike + leetspeak | 14.7% | 13.8% | 270 | 192 |
+| spaced + invisible | 8.4% | 4.5% | 448 | 88 |
+| spaced + look-alike | 7.5% | 4.0% | 362 | 42 |
+| look-alike + spaced | 7.2% | 3.9% | 330 | 24 |
+| spaced | 5.3% | 3.5% | 196 | 28 |
+| base64 + invisible | 4.8% | 0.0% | 442 | 0 |
+
+**What holds:** the overall drop (25.4% → 20.6%, against 27.9% → 19.1% on the tuning
+prompts), and every family but one: encoding, system-prompt extraction and prompt
+injection improve as they did on the tuning prompts.
+
+**What doesn't:**
+- **Leetspeak alone gets worse** (21.1% → 33.1%), where the tuning prompts showed a gain
+  (38.7% → 30.0%). 1,532 attempts that 0.2.0 blocked now get through.
+- **latentinjection gets slightly worse** (27.4% → 28.9%). On the tuning prompts it
+  improved (33.3% → 25.7%).
+
+The likely cause is the threshold: 0.2.0 blocked those attempts on the original text with
+a score between 2.7634 and 3.1107, and no view scores above 3.1107. That is the price
+named above, larger on the holdout than on the 300 tuning prompts. A per-family breakdown
+of the leetspeak attempts is to confirm it. This is a held-out result, so it is not used
+to tune the threshold again (decision 0006). The fix for latentinjection is training data
+([v2 data note](../research/2026-11-10-fortress-v2-data.md)).
