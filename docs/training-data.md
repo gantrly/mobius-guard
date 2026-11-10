@@ -118,9 +118,29 @@ numbers. The cleaned set has **206,438 items** (185,852 train, 20,586 val; 68,75
 Chosen in the [Fortress v2 data note](research/2026-11-10-fortress-v2-data.md) for the two
 measured gaps: injections inside documents get through, and harmless developer and agent
 text gets blocked. Licences checked on 2026-11-10; files pulled to the training box at the
-revisions below (no data on the maintainer's Mac). Not built yet: the counts kept come
-with the first build. Caps are a proposal: about 34k developer items and 11k document
-items next to the 206k of 0.2.0.
+revisions below (no data on the maintainer's Mac). Not built in full yet: the counts kept
+come with the full build. The caps were accepted by the maintainer on 2026-11-10: about
+34k developer items and 11k document items next to the 206k of 0.2.0.
+
+**Small build, 2026-11-10** (commit `c05913d`, every source at cap 300, seed 1, on the
+training box): 5 min 51 s, 5.8 GB of memory, 10,719 items. No duplicate IDs; every twin
+group of the new sources is complete and in one split. Checked by content, counts only:
+- No chat role markers ("USER:", "<|endoftext|>") in any item; tool outputs look like
+  tool data (glaive 54/54, ToolACE 19/19, hermes 34/37, Toucan 25/36: the rest are
+  plain-text outputs).
+- The redactor finds the fake secret in all 300 dev_secrets items (17 kinds).
+- SEP and InjecAgent attacks hold all of their clean twin plus the insert (153/153,
+  295/295).
+- Over 512 tokens: 8 of 300 wildchat_dev items (900-character windows of Chinese and
+  Russian) and 3 of 300 Toucan items; the tokenizer truncates them.
+
+Open after the small build:
+- **aspi:** only 149 of 268 injected answers contain their benign answer; the rest are
+  rewrites, and they are about 260 characters longer. Length could become a shortcut.
+  Keep, cap lower, or drop: to decide.
+- **InjecAgent:** its 17 templates give 295 attacks to 5 clean twins in the sample, so it
+  is in effect attack data.
+- **hermes:** half of its user turns fill the 900-character window; to look at why.
 
 From chats with tools, each conversation gives at most one user turn and one tool
 output, since those are what the proxy screens; system prompts and the assistant's turns
