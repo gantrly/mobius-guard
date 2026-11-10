@@ -42,9 +42,10 @@ Plan for the red-team loop: [decision 0014](decisions/0014-red-team-runner.md) (
 | garak and PyRIT adapters, stacked mutations, ledger entries | **done** 2026-11-07: 19,418 garak prompts from 4 static families (repeatable export), 26 chains × 2 deliveries, 46 PyRIT converters that call nothing |
 | Resumable runner, one row per attempt | **done** 2026-11-09: `mobiusguard-eval redteam run / summary`; CPU only (onnxruntime-gpu flipped 1.5% of attack verdicts), per-text score cache, shards |
 | Small run on the box (fixed probes, then the local attacker) | fixed probes **done** 2026-11-09: 50 seeds × 52 = 2,600 attempts on 2 shards, killed and resumed with nothing lost or repeated, identical results on two runs, ~25 attempts/s; the local attacker is next |
-| Findings grouped by family, mutation and cluster | code **done** 2026-11-09 (`redteam findings`); first use on the full run next |
-| Patch proposals: thresholds computed, rules written by a person and measured | planned |
-| Gate on the four harmless-text sets; sealed holdout with its hash committed first | code **done** 2026-11-09 (`redteam gate`, `seal`, `verify-holdout`); holdout to be sealed before findings are used |
+| Full fixed-probe run against 0.2.0 with Fortress-XS | **done** 2026-11-09: 1,009,736 attempts in 10 h on 4 vCPU, 0 errors; 27.1% got through |
+| Findings grouped by family, mutation and cluster | **done** 2026-11-10 (`redteam findings`, holdout left out): disguised attempts got through more often than plain ones |
+| Patch proposals: thresholds computed, rules written by a person and measured | 2026-11-10: lower thresholds (2.0, 1.5) failed the gate; the classifier now scores every view ([decision 0015](decisions/0015-classifier-sees-every-view.md)) and three normalisation gaps are fixed, both gated |
+| Gate on the four harmless-text sets; sealed holdout with its hash committed first | **done**: code 2026-11-09; holdout sealed 2026-11-10 ([hash](results/2026-11-10-red-team-holdout.md)) |
 | CLI `mobiusguard-eval redteam`, user guide, tests | **done** 2026-11-09: [docs/red-team.md](red-team.md) |
 | First measured run against 0.2.0 with Fortress (paid attacker, after approval), results note | planned |
 

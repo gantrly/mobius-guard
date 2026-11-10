@@ -21,6 +21,7 @@ classifier_dir = ""              # a local copy of Fortress's files; "" = downlo
 classifier_action = "block"      # block | log: what an attack score over the threshold does
 classifier_threshold = ""        # attack log-odds; "" = the model's own (Fortress), or for
                                  # PIGuard / ProtectAI v2: log scores, never block on them
+classifier_views = "all"         # all | original: score every view of a text, or only itself
 harmful = "log"                  # block | log | off: Fortress's harmful-request output
 harmful_threshold = ""           # harmful log-odds; "" = the model's own
 on_error = "block"               # block | allow: what happens when a detector fails
@@ -117,6 +118,18 @@ thresholds are set so that 1% of ordinary user messages go over them.
 The harmful output only logs by default because it also flags about half of the harmless
 prompts that only *sound* harmful (48% on OR-Bench hard). Set `harmful = "block"` if your
 traffic tolerates that, or `"off"` to leave it out.
+
+**Disguised text.** The classifier scores every view of a text, as the rules do: the
+original, a normalised copy (invisible characters removed, look-alike letters folded,
+spaced-out letters joined, leetspeak undone) and any decoded base64. The highest attack
+score counts. Because more views raise some harmless scores too, Fortress then uses a
+higher attack threshold set for that (3.1107 instead of 2.7634), on the same ordinary
+messages, so it still blocks no more of them
+([decision 0015](decisions/0015-classifier-sees-every-view.md)). A text with a second view
+costs one more classifier call; about 1 in 6 ordinary messages has one. The harmful output
+always scores the original text. `classifier_views = "original"` scores only the original,
+at the model's own thresholds. With your own `classifier_threshold`, every view is scored
+at that threshold.
 
 A score over a threshold whose action is `log` is recorded in the audit log's `flagged`
 list without blocking. Run with `classifier_action = "log"` for a few days to see what the

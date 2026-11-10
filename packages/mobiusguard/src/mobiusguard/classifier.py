@@ -154,6 +154,10 @@ class OnnxModel:
     revision: str  # a Hugging Face commit; "" = not published, only ``classifier_dir`` works
     licence: str
     file: str = "model.int8.onnx"
+    # The attack threshold for scoring every view of a text (decision 0015), as (the model's
+    # own attack threshold it was set for, the threshold). Set on the same ordinary messages
+    # as the model's own, so it blocks no more of them; None = original text only.
+    views_attack: tuple[float, float] | None = None
 
 
 ONNX_MODELS = {
@@ -162,6 +166,9 @@ ONNX_MODELS = {
         repo="gantrly/fortress-xs",
         revision="420ca0aa43fdee63ae6d7be44524a890f275c12a",  # v1
         licence="Apache-2.0",
+        # set 2026-11-10 on oasst1's dev half: 153 of 16,284 blocked, as at 2.7634 on the
+        # original text (docs/results/2026-11-10-classifier-views.md)
+        views_attack=(2.7634, 3.110666513442993),
     ),
 }
 ONNX_FILES = ("model.int8.onnx", "tokenizer.json", "fortress.json")
@@ -197,6 +204,13 @@ class OnnxClassifier:
         self.max_length = int(meta["max_length"])
         fpr = str(meta["default_fpr"])
         self.thresholds = {o: float(meta["thresholds"][o][fpr]) for o in self.outputs}
+        # Only for the files it was set on: another model keeps to its original text.
+        own, every = spec.views_attack or (None, None)
+        self.views_thresholds: dict[str, float] | None = (
+            {**self.thresholds, "attack": every}
+            if every is not None and own is not None and abs(self.thresholds["attack"] - own) < 1e-9
+            else None
+        )
         self.np: Any = importlib.import_module("numpy")
         ort: Any = importlib.import_module("onnxruntime")
         tok: Any = importlib.import_module("tokenizers").Tokenizer.from_file(

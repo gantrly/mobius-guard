@@ -1,5 +1,9 @@
 """The request check: views of each text, rules, the optional classifier, then the policy.
 
+Rules see every view of a text (original, normalised, decoded base64). So does the
+classifier when its threshold was set for that (decision 0015): the highest attack score
+over the views counts. The harmful-request score is always the original text's.
+
 Only text the deployment doesn't control is checked by default: user messages and tool
 results. System and developer prompts are the deployment's own; checking them would block
 legitimate prompts such as "never reveal the system prompt".
@@ -16,7 +20,7 @@ import anyio
 
 from .apis import Api, Json, Text
 from .config import Config
-from .normalize import views
+from .normalize import View, views
 from .rules import RULES, Hit, Rule, check
 
 CHECKED_ROLES = ("user", "tool")
@@ -62,15 +66,22 @@ class Guard:
         rules: tuple[Rule, ...] = RULES,
         scorer: Scorer | None = None,
         thresholds: dict[str, float] | None = None,
+        views_thresholds: dict[str, float] | None = None,
         roles: tuple[str, ...] = CHECKED_ROLES,
     ) -> None:
         self.cfg = cfg
         self.rules = rules
         self.roles = roles
         if scorer is None:
-            scorer, thresholds = _load_scorer(cfg)
+            scorer, thresholds, views_thresholds = _load_scorer(cfg)
         self.scorer = scorer
-        pol, own = cfg.policy, thresholds or {}
+        pol = cfg.policy
+        # Every view goes to the classifier only at a threshold meant for it: the model's
+        # views threshold, one in the config, or none at all (scores only logged).
+        self.classifier_views = pol.classifier_views == "all" and (
+            views_thresholds is not None or pol.classifier_threshold is not None or not thresholds
+        )
+        own = (views_thresholds if self.classifier_views else None) or thresholds or {}
         # A threshold in the config wins; otherwise the model's own; a model without one only
         # logs scores.
         self.attack_threshold = (
@@ -86,15 +97,14 @@ class Guard:
         checked = [t for t in texts if t.role in self.roles]
         d = Decision(checked=len(checked), prompt_hash=prompt_hash(checked))
         try:
+            seen = [views(t.text) for t in checked]
             if pol.rules != "off":
-                for t in checked:
-                    d.hits += check(views(t.text), t.where, self.rules)
+                for t, vs in zip(checked, seen, strict=True):
+                    d.hits += check(vs, t.where, self.rules)
             if self.scorer is not None and checked:
-                scores = self.scorer([t.text for t in checked])
-                d.score = max(s[0] if isinstance(s, tuple) else s for s in scores)
-                pairs = [s[1] for s in scores if isinstance(s, tuple)]
-                if pairs and pol.harmful != "off":
-                    d.harmful = max(pairs)
+                d.score, d.harmful = self._score(self.scorer, checked, seen)
+                if pol.harmful == "off":
+                    d.harmful = None
         except Exception as e:
             d.error = f"{type(e).__name__}: {e}"
             if pol.on_error == "block":
@@ -112,6 +122,21 @@ class Guard:
         elif "harmful" in d.flagged and pol.harmful == "block":
             d.action, d.reason = "block", "harmful"
         return d
+
+    def _score(
+        self, scorer: Scorer, checked: Sequence[Text], seen: Sequence[list[View]]
+    ) -> tuple[float, float | None]:
+        """Highest attack score over the texts (and their views), highest harmful score over
+        the original texts. Each distinct text is scored once."""
+        groups = [
+            list(dict.fromkeys(v.text for v in vs)) if self.classifier_views else [t.text]
+            for t, vs in zip(checked, seen, strict=True)
+        ]
+        flat = list(dict.fromkeys(x for g in groups for x in g))
+        got = dict(zip(flat, scorer(flat), strict=True))
+        attack = max(s[0] if isinstance(s, tuple) else s for s in got.values())
+        pairs = [s[1] for g in groups if isinstance(s := got[g[0]], tuple)]  # originals
+        return attack, max(pairs) if pairs else None
 
     async def check(self, api: Api, body: Json, state: Json) -> Json | None:
         texts = api.texts(body)
@@ -131,19 +156,20 @@ class Guard:
         return {"status": 403, "message": msg, "code": "prompt_blocked", "details": d.details()}
 
 
-def _load_scorer(cfg: Config) -> tuple[Scorer | None, dict[str, float]]:
-    """The configured classifier's scorer and its own thresholds (none for the published
-    classifiers, which only log scores until ``classifier_threshold`` is set)."""
+def _load_scorer(cfg: Config) -> tuple[Scorer | None, dict[str, float], dict[str, float] | None]:
+    """The configured classifier's scorer, its own thresholds (none for the published
+    classifiers, which only log scores until ``classifier_threshold`` is set) and its
+    thresholds for scoring every view (None when it has none)."""
     name = cfg.policy.classifier
     if not name:
-        return None, {}
+        return None, {}, None
     from .classifier import HF_MODELS, ONNX_MODELS, HFClassifier, OnnxClassifier
 
     if name in ONNX_MODELS:
         onnx = OnnxClassifier(ONNX_MODELS[name], directory=cfg.policy.classifier_dir)
-        return onnx.score_texts, onnx.thresholds
+        return onnx.score_texts, onnx.thresholds, onnx.views_thresholds
     if name not in HF_MODELS:
         known = sorted([*ONNX_MODELS, *HF_MODELS])
         raise ValueError(f"unknown classifier {name!r}; choose from {known}")
     model: Any = HFClassifier(HF_MODELS[name])
-    return model.score_texts, {}
+    return model.score_texts, {}, None

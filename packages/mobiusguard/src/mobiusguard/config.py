@@ -15,6 +15,8 @@
     classifier_action = "block"  # block | log: what an attack score over the threshold does
     classifier_threshold = ""    # attack log-odds; "" = the model's own (Fortress: 1% false
                                  # positives), or log scores only for a model without one
+    classifier_views = "all"     # all | original: score every view of a text (normalised,
+                                 # decoded base64) or only the original; see decision 0015
     harmful = "log"              # block | log | off: Fortress's harmful-request output
     harmful_threshold = ""       # harmful log-odds; "" = the model's own
     on_error = "block"           # block | allow: what a failing detector does
@@ -63,6 +65,7 @@ class Policy:
     classifier_dir: str = ""
     classifier_action: Literal["block", "log"] = "block"
     classifier_threshold: float | None = None
+    classifier_views: Literal["all", "original"] = "all"
     harmful: Action = "log"
     harmful_threshold: float | None = None
     on_error: Literal["block", "allow"] = "block"
@@ -129,6 +132,11 @@ def load(path: Path | None = None, env: dict[str, str] | None = None) -> Config:
         raise ValueError(
             f"policy.classifier_action must be block or log, not {classifier_action!r}"
         )
+    classifier_views = pol.get("classifier_views", "all")
+    if classifier_views != "all" and classifier_views != "original":
+        raise ValueError(
+            f"policy.classifier_views must be all or original, not {classifier_views!r}"
+        )
     on_error = pol.get("on_error", "block")
     if on_error != "block" and on_error != "allow":
         raise ValueError(f"policy.on_error must be block or allow, not {on_error!r}")
@@ -150,6 +158,7 @@ def load(path: Path | None = None, env: dict[str, str] | None = None) -> Config:
             classifier_dir=str(pol.get("classifier_dir", "")),
             classifier_action=classifier_action,
             classifier_threshold=None if threshold in ("", None) else float(threshold),
+            classifier_views=classifier_views,
             harmful=_action(pol.get("harmful", "log"), "policy.harmful"),
             harmful_threshold=None if harmful_threshold in ("", None) else float(harmful_threshold),
             on_error=on_error,

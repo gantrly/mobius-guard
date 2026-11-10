@@ -13,6 +13,12 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
   grouped by near-duplicate cluster and mutation; a sealed holdout; and a gate that
   refuses a patch which blocks more harmless text. `run`, `summary`, `findings`, `seal`,
   `verify-holdout`, `gate`.
+- **Fortress-XS scores every view of a text** ([decision 0015](docs/decisions/0015-classifier-sees-every-view.md)):
+  the normalised text and decoded base64 as well as the original, as the rules already did,
+  so look-alike letters, invisible characters, spaced-out letters and leetspeak no longer
+  hide an attack from it. Its attack threshold for this is 3.1107, set on the same ordinary
+  messages as its own 2.7634, so it blocks no more of them. A text with a second view costs
+  one more classifier call. `policy.classifier_views = "original"` keeps the old behaviour.
 - **Input normalisation catches three more disguises** (found by the first red-team run):
   invisible characters hidden between spaced-out letters, base64 whose text hides
   invisible characters, and base64 runs spaced out, given look-alike letters or invisible

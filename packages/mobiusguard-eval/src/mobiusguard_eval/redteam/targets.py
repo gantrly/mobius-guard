@@ -197,6 +197,7 @@ class GuardTarget:
             "classifier": pol.classifier,
             "classifier_action": pol.classifier_action,
             "attack_threshold": str(self.guard.attack_threshold),
+            "classifier_views": "all" if self.guard.classifier_views else "original",
             "harmful": pol.harmful,
             "harmful_threshold": str(self.guard.harmful_threshold),
         }

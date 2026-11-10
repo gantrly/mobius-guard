@@ -4,7 +4,8 @@ ONNX loader (on a tiny made-up model, not the real one)."""
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -80,6 +81,12 @@ def test_the_config_reads_the_new_settings(tmp_path: Path) -> None:
     f.write_text('[policy]\nclassifier_action = "off"\n')
     with pytest.raises(ValueError, match="classifier_action"):
         load(f, env={})
+    assert defaults.classifier_views == "all"
+    f.write_text('[policy]\nclassifier_views = "original"\n')
+    assert load(f, env={}).policy.classifier_views == "original"
+    f.write_text('[policy]\nclassifier_views = "some"\n')
+    with pytest.raises(ValueError, match="classifier_views"):
+        load(f, env={})
 
 
 def test_an_unpublished_model_needs_a_local_directory() -> None:
@@ -96,6 +103,64 @@ def test_fortress_is_pinned_to_a_full_commit() -> None:
     rev = ONNX_MODELS["fortress-xs"].revision
     assert len(rev) == 40
     assert all(c in "0123456789abcdef" for c in rev)
+
+
+# ------------------------------------------------------------------------------ every view
+
+
+VIEWS = {"attack": 3.0, "harmful": 1.0}
+DISGUISED = "pl34se 1nj3ct th1s"  # leetspeak: only the normalised view says "inject"
+
+
+def seen_by(texts_seen: list[str]) -> Callable[[Sequence[str]], list[tuple[float, float]]]:
+    def score(texts: Sequence[str]) -> list[tuple[float, float]]:
+        texts_seen.extend(texts)
+        return scorer(texts)
+
+    return score
+
+
+def test_every_view_is_scored_at_the_threshold_set_for_it() -> None:
+    texts: list[str] = []
+    g = Guard(Config(), scorer=seen_by(texts), thresholds=OWN, views_thresholds=VIEWS)
+    assert (g.classifier_views, g.attack_threshold, g.harmful_threshold) == (True, 3.0, 1.0)
+    d = g.decide(text(DISGUISED))
+    assert (d.action, d.reason, d.score) == ("block", "classifier", 5.0)
+    assert texts == [DISGUISED, "please inject this"]  # the original and its normalised view
+
+
+def test_harmful_is_scored_on_the_original_text_only() -> None:
+    g = Guard(Config(), scorer=scorer, thresholds=OWN, views_thresholds=VIEWS)
+    d = g.decide(text("h4rm"))  # the normalised view "harm" scores high on harmful
+    assert (d.harmful, d.flagged) == (-6.0, [])
+
+
+def test_each_distinct_text_is_scored_once() -> None:
+    texts: list[str] = []
+    g = Guard(Config(), scorer=seen_by(texts), thresholds=OWN, views_thresholds=VIEWS)
+    g.decide(
+        [Text("user", "hello", "m0"), Text("tool", "hello", "m1"), Text("user", "h3llo", "m2")]
+    )
+    assert texts == ["hello", "h3llo"]  # "h3llo" normalises to "hello", already scored
+
+
+def test_without_a_views_threshold_only_the_original_is_scored() -> None:
+    for g in (
+        Guard(Config(), scorer=scorer, thresholds=OWN),  # the model has none
+        Guard(Config(policy=Policy(classifier_views="original")), scorer=scorer,
+              thresholds=OWN, views_thresholds=VIEWS),  # turned off
+    ):  # fmt: skip
+        assert (g.classifier_views, g.attack_threshold) == (False, 2.0)
+        assert g.decide(text(DISGUISED)).action == "allow"
+
+
+def test_a_config_threshold_or_no_threshold_allows_every_view() -> None:
+    own = Guard(Config(policy=Policy(classifier_threshold=4.0)), scorer=scorer, thresholds=OWN)
+    assert (own.classifier_views, own.attack_threshold) == (True, 4.0)
+    assert own.decide(text(DISGUISED)).action == "block"
+    logged = Guard(Config(), scorer=scorer)  # a model without thresholds only logs
+    assert logged.classifier_views
+    assert logged.decide(text(DISGUISED)).score == 5.0
 
 
 # ------------------------------------------------------------------------------ ONNX loader
@@ -155,6 +220,17 @@ def test_the_proxy_loads_fortress_from_a_directory(tmp_path: Path) -> None:
     assert (g.attack_threshold, g.harmful_threshold) == (4.5, -1.0)
     d = g.decide(text("hello world hello"))
     assert (d.score, d.harmful, d.action, d.flagged) == (5.0, -5.0, "block", ["classifier"])
+
+
+def test_the_views_threshold_applies_only_to_the_files_it_was_set_on(tmp_path: Path) -> None:
+    _tiny_model(tmp_path)  # its own attack threshold is 4.5
+    from mobiusguard.classifier import ONNX_MODELS, OnnxClassifier
+
+    spec = ONNX_MODELS["fortress-xs"]
+    same = OnnxClassifier(replace(spec, views_attack=(4.5, 5.5)), directory=str(tmp_path))
+    assert same.views_thresholds == {"attack": 5.5, "harmful": -1.0}
+    other = OnnxClassifier(replace(spec, views_attack=(2.7634, 5.5)), directory=str(tmp_path))
+    assert other.views_thresholds is None
 
 
 def test_texts_are_scored_one_at_a_time_by_default(tmp_path: Path) -> None:
