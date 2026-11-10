@@ -150,9 +150,13 @@ injection improve as they did on the tuning prompts.
 - **latentinjection gets slightly worse** (27.4% → 28.9%). On the tuning prompts it
   improved (33.3% → 25.7%).
 
-The likely cause is the threshold: 0.2.0 blocked those attempts on the original text with
-a score between 2.7634 and 3.1107, and no view scores above 3.1107. That is the price
-named above, larger on the holdout than on the 300 tuning prompts. A per-family breakdown
-of the leetspeak attempts is to confirm it. This is a held-out result, so it is not used
+The cause is the threshold. All 3,834 attempts newly let through were blocked by the
+classifier in 0.2.0 with a score between 2.7634 and 3.1107, and with every view their top
+score is still in that band. That is the price named above, larger on the holdout than on
+the 300 tuning prompts:
+- 1,486 of the 1,532 leetspeak attempts are latentinjection, not encoding.
+- Of latentinjection's 3,056, 2,430 are `LatentInjectionResume`, which gains only 482.
+  The held-out résumé prompts score close to the threshold, so the change in threshold
+  decides them. This is a held-out result, so it is not used
 to tune the threshold again (decision 0006). The fix for latentinjection is training data
 ([v2 data note](../research/2026-11-10-fortress-v2-data.md)).
