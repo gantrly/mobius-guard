@@ -13,6 +13,10 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
   grouped by near-duplicate cluster and mutation; a sealed holdout; and a gate that
   refuses a patch which blocks more harmless text. `run`, `summary`, `findings`, `seal`,
   `verify-holdout`, `gate`.
+- **Input normalisation catches three more disguises** (found by the first red-team run):
+  invisible characters hidden between spaced-out letters, base64 whose text hides
+  invisible characters, and base64 runs spaced out, given look-alike letters or invisible
+  characters after encoding. Rules now see the hidden text; harmless text is unchanged.
 - `mobiusguard-eval[pyrit]`: PyRIT's prompt converters as extra mutations, limited to
   ones that turn text into text and call no model or service.
 - `examples/ollama-fortress.toml`: the local-model example with Fortress-XS on.
