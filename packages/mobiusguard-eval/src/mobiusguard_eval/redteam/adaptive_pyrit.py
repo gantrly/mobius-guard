@@ -43,7 +43,7 @@ def _classes(p: dict[str, Any]) -> tuple[Any, Any]:
     class SessionTarget(p["PromptTarget"]):  # pyright: ignore[reportUntypedBaseClass]
         """The guard as PyRIT's objective target: each prompt is one try of the session."""
 
-        def __init__(self, session: Session) -> None:
+        def __init__(self, *, session: Session) -> None:
             super().__init__()  # pyright: ignore[reportUnknownMemberType]
             self.session = session
             self.feedback: dict[str, float] = {}  # conversation -> its last try's feedback
@@ -65,7 +65,7 @@ def _classes(p: dict[str, Any]) -> tuple[Any, Any]:
     class FeedbackScorer(p["MessageFloatScaleScorer"]):  # pyright: ignore[reportUntypedBaseClass]
         """Scores the target's reply with the session's feedback for that try."""
 
-        def __init__(self, target: Any) -> None:
+        def __init__(self, *, target: Any) -> None:
             validator = p["ScorerPromptValidator"](supported_data_types=["text"])
             super().__init__(validator=validator)  # pyright: ignore[reportUnknownMemberType]
             self.target = target
@@ -109,8 +109,9 @@ class PairAttack:
 
     async def _attack(self, session: Session) -> None:
         p = self.p
-        target = self.target_cls(session)
-        scorer = p["FloatScaleThresholdScorer"](scorer=self.scorer_cls(target), threshold=1.0)
+        target = self.target_cls(session=session)
+        feedback = self.scorer_cls(target=target)
+        scorer = p["FloatScaleThresholdScorer"](scorer=feedback, threshold=1.0)
         attack = p["PAIRAttack"](
             objective_target=target,
             attack_adversarial_config=p["AttackAdversarialConfig"](target=self.attacker),
