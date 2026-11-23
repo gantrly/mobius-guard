@@ -65,6 +65,9 @@ conversation (oasst1). None of the four false-positive sets covers what develope
 agents send. System prompts are not screened (the proxy checks user and tool text only),
 so the system prompt in the echo case, which scored 6.64, did not cause the block.
 
+[`scripts/dev_check.py`](../../scripts/dev_check.py) scores these eight texts the same way for any
+model, with its threshold; on Fortress-XS v1 it gives the scores above.
+
 **What follows from this:**
 - Fortress v2 needs harmless developer and agent text in its training data, and a false-
   positive set of the same kind in the suite.
