@@ -147,8 +147,9 @@ def test_the_new_rule_treats_the_old_sources_like_the_old_rule() -> None:
 
 def test_the_v2_rule_only_adds_the_v2_twins() -> None:
     old, new = judge.RULE_2026_11_06, judge.RULE_2026_11_23
-    assert new.trust_attack - old.trust_attack == {"sep", "injecagent"}
-    assert new.harmful_split_keeps_source - old.harmful_split_keeps_source == {"sep", "injecagent"}
+    v2 = {"sep", "injecagent", "dev_secrets"}
+    assert new.trust_attack - old.trust_attack == v2
+    assert new.harmful_split_keeps_source - old.harmful_split_keeps_source == v2
     for name in ("keep_attack_flips", "revert_attack_flips", "keep_harmful_flips",
                  "drop_disputed_pairs", "judges"):  # fmt: skip
         assert getattr(old, name) == getattr(new, name)

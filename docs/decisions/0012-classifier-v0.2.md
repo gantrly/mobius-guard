@@ -187,10 +187,15 @@ the same two judges; the 246,694 items carried over keep the labels judged on 20
 2026-11-06 (`RULE_2026_11_23` in `judge.py`):
 - **SEP and InjecAgent** are twins whose attack label is the insert itself, so they keep it,
   like the constructed pairs above; disputes are counted.
-- **The developer and agent sources** take the default rule: an attack label both judges
-  flip drops the item, and a harmful label they overrule becomes unknown.
+- **dev_secrets** keeps its harmless label as well. The judges dispute 2,490 of its 3,000
+  coding requests with a fake key inserted, but 1 of 2,000 of the same kind of request
+  without a key (OpenCodeInstruct): the key alone moves them, which is the false positive
+  these items are there to remove. Chosen by the maintainer.
+- **The other developer and agent sources** take the default rule: an attack label both
+  judges flip drops the item, and a harmful label they overrule becomes unknown.
 
-If the judges dispute many of the SEP or InjecAgent labels, a spot check comes first.
+Judged on the training box through a role that may call only these two models: 42,300 items,
+$9.36, 6 minutes (`runs/judge-v2`).
 
 ## Status of the synthetic data (2026-11-05)
 
