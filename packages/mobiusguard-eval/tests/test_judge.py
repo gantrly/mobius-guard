@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import Mapping
 
 import pytest
@@ -142,3 +143,25 @@ def test_the_new_rule_treats_the_old_sources_like_the_old_rule() -> None:
         | new.harmful_split_keeps_source
     )
     assert not added & olds
+
+
+def test_the_v2_rule_only_adds_the_v2_twins() -> None:
+    old, new = judge.RULE_2026_11_06, judge.RULE_2026_11_23
+    assert new.trust_attack - old.trust_attack == {"sep", "injecagent"}
+    assert new.harmful_split_keeps_source - old.harmful_split_keeps_source == {"sep", "injecagent"}
+    for name in ("keep_attack_flips", "revert_attack_flips", "keep_harmful_flips",
+                 "drop_disputed_pairs", "judges"):  # fmt: skip
+        assert getattr(old, name) == getattr(new, name)
+
+
+def test_a_v2_twin_keeps_its_attack_label_and_a_dev_flip_is_dropped() -> None:
+    meta = {"harmful": "0", "pair": "sep:1"}
+    bad = make_item("a passage with a probe inserted", ATTACK, "sep", meta=meta)
+    dev = make_item("how do I rotate my deploy token?", BENIGN, "glaive_fc", meta={"harmful": "0"})
+    yes, no = {"attack": 1, "harmful": 0}, {"attack": 0, "harmful": 0}
+    labels = _labels((bad, no, no), (dev, yes, yes))
+    rule = dataclasses.replace(judge.RULE_2026_11_23, judges=("j1", "j2"))
+    kept, stats = judge.apply([bad, dev], labels, rule)
+    assert [(it.id, it.label) for it in kept] == [(bad.id, ATTACK)]
+    assert stats["sep"]["judges_dispute_attack"] == 1
+    assert stats["glaive_fc"]["dropped_attack_flip"] == 1

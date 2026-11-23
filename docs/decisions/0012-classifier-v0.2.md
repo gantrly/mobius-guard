@@ -180,6 +180,18 @@ identical labels and splits. The cleaned set has **206,438 items**, 33% attacks,
 passed a final audit: no duplicate IDs, no text shared between train and val or with the
 suite, no twins split across them.
 
+## Label cleaning of the Fortress v2 sources (2026-11-23)
+
+The 13 sources added for Fortress v2 ([training-data.md](../training-data.md)) go through
+the same two judges; the 246,694 items carried over keep the labels judged on 2026-11-05 and
+2026-11-06 (`RULE_2026_11_23` in `judge.py`):
+- **SEP and InjecAgent** are twins whose attack label is the insert itself, so they keep it,
+  like the constructed pairs above; disputes are counted.
+- **The developer and agent sources** take the default rule: an attack label both judges
+  flip drops the item, and a harmful label they overrule becomes unknown.
+
+If the judges dispute many of the SEP or InjecAgent labels, a spot check comes first.
+
 ## Status of the synthetic data (2026-11-05)
 
 The synthetic generator was not built in this round. The first training run uses the cleaned
