@@ -1325,20 +1325,6 @@ def _injecagent(paths: list[Path]) -> Iterator[Item]:
             yield make_item(good, BENIGN, "injecagent", lang="en", meta=_m("0", **meta))
 
 
-def _aspi(paths: list[Path]) -> Iterator[Item]:
-    for path in paths:
-        for r in _json_rows(path):
-            good = _keep(r.get("benign_clarification_response"))
-            injections = cast("list[dict[str, Any]]", r.get("injections") or [])
-            key = f"aspi:{content_hash(str(good))}"  # benign answers repeat across rows
-            bads = [b for i in injections if (b := _keep(i.get("injected_clarification_response")))]
-            if not good or not bads:
-                continue
-            yield make_item(good, BENIGN, "aspi", lang="en", meta=_m("0", pair=key))
-            for b in bads:
-                yield make_item(b, ATTACK, "aspi", lang="en", meta=_m("", pair=key))
-
-
 for _src in (
     Source(
         id="sep",
@@ -1363,28 +1349,10 @@ for _src in (
         files=(Remote("url", _INJECAGENT_URL, sha256=_INJECAGENT_SHA),),
         parse=_injecagent,
         trained_on_by=("PIGuard",),
-        cap=1_000,
+        cap=300,
         notes="17 tool-response templates filled with 62 attacker instructions; the template "
-        "with the placeholder emptied is the clean twin. Templated, so capped low.",
-    ),
-    Source(
-        id="aspi",
-        title="ScaleAI ASPI: clarification answers, injected and benign",
-        homepage="https://huggingface.co/datasets/ScaleAI/aspi",
-        licence="CC-BY-4.0",
-        role="mixed",
-        files=_hf(
-            "ScaleAI/aspi",
-            "8aaafd059a345eaf60019a6a35472c31a8527bd7",
-            "data/banking.jsonl",
-            "data/slack.jsonl",
-            "data/travel.jsonl",
-            "data/workspace.jsonl",
-        ),
-        parse=_aspi,
-        cap=1_500,
-        notes="An agent asks the user to clarify; the answer is benign or carries one of three "
-        "injections. CC-BY-4.0 on the card; the repository has no licence file.",
+        "with the placeholder emptied is the clean twin. Templated, so capped low: at 1,000 "
+        "in the 2026-11-23 build its few template groups all fell in train.",
     ),
 ):
     _add(_src)

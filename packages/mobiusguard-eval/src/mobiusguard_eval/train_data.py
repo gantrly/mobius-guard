@@ -59,7 +59,6 @@ CONTRAST = (
     frozenset({"cse_frr", "cse_mitre"}),
     frozenset({"sep"}),
     frozenset({"injecagent"}),
-    frozenset({"aspi"}),
 )
 
 

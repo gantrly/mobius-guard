@@ -142,6 +142,18 @@ Open after the small build:
   is in effect attack data.
 - **hermes:** half of its user turns fill the 900-character window; to look at why.
 
+**Full build, 2026-11-23** (commit `0536925`, on the training box): 9 min 25 s, 10.2 GB of
+memory at the peak, 291,194 items (262,021 train, 29,173 validation; 100,646 attacks). No
+duplicate IDs and no twin group split between train and validation; the redactor finds the
+fake secret in all 3,000 dev_secrets items. Two changes followed, chosen by the maintainer:
+- **aspi dropped.** 1,328 attacks to 172 clean answers, only 835 of 1,317 attacks contain
+  their clean answer, and the attacks are about 258 characters longer: length would be a
+  shortcut.
+- **InjecAgent capped at 300.** Its 16 template groups put all 1,000 items in train.
+
+The 44,500 items of the new sources then go through the same two judges as the rest
+(decision 0012) before training.
+
 From chats with tools, each conversation gives at most one user turn and one tool
 output, since those are what the proxy screens; system prompts and the assistant's turns
 are left out. Texts longer than about 900 characters become one window, as above.
@@ -160,15 +172,14 @@ are left out. Texts longer than about 900 characters become one window, as above
 | wildchat_dev | [allenai/WildChat-4.8M](https://huggingface.co/datasets/allenai/WildChat-4.8M) | ODC-BY-1.0 | 4,000 | Real users' first messages naming two or more developer terms; not toxic, not flagged; 6 of 86 files |
 | dev_secrets | OpenCodeInstruct (a fourth file) | CC-BY-4.0 | 3,000 | Coding requests with one fake key, token, private key or connection string from the redaction harness's generators; harmless |
 | sep | [SEP](https://github.com/egozverev/Should-It-Be-Executed-Or-Processed) | CC-BY-4.0 (data), MIT (code) | 8,000 | Passages with and without an inserted harmless probe question (19,160 pairs); no 12-word overlap with the garak red-team seeds |
-| injecagent | [InjecAgent](https://github.com/uiuc-kang-lab/InjecAgent) base cases | MIT | 1,000 | Tool responses with an attacker instruction; the emptied template is the clean twin. 17 templates, 62 instructions; PIGuard trained on it |
-| aspi | [ScaleAI/aspi](https://huggingface.co/datasets/ScaleAI/aspi) | CC-BY-4.0 (card; no licence file) | 1,500 | Clarification answers, benign or with one of three injections |
+| injecagent | [InjecAgent](https://github.com/uiuc-kang-lab/InjecAgent) base cases | MIT | 300 | Tool responses with an attacker instruction; the emptied template is the clean twin. 17 templates, 62 instructions; PIGuard trained on it |
 
 `plant` and `planted_pairs` in `train_sources.py` build twins the same way from licensed
 harmless documents and licensed training attacks (never garak). They are not a source
 yet: the carrier documents (résumés, reports, notes, where Fortress misses most) are
 still to be chosen.
 
-Left out: xlam-function-calling-60k and prodnull's repository files (gated, after the
+Left out: ScaleAI/aspi (see the full build above), xlam-function-calling-60k and prodnull's repository files (gated, after the
 maintainer accepts their terms), SecFid (nested fields to check first), AgentDojo (its
 repository is mostly logs of other models' runs), Toucan's Kimi-K2 and Qwen3 folders, and
 nebius/SWE-agent-trajectories (its model outputs fall under the Llama 3.1 licence).
