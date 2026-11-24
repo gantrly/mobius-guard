@@ -99,6 +99,29 @@ gated:
 The full three-seed run follows only if C passes, and a release only if it passes against
 the released v1.
 
+## The run of 2026-11-24 (the maintainer's choices)
+
+- **The test runs** (decided after the A/B/C runs) left out one group of v2 sources at a
+  time:
+  - **D, without the tool-call sources:** recovered LLMail (50.5%, against C's 34.2%) but
+    blocked 6 of the 8 developer messages.
+  - **E, without the code sources:** cut the harmless jackhhao prompts blocked from 6.0% to
+    4.6%.
+  - **G, without both:** cut that further to 2.7%, but lost LLMail (26.1%).
+
+  The three messages every model blocks, v1 included, are the two "Call save_note…" requests
+  and "my key is …". Leaving sources out cannot fix them, because the classifier does not
+  know whether a text is the user's request or part of a document. Telling it is the next
+  design question.
+- **The full run uses recipe D, with one seed instead of three.** v2's three seeds differed
+  by 0.0003 on validation selection, so the extra seeds buy almost nothing, and one seed
+  takes about 1 h 40 min instead of about 5 h.
+- **Expected against v1:**
+  - better on harmless disguised text and on LLMail;
+  - worse on harmless jackhhao prompts and on the developer check.
+
+  A release is the maintainer's decision on the gate's result.
+
 ## Consequences
 
 - Training data grows by about 4% (the copies). The disguised copies of attacks are
