@@ -5,6 +5,9 @@ One run = one base model and one seed. The model has two independent outputs (si
 each read as log-odds): ``attack`` (an injection or a jailbreak) and ``harmful`` (a harmful
 request). The harmful loss skips items whose harmful label is unknown.
 
+An item's loss counts ``meta["weight"]`` times (default 1; ``augment`` weights a group of
+sources), and the batch loss is the weighted mean, so unweighted data trains as before.
+
 After each epoch both outputs are scored on ``val`` (never on the evaluation suite): AUC and
 recall at 1% false positives, the threshold set on val's own negatives. The epoch with the
 best mean of the two recalls is kept in ``best/``.
@@ -89,6 +92,10 @@ def _harmful(it: Item) -> float:
     return {"1": 1.0, "0": 0.0}.get(it.meta.get("harmful", ""), -1.0)
 
 
+def item_weight(it: Item) -> float:
+    return float(it.meta.get("weight", "1"))
+
+
 def val_metrics(scores: Sequence[float], labels: Sequence[int]) -> dict[str, float]:
     pos = [s for s, y in zip(scores, labels, strict=True) if y == 1]
     neg = [s for s, y in zip(scores, labels, strict=True) if y == 0]
@@ -138,11 +145,12 @@ def train(
     sched: Any = tf.get_linear_schedule_with_warmup(opt, int(cfg.warmup * total), total)
     use_bf16 = device.startswith("cuda") and torch.cuda.is_bf16_supported()
 
-    def encode(chunk: Sequence[Item]) -> tuple[dict[str, Any], Any]:
+    def encode(chunk: Sequence[Item]) -> tuple[dict[str, Any], Any, Any]:
         enc = tok([it.text for it in chunk], truncation=True, max_length=cfg.max_length,
                   padding=True, return_tensors="pt")  # fmt: skip
         targets = torch.tensor([[float(it.label), _harmful(it)] for it in chunk], device=device)
-        return {k: v.to(device) for k, v in enc.items()}, targets
+        weights = torch.tensor([[item_weight(it)] for it in chunk], device=device)
+        return {k: v.to(device) for k, v in enc.items()}, targets, weights
 
     def plan(epoch: int) -> list[list[int]]:
         """The epoch's batches: shuffled, then length-sorted inside windows, then shuffled
@@ -158,10 +166,10 @@ def train(
         rng.shuffle(result)
         return result
 
-    def loss_of(logits: Any, targets: Any) -> Any:
-        known = targets >= 0
+    def loss_of(logits: Any, targets: Any, weights: Any) -> Any:
+        known = (targets >= 0) * weights
         per = bce(logits.float(), targets.clamp(min=0)) * known
-        return per.sum() / known.sum().clamp(min=1)
+        return per.sum() / known.sum().clamp(min=1e-6)
 
     def scores(items: Sequence[Item]) -> tuple[list[float], list[float]]:
         model.eval()
@@ -171,7 +179,7 @@ def train(
         with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16, enabled=use_bf16):
             for i in range(0, len(order), cfg.batch_size):
                 idx = order[i : i + cfg.batch_size]
-                enc, _ = encode([items[j] for j in idx])
+                enc, _, _ = encode([items[j] for j in idx])
                 logits = model(**enc).logits.float()
                 for j, a, h in zip(idx, logits[:, 0].tolist(), logits[:, 1].tolist(), strict=True):
                     attack[j], harmful[j] = a, h
@@ -229,9 +237,9 @@ def train(
         loss_sum, n = carried if epoch == start_epoch else (0.0, 0)
         t0, seen = time.time(), 0
         for step in range(first, len(batches)):
-            enc, targets = encode([train_items[j] for j in batches[step]])
+            enc, targets, weights = encode([train_items[j] for j in batches[step]])
             with torch.autocast("cuda", dtype=torch.bfloat16, enabled=use_bf16):
-                loss = loss_of(model(**enc).logits, targets)
+                loss = loss_of(model(**enc).logits, targets, weights)
             if not torch.isfinite(loss):
                 where = f"epoch {epoch + 1} step {step}"
                 raise FloatingPointError(f"{cfg.base}: loss is {float(loss)} at {where}; "

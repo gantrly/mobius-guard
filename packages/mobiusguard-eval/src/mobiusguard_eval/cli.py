@@ -343,6 +343,23 @@ def _run(a: argparse.Namespace) -> int:
         step_judge(Path(a.data), Path(a.out), workers=a.workers, limit=a.limit)
     elif cmd == "apply-judges":
         step_apply_judges(Path(a.data), Path(a.judged), Path(a.out))
+    elif cmd == "augment":
+        from .augment import augment
+
+        summary = augment(Path(a.data), Path(a.out))
+        log(f"augment: wrote {a.out}: {json.dumps(summary['counts'])}")
+    elif cmd == "extend-suite":
+        from .augment import extend_suite
+
+        manifest = extend_suite(Path(a.suite), Path(a.out))
+        log(f"extend-suite: wrote {a.out}: {json.dumps(manifest['added'])}")
+    elif cmd == "gate":
+        from .gate import gate
+
+        ok = gate(Path(a.report), a.baseline, a.candidate, Path(a.out))
+        log(f"gate: {'PASS' if ok else 'FAIL'}, see {a.out}/gate.md")
+        if not ok:
+            raise SystemExit(1)
     elif cmd == "export":
         step_export(Path(a.model), Path(a.out), val=Path(a.val) if a.val else None,
                     threads=a.threads)  # fmt: skip
@@ -451,6 +468,20 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("apply-judges", help="clean a training build with saved judge labels")
     p.add_argument("--data", required=True)
     p.add_argument("--judged", required=True, help="the judge run's directory")
+    p.add_argument("--out", required=True)
+
+    p = sub.add_parser("augment", help="disguised copies (both labels) and group weights")
+    p.add_argument("--data", required=True, help="a cleaned training set")
+    p.add_argument("--out", required=True)
+
+    p = sub.add_parser("extend-suite", help="the suite plus harmless disguised and dev sets")
+    p.add_argument("--suite", required=True)
+    p.add_argument("--out", required=True)
+
+    p = sub.add_parser("gate", help="pass/fail: does a candidate beat the baseline")
+    p.add_argument("--report", required=True, help="a report holding both detectors")
+    p.add_argument("--baseline", required=True, help="detector name in the report")
+    p.add_argument("--candidate", required=True, help="detector name in the report")
     p.add_argument("--out", required=True)
 
     p = sub.add_parser("export", help="ONNX + INT8 export of a trained model, with checks")
