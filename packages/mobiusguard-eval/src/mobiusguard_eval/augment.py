@@ -137,11 +137,16 @@ def weigh(it: Item, w: float) -> Item:
     return replace(it, meta={**it.meta, "weight": f"{w:.4f}"})
 
 
-def augment(data: Path, out: Path) -> dict[str, Any]:
+def augment(data: Path, out: Path, *, exclude: Sequence[str] = (),
+            weight: float | None = None) -> dict[str, Any]:  # fmt: skip
     """Write ``out/{train,val}.jsonl`` and ``summary.json``: the items of ``data`` with
-    their group weights, plus one disguised copy for the picked items."""
-    parts = {p: list(read_jsonl(data / f"{p}.jsonl")) for p in ("train", "val")}
-    w = group_weight([it for items in parts.values() for it in items])
+    their group weights, plus one disguised copy for the picked items.
+
+    ``exclude`` leaves sources out (to find which ones move a result); ``weight`` fixes the
+    group weight instead of computing it, so leaving sources out changes nothing else."""
+    parts = {p: [it for it in read_jsonl(data / f"{p}.jsonl") if it.source not in exclude]
+             for p in ("train", "val")}  # fmt: skip
+    w = weight if weight is not None else group_weight([it for v in parts.values() for it in v])
     out.mkdir(parents=True, exist_ok=True)
     counts: Counter[str] = Counter()
     ids: list[str] = []
@@ -168,6 +173,7 @@ def augment(data: Path, out: Path) -> dict[str, Any]:
             "held_out": HELD_OUT,
             "dev_group": sorted(DEV_GROUP),
             "dev_group_weight": round(w, 4),
+            "excluded": sorted(exclude),
         },
         "counts": dict(sorted(counts.items())),
         # IDs and weights: two sets with the same items but other weights are other data.

@@ -170,3 +170,19 @@ def test_the_gate_fails_a_regression_on_a_plain_family(tmp_path: Path) -> None:
     report = _report(tmp_path, _detector(0.94, 0.995, 5), cand)
     failed = [c.name for c in gate.checks(report, "b", "c") if not c.passed]
     assert failed == ["gandalf caught"]
+
+
+def test_excluded_sources_are_left_out_and_a_fixed_weight_is_kept(tmp_path: Path) -> None:
+    data = tmp_path / "clean"
+    data.mkdir()
+    items = [_item(i, 0, "hermes_fc") for i in range(50)] + [
+        _item(i, 0, "magicoder") for i in range(50)
+    ]
+    write_jsonl(data / "train.jsonl", items)
+    write_jsonl(data / "val.jsonl", [])
+    (data / "summary.json").write_text(json.dumps({"ids_sha256": "x"}))
+    s = augment.augment(data, tmp_path / "aug", exclude=["hermes_fc"], weight=0.5)
+    out = list(read_jsonl(tmp_path / "aug" / "train.jsonl"))
+    assert {it.source for it in out} == {"magicoder"}
+    assert {it.meta["weight"] for it in out} == {"0.5000"}
+    assert s["augment"]["excluded"] == ["hermes_fc"]

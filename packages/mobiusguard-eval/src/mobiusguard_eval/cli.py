@@ -346,7 +346,8 @@ def _run(a: argparse.Namespace) -> int:
     elif cmd == "augment":
         from .augment import augment
 
-        summary = augment(Path(a.data), Path(a.out))
+        summary = augment(Path(a.data), Path(a.out), weight=a.group_weight,
+                          exclude=[s for s in a.exclude.split(",") if s])  # fmt: skip
         log(f"augment: wrote {a.out}: {json.dumps(summary['counts'])}")
     elif cmd == "extend-suite":
         from .augment import extend_suite
@@ -473,6 +474,8 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("augment", help="disguised copies (both labels) and group weights")
     p.add_argument("--data", required=True, help="a cleaned training set")
     p.add_argument("--out", required=True)
+    p.add_argument("--exclude", default="", help="comma-separated sources to leave out")
+    p.add_argument("--group-weight", type=float, help="fix the developer group's weight")
 
     p = sub.add_parser("extend-suite", help="the suite plus harmless disguised and dev sets")
     p.add_argument("--suite", required=True)
