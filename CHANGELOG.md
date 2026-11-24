@@ -53,6 +53,11 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
   - `gate`: pass or fail of a candidate model against a baseline;
   - `local-views:DIR`: scores a trained model on every view of a text, as the proxy does.
   - Training reads a per-item loss weight.
+- `policy.classifier_long = "windows"` (off by default,
+  [decision 0018](docs/decisions/0018-long-inputs-in-windows.md)): a text over 512 tokens
+  is scored in overlapping windows, and the highest score counts, so an injection near the
+  end of a long document is seen. Each extra window costs one more classifier call. It stays
+  off until its effect on false positives is measured.
 - `scripts/dev_check.py`: scores the eight developer messages of the 2026-11-07 live check
   with any Fortress model or export.
 

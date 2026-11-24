@@ -52,15 +52,17 @@ class NormalizedClassifier(HFClassifier):
     """A pretrained classifier scored on every view of a text; the highest score counts."""
 
     def __init__(self, key: str = "", *, spec: HFModel | None = None, device: str = "cpu",
-                 batch_size: int = 32) -> None:  # fmt: skip
+                 batch_size: int = 32, windows: bool = False) -> None:  # fmt: skip
         spec = spec or HF_MODELS[key]
-        super().__init__(spec, device=device, batch_size=batch_size)
-        self.name = f"{key}-norm" if key else spec.name.replace("local:", "local-views:", 1)
+        super().__init__(spec, device=device, batch_size=batch_size, windows=windows)
+        prefix = "local-views+windows:" if windows else "local-views:"
+        self.name = f"{key}-norm" if key else spec.name.replace("local:", prefix, 1)
 
     @classmethod
-    def local(cls, path: str, *, device: str = "cpu", batch_size: int = 32) -> NormalizedClassifier:
+    def local(cls, path: str, *, device: str = "cpu", batch_size: int = 32,
+              windows: bool = False) -> NormalizedClassifier:  # fmt: skip
         """A model trained here (``local:DIR``), given every view of each text."""
-        return cls(spec=local_spec(path), device=device, batch_size=batch_size)
+        return cls(spec=local_spec(path), device=device, batch_size=batch_size, windows=windows)
 
     def fingerprint(self) -> dict[str, str]:
         return {**super().fingerprint(), "views": "original+normalized+base64, max"}

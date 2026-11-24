@@ -22,6 +22,7 @@ classifier_action = "block"      # block | log: what an attack score over the th
 classifier_threshold = ""        # attack log-odds; "" = the model's own (Fortress), or for
                                  # PIGuard / ProtectAI v2: log scores, never block on them
 classifier_views = "all"         # all | original: score every view of a text, or only itself
+classifier_long = "cut"          # cut | windows: score a text over 512 tokens in windows
 harmful = "log"                  # block | log | off: Fortress's harmful-request output
 harmful_threshold = ""           # harmful log-odds; "" = the model's own
 on_error = "block"               # block | allow: what happens when a detector fails
@@ -130,6 +131,14 @@ costs one more classifier call; about 1 in 6 ordinary messages has one. The harm
 always scores the original text. `classifier_views = "original"` scores only the original,
 at the model's own thresholds. With your own `classifier_threshold`, every view is scored
 at that threshold.
+
+**Long text.** The classifier reads 512 tokens, about 2,000 characters of English. By
+default a longer text is cut, so an injection near the end of a long document or email is
+not seen. `classifier_long = "windows"` scores the text in overlapping windows of 512
+tokens instead (128 tokens shared between neighbours) and keeps the highest score. Each
+extra window costs one more classifier call, about 180 ms on 4 CPU threads, and a long
+harmless text gets more chances to score high. It is off by default until its effect on
+false positives is measured ([decision 0018](decisions/0018-long-inputs-in-windows.md)).
 
 A score over a threshold whose action is `log` is recorded in the audit log's `flagged`
 list without blocking. Run with `classifier_action = "log"` for a few days to see what the

@@ -240,3 +240,59 @@ def test_texts_are_scored_one_at_a_time_by_default(tmp_path: Path) -> None:
 
     c = OnnxClassifier(ONNX_MODELS["fortress-xs"], directory=str(tmp_path))
     assert c.batch_size == 1
+
+
+def _counting_model(d: Path) -> None:
+    """The tiny model, but attack = how many times "world" (id 5) is in the window."""
+    _tiny_model(d)
+    onnx = pytest.importorskip("onnx")
+    h = onnx.helper
+    graph = h.make_graph(
+        [
+            h.make_node("Equal", ["input_ids", "world"], ["is_world"]),
+            h.make_node("Cast", ["is_world"], ["f"], to=onnx.TensorProto.FLOAT),
+            h.make_node("ReduceSum", ["f", "axes"], ["n"], keepdims=1),
+            h.make_node("Mul", ["n", "w"], ["logits"]),
+        ],
+        "counting",
+        [h.make_tensor_value_info("input_ids", onnx.TensorProto.INT64, ["b", "s"]),
+         h.make_tensor_value_info("attention_mask", onnx.TensorProto.INT64, ["b", "s"])],
+        [h.make_tensor_value_info("logits", onnx.TensorProto.FLOAT, ["b", 2])],
+        [h.make_tensor("axes", onnx.TensorProto.INT64, [1], [1]),
+         h.make_tensor("w", onnx.TensorProto.FLOAT, [2], [1.0, -1.0]),
+         h.make_tensor("world", onnx.TensorProto.INT64, [], [5])],
+    )  # fmt: skip
+    model = h.make_model(graph, opset_imports=[h.make_opsetid("", 17)])
+    model.ir_version = 8
+    onnx.save(model, str(d / "model.int8.onnx"))
+
+
+@pytest.mark.parametrize("batch_size", [1, 3])
+def test_windows_see_the_end_of_a_long_text(tmp_path: Path, batch_size: int) -> None:
+    _counting_model(tmp_path)  # max_length 6: [CLS] + 4 words + [SEP] per window
+    from mobiusguard.classifier import ONNX_MODELS, OnnxClassifier
+
+    spec = ONNX_MODELS["fortress-xs"]
+    texts = [" ".join(["hello"] * 20 + ["world", "world"]), "world hello", "hello"]
+    cut = OnnxClassifier(spec, directory=str(tmp_path), batch_size=batch_size)
+    win = OnnxClassifier(spec, directory=str(tmp_path), batch_size=batch_size, windows=True)
+    assert [a for a, _ in cut.score_texts(texts)] == [0.0, 1.0, 0.0]  # the end is cut off
+    assert win.score_texts(texts) == [(2.0, 0.0), (1.0, -1.0), (0.0, 0.0)]
+
+
+def test_windows_take_the_highest_score_of_each_output_per_text() -> None:
+    from mobiusguard.classifier import max_by_owner, window_stride
+
+    assert max_by_owner([0, 0, 1, 0], [1.0, 3.0, -2.0, 2.0], 2) == [3.0, -2.0]
+    assert (window_stride(512), window_stride(6)) == (128, 1)
+
+
+def test_the_config_reads_classifier_long(tmp_path: Path) -> None:
+    from mobiusguard.config import load
+
+    p = tmp_path / "c.toml"
+    p.write_text('[policy]\nclassifier_long = "windows"\n')
+    assert load(p, env={}).policy.classifier_long == "windows"
+    p.write_text('[policy]\nclassifier_long = "slide"\n')
+    with pytest.raises(ValueError, match="cut or windows"):
+        load(p, env={})

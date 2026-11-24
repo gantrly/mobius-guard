@@ -166,10 +166,12 @@ def _load_scorer(cfg: Config) -> tuple[Scorer | None, dict[str, float], dict[str
     from .classifier import HF_MODELS, ONNX_MODELS, HFClassifier, OnnxClassifier
 
     if name in ONNX_MODELS:
-        onnx = OnnxClassifier(ONNX_MODELS[name], directory=cfg.policy.classifier_dir)
+        windows = cfg.policy.classifier_long == "windows"
+        onnx = OnnxClassifier(ONNX_MODELS[name], directory=cfg.policy.classifier_dir,
+                              windows=windows)  # fmt: skip
         return onnx.score_texts, onnx.thresholds, onnx.views_thresholds
     if name not in HF_MODELS:
         known = sorted([*ONNX_MODELS, *HF_MODELS])
         raise ValueError(f"unknown classifier {name!r}; choose from {known}")
-    model: Any = HFClassifier(HF_MODELS[name])
+    model: Any = HFClassifier(HF_MODELS[name], windows=cfg.policy.classifier_long == "windows")
     return model.score_texts, {}, None

@@ -25,6 +25,7 @@ class HFClassifier(_ProxyClassifier):
             "max_length": str(self.spec.max_length),
             "device": self.device.split(":")[0],
             "output": "log-odds",
+            **({"long": "windows"} if self.windows else {}),
         }
 
     def groups(self, items: Sequence[Item]) -> list[tuple[str, list[int]]]:
@@ -40,11 +41,15 @@ class HFClassifier(_ProxyClassifier):
         return result
 
 
-def local_classifier(path: str, *, device: str = "cpu", batch_size: int = 32) -> HFClassifier:
+def local_classifier(path: str, *, device: str = "cpu", batch_size: int = 32,
+                     windows: bool = False) -> HFClassifier:  # fmt: skip
     """A model trained here (``train``), from its directory; ``DIR#harmful`` scores its
     harmful output instead of the attack output. Its fingerprint holds the weights' hash,
     so a retrained model is never mistaken for the old one's scores."""
-    return HFClassifier(local_spec(path), device=device, batch_size=batch_size)
+    c = HFClassifier(local_spec(path), device=device, batch_size=batch_size, windows=windows)
+    if windows:
+        c.name = c.name.replace("local:", "local+windows:", 1)
+    return c
 
 
 def local_spec(path: str) -> HFModel:

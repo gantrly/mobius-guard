@@ -9,6 +9,12 @@ run downloaded code: the class is re-implemented below from the pinned ``modelin
 DeBERTa-v2 encoder, the first token's hidden state, one linear layer) and only the weights
 are downloaded. Scores are log-odds of the attack label (higher = more likely an attack).
 The evaluation harness measures this same code.
+
+**Long inputs.** By default a text longer than the model's 512 tokens is cut, so an
+injection at the end of a long document is never seen. With ``windows=True`` (the policy's
+``classifier_long = "windows"``), the text is scored in overlapping windows of 512 tokens,
+``WINDOW_STRIDE`` tokens shared between neighbours, and the highest score counts. Each extra
+window costs one more model call. Short texts score exactly as before.
 """
 
 from __future__ import annotations
@@ -19,6 +25,21 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+WINDOW_STRIDE = 128  # tokens shared by neighbouring windows, so no phrase is only ever split
+
+
+def window_stride(max_length: int) -> int:
+    """``WINDOW_STRIDE``, or a quarter of the window for a model with short inputs."""
+    return min(WINDOW_STRIDE, max_length // 4)
+
+
+def max_by_owner(owners: Sequence[int], values: Sequence[float], n: int) -> list[float]:
+    """The highest value per owner (a text's windows share an owner)."""
+    best = [float("-inf")] * n
+    for o, v in zip(owners, values, strict=True):
+        best[o] = max(best[o], v)
+    return best
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,9 +89,11 @@ def _piguard_class(transformers: Any, torch: Any) -> Any:
 
 
 class HFClassifier:
-    def __init__(self, spec: HFModel, *, device: str = "cpu", batch_size: int = 32) -> None:
+    def __init__(self, spec: HFModel, *, device: str = "cpu", batch_size: int = 32,
+                 windows: bool = False) -> None:  # fmt: skip
         self.spec = spec
         self.name = spec.name
+        self.windows = windows
         self.device = device
         self.batch_size = batch_size
         self.torch: Any = importlib.import_module("torch")
@@ -108,8 +131,10 @@ class HFClassifier:
             "transformers": self.transformers.__version__,
             "max_length": str(self.spec.max_length),
             "score": "log-odds of the attack label",
-            "truncation": "longer inputs are cut to max_length tokens (the model card usage)",
-        }
+            "truncation": (f"overlapping windows of max_length tokens (stride {WINDOW_STRIDE}),"
+                           " highest score" if self.windows else
+                           "longer inputs are cut to max_length tokens (the model card usage)"),
+        }  # fmt: skip
         if self.device.startswith("cuda"):
             info["gpu"] = t.cuda.get_device_name(0)
         else:
@@ -121,26 +146,31 @@ class HFClassifier:
         out: list[float] = []
         with t.inference_mode():
             for i in range(0, len(texts), self.batch_size):
-                enc = self.tokenizer(
-                    list(texts[i : i + self.batch_size]),
-                    truncation=True,
-                    max_length=self.spec.max_length,
-                    padding=True,
-                    return_tensors="pt",
-                ).to(self.device)
+                chunk = list(texts[i : i + self.batch_size])
+                extra: dict[str, Any] = (
+                    {"stride": window_stride(self.spec.max_length),
+                     "return_overflowing_tokens": True}
+                    if self.windows else {}
+                )  # fmt: skip
+                enc = self.tokenizer(chunk, truncation=True, max_length=self.spec.max_length,
+                                     padding=True, return_tensors="pt", **extra)  # fmt: skip
+                owners = (enc.pop("overflow_to_sample_mapping").tolist() if self.windows
+                          else list(range(len(chunk))))  # fmt: skip
+                enc = enc.to(self.device)
                 logits = self.model(
                     input_ids=enc["input_ids"], attention_mask=enc["attention_mask"]
                 ).logits
                 if self.multi_label:  # independent sigmoid outputs: the logit is the log-odds
-                    out.extend(float(v) for v in logits[:, self.positive].double().cpu().tolist())
-                    continue
-                # Log-odds of the positive label, not its probability: probabilities round to
-                # exactly 1.0 in float32 for confident inputs, and ties can't be thresholded.
-                lp = t.log_softmax(logits.double(), dim=-1)
-                rest = t.logsumexp(
-                    t.cat([lp[:, : self.positive], lp[:, self.positive + 1 :]], dim=-1), dim=-1
-                )
-                out.extend(float(v) for v in (lp[:, self.positive] - rest).cpu().tolist())
+                    vals = [float(v) for v in logits[:, self.positive].double().cpu().tolist()]
+                else:
+                    # Log-odds of the positive label, not its probability: probabilities round
+                    # to exactly 1.0 in float32 for confident inputs; ties can't be thresholded.
+                    lp = t.log_softmax(logits.double(), dim=-1)
+                    rest = t.logsumexp(
+                        t.cat([lp[:, : self.positive], lp[:, self.positive + 1 :]], dim=-1), dim=-1
+                    )
+                    vals = [float(v) for v in (lp[:, self.positive] - rest).cpu().tolist()]
+                out.extend(max_by_owner(owners, vals, len(chunk)))
         return out
 
 
@@ -180,7 +210,13 @@ class OnnxClassifier:
     rate named in ``fortress.json``), set on ordinary user messages."""
 
     def __init__(
-        self, spec: OnnxModel, *, directory: str = "", threads: int = 0, batch_size: int = 1
+        self,
+        spec: OnnxModel,
+        *,
+        directory: str = "",
+        threads: int = 0,
+        batch_size: int = 1,
+        windows: bool = False,
     ) -> None:
         # One text per run by default: dynamic INT8 quantizes each batch as a whole, so in a
         # batch a text's score moves (up to ~0.5 log-odds) with its neighbours and padding.
@@ -216,9 +252,13 @@ class OnnxClassifier:
         tok: Any = importlib.import_module("tokenizers").Tokenizer.from_file(
             str(d / "tokenizer.json")
         )
-        tok.enable_truncation(self.max_length)
+        self.windows = windows
+        tok.enable_truncation(
+            self.max_length, stride=window_stride(self.max_length) if windows else 0
+        )
         pad = "[PAD]"  # a token name, not a secret
-        tok.enable_padding(pad_id=tok.token_to_id(pad), pad_token=pad)
+        self.pad_id: int = tok.token_to_id(pad)
+        tok.enable_padding(pad_id=self.pad_id, pad_token=pad)
         self.tokenizer = tok
         opts = ort.SessionOptions()
         if threads:
@@ -234,6 +274,8 @@ class OnnxClassifier:
         out: list[tuple[float, float]] = [(0.0, 0.0)] * len(texts)
         # Sort by length so batches pad less; return in the given order.
         order = sorted(range(len(texts)), key=lambda i: len(texts[i]))
+        if self.windows:
+            return self._score_windows(texts, order, a, h)
         for i in range(0, len(order), self.batch_size):
             idx = order[i : i + self.batch_size]
             enc = self.tokenizer.encode_batch([texts[k] for k in idx])
@@ -245,3 +287,34 @@ class OnnxClassifier:
             for k, row in zip(idx, logits.tolist(), strict=True):
                 out[k] = (float(row[a]), float(row[h]))
         return out
+
+    def _score_windows(
+        self, texts: Sequence[str], order: Sequence[int], a: int, h: int
+    ) -> list[tuple[float, float]]:
+        """Every window of every text, ``batch_size`` windows per run; the highest score of
+        a text's windows counts, per output."""
+        np = self.np
+        owners: list[int] = []
+        wins: list[tuple[list[int], list[int]]] = []
+        for k in order:
+            e = self.tokenizer.encode(texts[k])
+            for w in [e, *e.overflowing]:
+                owners.append(k)
+                wins.append((list(w.ids), list(w.attention_mask)))
+        attack: list[float] = []
+        harmful: list[float] = []
+        for i in range(0, len(wins), self.batch_size):
+            part = wins[i : i + self.batch_size]
+            n = max(len(ids) for ids, _ in part)
+            feed = {
+                "input_ids": np.array([ids + [self.pad_id] * (n - len(ids)) for ids, _ in part],
+                                      dtype=np.int64),
+                "attention_mask": np.array([m + [0] * (n - len(m)) for _, m in part],
+                                           dtype=np.int64),
+            }  # fmt: skip
+            for row in self.session.run(["logits"], feed)[0].tolist():
+                attack.append(float(row[a]))
+                harmful.append(float(row[h]))
+        best_a = max_by_owner(owners, attack, len(texts))
+        best_h = max_by_owner(owners, harmful, len(texts))
+        return list(zip(best_a, best_h, strict=True))
