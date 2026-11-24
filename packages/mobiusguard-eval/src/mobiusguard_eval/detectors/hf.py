@@ -14,7 +14,7 @@ from mobiusguard.classifier import HFClassifier as _ProxyClassifier
 from ..items import Item
 from . import chunks
 
-__all__ = ["HF_MODELS", "HFClassifier", "HFModel", "local_classifier"]
+__all__ = ["HF_MODELS", "HFClassifier", "HFModel", "local_classifier", "local_spec"]
 
 
 class HFClassifier(_ProxyClassifier):
@@ -44,13 +44,17 @@ def local_classifier(path: str, *, device: str = "cpu", batch_size: int = 32) ->
     """A model trained here (``train``), from its directory; ``DIR#harmful`` scores its
     harmful output instead of the attack output. Its fingerprint holds the weights' hash,
     so a retrained model is never mistaken for the old one's scores."""
+    return HFClassifier(local_spec(path), device=device, batch_size=batch_size)
+
+
+def local_spec(path: str) -> HFModel:
+    """The model spec of a directory trained here; named after the directory's parent."""
     path, _, output = path.partition("#")
     d = Path(path)
     h = hashlib.sha256()
     for f in sorted(d.glob("*.safetensors")) + sorted(d.glob("*.bin")):
         h.update(f.read_bytes())
     label = output or "attack"
-    spec = HFModel(name=f"local:{d.parent.name}#{label}", repo=str(d),
+    return HFModel(name=f"local:{d.parent.name}#{label}", repo=str(d),
                    revision=h.hexdigest()[:40], licence="Apache-2.0",
                    positive_label=label)  # fmt: skip
-    return HFClassifier(spec, device=device, batch_size=batch_size)

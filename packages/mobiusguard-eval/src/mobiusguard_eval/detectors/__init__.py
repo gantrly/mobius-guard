@@ -93,6 +93,11 @@ def get(name: str, *, device: str = "cpu", batch_size: int = 32) -> Detector:
     factories["mobiusguard-rules"] = rules
     factories["protectai-v2-norm"] = norm("protectai-v2")
     factories["piguard-norm"] = norm("piguard")
+    if name.startswith("local-views:"):
+        from .proxy import NormalizedClassifier
+
+        return NormalizedClassifier.local(name.removeprefix("local-views:"), device=device,
+                                          batch_size=batch_size)  # fmt: skip
     if name.startswith("local:"):
         from .hf import local_classifier
 

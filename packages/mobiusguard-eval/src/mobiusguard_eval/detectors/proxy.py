@@ -6,6 +6,8 @@
 - ``<model>-norm``: a pretrained classifier given every view of each text (original,
   normalised, decoded base64) with the highest score kept, to show what normalisation
   alone does for an existing model.
+- ``local-views:DIR``: a model trained here, scored the same way: what the proxy does
+  with Fortress (decision 0015).
 """
 
 from __future__ import annotations
@@ -18,7 +20,7 @@ from mobiusguard.rules import RULES, check
 
 from ..items import Item
 from . import chunks
-from .hf import HF_MODELS, HFClassifier
+from .hf import HF_MODELS, HFClassifier, HFModel, local_spec
 
 
 class RulesDetector:
@@ -49,9 +51,16 @@ class RulesDetector:
 class NormalizedClassifier(HFClassifier):
     """A pretrained classifier scored on every view of a text; the highest score counts."""
 
-    def __init__(self, key: str, *, device: str = "cpu", batch_size: int = 32) -> None:
-        super().__init__(HF_MODELS[key], device=device, batch_size=batch_size)
-        self.name = f"{key}-norm"
+    def __init__(self, key: str = "", *, spec: HFModel | None = None, device: str = "cpu",
+                 batch_size: int = 32) -> None:  # fmt: skip
+        spec = spec or HF_MODELS[key]
+        super().__init__(spec, device=device, batch_size=batch_size)
+        self.name = f"{key}-norm" if key else spec.name.replace("local:", "local-views:", 1)
+
+    @classmethod
+    def local(cls, path: str, *, device: str = "cpu", batch_size: int = 32) -> NormalizedClassifier:
+        """A model trained here (``local:DIR``), given every view of each text."""
+        return cls(spec=local_spec(path), device=device, batch_size=batch_size)
 
     def fingerprint(self) -> dict[str, str]:
         return {**super().fingerprint(), "views": "original+normalized+base64, max"}
