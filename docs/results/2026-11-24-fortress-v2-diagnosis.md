@@ -140,11 +140,37 @@ Gandalf and look-alike gaps against the 3-epoch v1, so those two are an effect o
 run. The first three come with v2's new data, as B shows, and the group weight did not fix
 them.
 
+## 4. Which v2 sources cause the rest
+
+These runs used the same 1-epoch budget and the same scoring (as the proxy runs it). Each
+leaves out one group of v2 sources, with C's group weight kept (commit `fb2dbac`).
+
+| | v1 | A (v1 data) | C (all v3) | D (no tool-call) | E (no code) | G (neither) |
+|---|---:|---:|---:|---:|---:|---:|
+| LLMail attacks caught | 43.6 | 52.4 | 34.2 | 50.5 | 30.7 | 26.1 |
+| jackhhao harmless prompts blocked | 1.3 | 1.0 | 6.0 | 6.0 | 4.6 | 2.7 |
+| Developer check (of 8) blocked | 5 | 5 | 4 | 6 | 4 | 5 |
+| Checks passed against v1 (of 35) | | | 30 | 31 | 30 | 28 |
+
+- **LLMail:** the tool-call sources pull it down. Without them it recovers above v1.
+- **The developer check:** the same tool-call sources help it.
+- **The jackhhao harmless prompts:** the code sources cause part of the rise.
+- **The messages no model passes:** three of the eight are blocked by every model, v1
+  included: the two "Call save_note…" requests and "my key is …". Removing sources only
+  trades one result for another, because the classifier does not know whether a text is
+  the user's request or part of a document.
+- **Noise:** LLMail ranges from 26% to 52% across these single-seed, 1-epoch runs, so part
+  of that spread may be noise.
+
+**The full run (2026-11-24 evening):** recipe D, with seed 0 and 3 epochs (one seed: see
+decision 0017). It is gated against v1 as the proxy runs it, harmful checks included,
+with the INT8 developer check. Its results go in a later note.
+
 ## What follows
 
-- **Step 2:** two more 1-epoch runs, without the tool-call sources and without the code
-  sources, with C's group weight kept. They show which group causes the LLMail, jackhhao and
-  developer-check regressions.
+- **Tell the classifier where a text comes from:** the user's turn, a tool result or a
+  document. This is the fix that can serve both LLMail and the developer check. It needs a
+  design decision first.
 - **The full 3-seed run** (about 5.5 h) only when a 1-epoch candidate passes against A, and
   a release only when it passes against the released v1 as the proxy runs it.
 - **Model card and user docs:** v1's false positives on disguised harmless text belong in
