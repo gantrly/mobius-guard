@@ -38,6 +38,23 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
   (`LIVE_OVERHEAD`). [Results with Fortress-XS](docs/results/2026-11-07-live-check-fortress.md):
   the proxy adds about 9 ms, and Fortress-XS blocks some harmless developer-style messages
   (keys, databases, tokens, tool calls), now listed in its model card's limits.
+- **Fortress-XS v1 blocks most harmless text written in a disguise.** Measured 2026-11-24
+  on 1,000 harmless messages: 94% are blocked once spaced out letter by letter, 79% in
+  leetspeak and 17% with invisible characters. It caught spaced-out attacks by blocking
+  everything spaced, not by reading them
+  ([results](docs/results/2026-11-24-fortress-v2-diagnosis.md)). A retrained model that
+  fixes this is being tested ([decision 0017](docs/decisions/0017-disguises-carry-no-label.md)).
+- Harness, for training and gating Fortress models
+  ([decision 0017](docs/decisions/0017-disguises-carry-no-label.md)):
+  - `augment`: disguised training copies of attack and harmless items at the same rate,
+    and group weights;
+  - `extend-suite`: harmless disguised test sets and the developer messages added to a copy
+    of the suite;
+  - `gate`: pass or fail of a candidate model against a baseline;
+  - `local-views:DIR`: scores a trained model on every view of a text, as the proxy does.
+  - Training reads a per-item loss weight.
+- `scripts/dev_check.py`: scores the eight developer messages of the 2026-11-07 live check
+  with any Fortress model or export.
 
 ## 0.2.0 (2026-11-07)
 
