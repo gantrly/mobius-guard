@@ -186,3 +186,29 @@ def test_excluded_sources_are_left_out_and_a_fixed_weight_is_kept(tmp_path: Path
     assert {it.source for it in out} == {"magicoder"}
     assert {it.meta["weight"] for it in out} == {"0.5000"}
     assert s["augment"]["excluded"] == ["hermes_fc"]
+
+
+def _harmful_report(tmp_path: Path, cand_toxic: float, cand_orbench: float) -> Path:
+    def det(toxic: float, orbench: float) -> dict[str, object]:
+        fpr = {s: _rates(0.9) for s in gate.HARMFUL_REQUESTS}
+        fpr["orbench_toxic"] = _rates(toxic)
+        fpr |= {s: _rates(0.05) for s in gate.HARMFUL_HARMLESS}
+        fpr["orbench"] = _rates(orbench)
+        return {"fpr": fpr}
+
+    d = tmp_path / "harmful"
+    d.mkdir()
+    metrics = {"detectors": {"hb": det(0.9, 0.48), "hc": det(cand_toxic, cand_orbench)}}
+    (d / "metrics.json").write_text(json.dumps(metrics))
+    return d
+
+
+@pytest.mark.parametrize(("toxic", "orbench", "passes"),
+                         [(0.9, 0.40, True), (0.8, 0.40, False), (0.9, 0.55, False)])  # fmt: skip
+def test_the_harmful_checks_guard_harmful_recall_and_over_blocking(
+    tmp_path: Path, toxic: float, orbench: float, passes: bool
+) -> None:
+    report = _report(tmp_path, _detector(0.94, 0.995, 5), _detector(0.02, 0.50, 1))
+    harmful = (_harmful_report(tmp_path, toxic, orbench), "hb", "hc")
+    assert gate.gate(report, "b", "c", tmp_path / "out", harmful=harmful) is passes
+    assert "harmful: orbench blocked" in (tmp_path / "out" / "gate.md").read_text()

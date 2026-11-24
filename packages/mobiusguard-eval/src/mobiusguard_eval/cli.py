@@ -357,7 +357,10 @@ def _run(a: argparse.Namespace) -> int:
     elif cmd == "gate":
         from .gate import gate
 
-        ok = gate(Path(a.report), a.baseline, a.candidate, Path(a.out))
+        harmful = None
+        if a.harmful_report:
+            harmful = (Path(a.harmful_report), a.harmful_baseline, a.harmful_candidate)
+        ok = gate(Path(a.report), a.baseline, a.candidate, Path(a.out), harmful=harmful)
         log(f"gate: {'PASS' if ok else 'FAIL'}, see {a.out}/gate.md")
         if not ok:
             raise SystemExit(1)
@@ -486,6 +489,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--baseline", required=True, help="detector name in the report")
     p.add_argument("--candidate", required=True, help="detector name in the report")
     p.add_argument("--out", required=True)
+    p.add_argument("--harmful-report", help="a report of both models' #harmful scores")
+    p.add_argument("--harmful-baseline", help="detector name in the harmful report")
+    p.add_argument("--harmful-candidate", help="detector name in the harmful report")
 
     p = sub.add_parser("export", help="ONNX + INT8 export of a trained model, with checks")
     p.add_argument("--model", required=True, help="a trained model directory (best/ or partial/)")
