@@ -74,11 +74,12 @@ Four causes limit the model:
 | A2 | Measure long inputs in windows ([decision 0018](decisions/0018-long-inputs-in-windows.md)) on v3, then decide its default. No training. | **done** 2026-11-25: LLMail about +6 points, jackhhao harmless +0.9 for v3; **opt-in** (the maintainer's choice) |
 | A3 | Gate: compare look-alike letters (held out) with the candidate's own plain-text recall, as for the other disguises, since v1's number there is a shortcut | **done** 2026-11-25 |
 | A4 | Gate v3 with A1–A3 against v1; releasing v3 is the maintainer's decision | **done** 2026-11-25 ([results](results/2026-11-25-fortress-deployment-thresholds.md)): 38 of 41 checks pass against v1 as shipped; fails on the developer check (2 of 8, bar 1), jackhhao harmless prompts (3.2–4.1% against 1.3%) and OR-Bench in the harmful output (51.0% against 50.9%) |
-| B1 | Role marking: training items tagged user, tool result or document, and the proxy passes the tag (design note first). Train on real tool outputs as harmless text, and set the tool threshold on a larger tool-output set | v3.1 |
-| B2 | Find which source (`wildchat_dev` or `dev_secrets`) raises the harmless jackhhao blocks; filter it, do not drop it | v3.1 |
-| B3 | Honest screening: a development split for comparing candidates, the suite's test half for the final check only, 3 seeds per screening run | v3.1 |
-| C1 | DeBERTa-v3-base as a teacher, distilled into xsmall (same speed) | v4 |
-| C2 | A larger held-out indirect-injection test set (BIPIA has 125 attacks) | v4 |
+| B1 | Role marking: training items tagged user, tool result or document, and the proxy passes the tag (design note first). Train on real tool outputs as harmless text, and set the tool threshold on a larger tool-output set | **built and screened** 2026-11-25 ([decision 0020](decisions/0020-role-marking.md), [results](results/2026-11-25-fortress-role-marking.md)): BIPIA 12 → 48%, jackhhao harmless fixed; the developer check is not fixed and harmful XSTest gets worse. **Stopped, not delivered** |
+| B2 | Find which source (`wildchat_dev` or `dev_secrets`) raises the harmless jackhhao blocks; filter it, do not drop it | **not needed**: role marking with the tool-call data back fixed the jackhhao blocks |
+| B3 | Honest screening: a development split for comparing candidates, the suite's test half for the final check only, 3 seeds per screening run | **done** 2026-11-25: `split-suite` (screening and final halves by cluster), multi-seed gate |
+| — | **Why the weak areas stopped moving** ([results](results/2026-11-25-fortress-role-marking.md#why-the-weak-areas-stopped-moving-2026-11-23-to-25)): the weak sets are small (8 to about 1,300 items) and noisy between seeds; they cannot be trained on; the developer check is 8 sentences; and the model is likely at its capacity. The data mix has stopped paying off | 2026-11-25 |
+| C1 | DeBERTa-v3-base as a teacher, distilled into xsmall (same speed) | v4: **next**, planned 2026-11-25 |
+| C2 | Larger held-out test sets: indirect injection (BIPIA has 125 attacks) and developer false positives (hundreds of real harmless developer messages; the 8-message check becomes a smoke test) | v4: **next**, with C1 |
 | — | The harmful output's over-blocking on prompts that only sound harmful (about 50% on OR-Bench hard). It only logs by default. | later |
 
 ## v0.3: reach

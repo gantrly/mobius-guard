@@ -1,8 +1,12 @@
 # 0020: Tell the classifier where a text comes from (role marking)
 
-- **Status:** accepted 2026-11-25. The maintainer asked for the best chance at a model that
-  can be published in one cycle. Built the same day: the proxy, the harness and the
-  training data.
+- **Status:** accepted and built 2026-11-25: the proxy, the harness and the training data.
+  One screening batch was run (candidate R, 2 seeds), and the line was then stopped: **not
+  trained further, not delivered**, the maintainer's decision.
+  [Results](../results/2026-11-25-fortress-role-marking.md): BIPIA 12% to 48%, and the
+  jackhhao harmless prompts back at v1's level. The developer check is not fixed, and the
+  harmful output over-blocks XSTest's safe prompts (15.8% against 7.3%). The code stays:
+  the proxy marks text only for a model whose `fortress.json` asks for it.
 - **Builds on:** [0017](0017-disguises-carry-no-label.md) (the gate),
   [0019](0019-per-role-thresholds.md) (per-role thresholds),
   [0018](0018-long-inputs-in-windows.md) (windows)
