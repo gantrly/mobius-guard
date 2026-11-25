@@ -55,6 +55,32 @@ Plan for the red-team loop: [decision 0014](decisions/0014-red-team-runner.md) (
 - Train a small permissive classifier (DeBERTa-v3-xsmall / mmBERT-small class) on the GPU
   box; INT8 ONNX; model card with held-out numbers.
 
+### Fortress: the improvement plan (agreed 2026-11-25)
+
+Based on the v2 diagnosis and the v3 run
+([v2](results/2026-11-24-fortress-v2-diagnosis.md), [v3](results/2026-11-25-fortress-v3.md)).
+Four causes limit the model:
+
+1. **It does not know where a text came from.** The same words are a request from the user
+   and an attack inside a document. This drives the LLMail, BIPIA and developer-check
+   trade-offs.
+2. **It learns shortcuts from how text looks.** Disguises did this, fixed in v3.
+3. **Single-seed, 1-epoch screening runs are noisy.**
+4. **The suite has been used to compare many candidates.**
+
+| Step | Work | Status |
+|---|---|---|
+| A1 | Thresholds per role: the proxy uses a higher threshold for the user's turn and a lower one for tool results and documents, each set on harmless text of that role. No training. | next |
+| A2 | Measure long inputs in windows ([decision 0018](decisions/0018-long-inputs-in-windows.md)) on v3, then decide its default. No training. | next |
+| A3 | Gate: compare look-alike letters (held out) with the candidate's own plain-text recall, as for the other disguises, since v1's number there is a shortcut | next |
+| A4 | Gate v3 with A1–A3 against v1; releasing v3 is the maintainer's decision | after A1–A3 |
+| B1 | Role marking: training items tagged user, tool result or document, and the proxy passes the tag (design note first) | v3.1 |
+| B2 | Find which source (`wildchat_dev` or `dev_secrets`) raises the harmless jackhhao blocks; filter it, do not drop it | v3.1 |
+| B3 | Honest screening: a development split for comparing candidates, the suite's test half for the final check only, 3 seeds per screening run | v3.1 |
+| C1 | DeBERTa-v3-base as a teacher, distilled into xsmall (same speed) | v4 |
+| C2 | A larger held-out indirect-injection test set (BIPIA has 125 attacks) | v4 |
+| — | The harmful output's over-blocking on prompts that only sound harmful (about 50% on OR-Bench hard). It only logs by default. | later |
+
 ## v0.3: reach
 
 - Dashboard.
