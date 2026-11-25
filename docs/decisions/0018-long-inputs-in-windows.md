@@ -1,7 +1,7 @@
 # 0018: Long inputs scored in windows (opt-in until measured)
 
-- **Status:** proposed, 2026-11-24. Built behind a setting that is off by default. The
-  default changes only after the measurement below, with the maintainer's choice.
+- **Status:** built 2026-11-24 and measured 2026-11-25, off by default. Turning it on by
+  default is the maintainer's choice.
 - **Builds on:** [0015](0015-classifier-sees-every-view.md) (the views the classifier
   scores)
 
@@ -37,3 +37,18 @@ Score the suite with and without windows. These detectors in the harness cover i
 
 If false positives rise, set a separate windows threshold on the same ordinary messages,
 as decision 0015 did for views.
+
+## Measured (2026-11-25, [results](../results/2026-11-25-fortress-deployment-thresholds.md))
+
+Scored as the proxy runs it, at the same thresholds (the thresholds did not need to be set
+again):
+
+| | v1 | v3 |
+|---|---:|---:|
+| LLMail caught: cut → windows | 43.6 → 49.9% | 43.4 → 49.0% |
+| BIPIA caught | 14.4 → 14.4% | 12.0 → 12.0% |
+| jackhhao harmless prompts blocked | 1.3 → 1.3% | 3.2 → 4.1% |
+| oasst1, NotInject, LLMail harmless emails blocked | unchanged | unchanged |
+
+So windows gain about 6 points on LLMail. For v3, the harmless jackhhao prompts blocked rise
+by 0.9 points, and long texts cost one model call per extra window.
