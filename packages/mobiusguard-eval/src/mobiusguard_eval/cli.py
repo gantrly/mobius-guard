@@ -354,6 +354,12 @@ def _run(a: argparse.Namespace) -> int:
 
         manifest = extend_suite(Path(a.suite), Path(a.out))
         log(f"extend-suite: wrote {a.out}: {json.dumps(manifest['added'])}")
+    elif cmd == "split-suite":
+        from .screening import split_suite
+
+        m = split_suite(Path(a.suite), Path(a.out))
+        log(f"split-suite: wrote {a.out}: screen {m['screen']['test_items']}, "
+            f"final {m['final']['test_items']} test items")  # fmt: skip
     elif cmd == "doc-calibration":
         from .roles import document_calibration
 
@@ -494,6 +500,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--suite", required=True)
     p.add_argument("--out", required=True)
 
+    p = sub.add_parser("split-suite", help="screening and final halves of a suite (by cluster)")
+    p.add_argument("--suite", required=True)
+    p.add_argument("--out", required=True)
+
     p = sub.add_parser("doc-calibration", help="harmless documents to set a document threshold on")
     p.add_argument("--data", required=True, help="a training set (its val split is used)")
     p.add_argument("--exclude-train", nargs="*", default=[], help="train.jsonl files to leave out")
@@ -508,11 +518,12 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("gate", help="pass/fail: does a candidate beat the baseline")
     p.add_argument("--report", required=True, help="a report holding both detectors")
     p.add_argument("--baseline", required=True, help="detector name in the report")
-    p.add_argument("--candidate", required=True, help="detector name in the report")
+    p.add_argument("--candidate", required=True, nargs="+",
+                   help="detector name in the report; several = seeds of one recipe")  # fmt: skip
     p.add_argument("--out", required=True)
     p.add_argument("--harmful-report", help="a report of both models' #harmful scores")
     p.add_argument("--harmful-baseline", help="detector name in the harmful report")
-    p.add_argument("--harmful-candidate", help="detector name in the harmful report")
+    p.add_argument("--harmful-candidate", nargs="+", help="names in the harmful report")
 
     p = sub.add_parser("export", help="ONNX + INT8 export of a trained model, with checks")
     p.add_argument("--model", required=True, help="a trained model directory (best/ or partial/)")

@@ -212,3 +212,22 @@ def test_the_harmful_checks_guard_harmful_recall_and_over_blocking(
     harmful = (_harmful_report(tmp_path, toxic, orbench), "hb", "hc")
     assert gate.gate(report, "b", "c", tmp_path / "out", harmful=harmful) is passes
     assert "harmful: orbench blocked" in (tmp_path / "out" / "gate.md").read_text()
+
+
+def test_a_check_must_pass_for_every_seed(tmp_path: Path) -> None:
+    good, bad = _detector(0.02, 0.50, 1), _detector(0.02, 0.50, 3)
+    report = _report(tmp_path, _detector(0.94, 0.995, 5), good)
+    m = json.loads((report / "metrics.json").read_text())
+    m["detectors"]["c2"] = bad
+    (report / "metrics.json").write_text(json.dumps(m))
+    rows = [json.loads(line) for line in (report / "scored_items.jsonl").open()]
+    for r in rows:
+        r["flagged_at_1pct"]["c2"] = r["flagged_at_1pct"]["c"]
+    with (report / "scored_items.jsonl").open("w") as f:
+        f.writelines(json.dumps(r) + "\n" for r in rows)
+    assert gate.gate(report, "b", ["c"], tmp_path / "one")
+    assert not gate.gate(report, "b", ["c", "c2"], tmp_path / "two")
+    out = json.loads((tmp_path / "two" / "gate.json").read_text())
+    dev = next(d for d in out["per_seed"] if d["name"].startswith("dev_check"))
+    assert dev["seeds"] == [1, 3]
+    assert dev["passed"] == [True, False]

@@ -24,6 +24,11 @@ calibration half. Intervals are the report's Wilson 95% intervals.
    lower bound; harmless prompts that sound harmful and ordinary messages
    (``HARMFUL_HARMLESS``) are blocked at most at the baseline's upper bound.
 
+**Seeds.** A candidate can be several seeds of the same recipe: a check passes only when it
+passes for every seed, and the table shows the seeds' mean (each seed's value is in
+``gate.json``). A single seed's run-to-run noise is large on small families: LLMail ranged
+from 26% to 52% over single-seed 1-epoch runs (2026-11-24).
+
 A disguised family's own recall is not compared with the baseline's: v1 caught 99.5% of
 spaced attacks by blocking 94% of everything spaced, and a model that reads through the
 disguise should score lower there.
@@ -33,6 +38,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -132,12 +138,37 @@ def harmful_checks(report: Path, baseline: str, candidate: str) -> list[Check]:
     return out
 
 
-def gate(report: Path, baseline: str, candidate: str, out: Path,
-         harmful: tuple[Path, str, str] | None = None) -> bool:  # fmt: skip
-    """``harmful`` = (report, baseline name, candidate name) of the ``#harmful`` scores."""
-    result = checks(report, baseline, candidate)
+def _merge(per_seed: list[list[Check]]) -> tuple[list[Check], list[dict[str, Any]]]:
+    """One check per name: passes when every seed passes; the candidate value is the mean."""
+    merged: list[Check] = []
+    detail: list[dict[str, Any]] = []
+    for group in zip(*per_seed, strict=True):
+        first = group[0]
+        mean = sum(ch.candidate for ch in group) / len(group)
+        rule = first.rule if len(group) == 1 else f"{first.rule} (every seed)"
+        merged.append(Check(first.name, first.baseline, round(mean, 4), rule,
+                            all(ch.passed for ch in group)))  # fmt: skip
+        detail.append({"name": first.name, "seeds": [ch.candidate for ch in group],
+                       "passed": [ch.passed for ch in group]})  # fmt: skip
+    return merged, detail
+
+
+def gate(report: Path, baseline: str, candidate: str | Sequence[str], out: Path,
+         harmful: tuple[Path, str, str | Sequence[str]] | None = None) -> bool:  # fmt: skip
+    """``candidate``: one detector name, or one per seed of the same recipe. ``harmful`` =
+    (report, baseline name, candidate name or names) of the ``#harmful`` scores, the
+    candidate names in the same seed order."""
+    cands = [candidate] if isinstance(candidate, str) else list(candidate)
+    per_seed = [checks(report, baseline, c) for c in cands]
     if harmful:
-        result += harmful_checks(*harmful)
+        h_report, h_base, h_cand = harmful
+        h_cands = [h_cand] if isinstance(h_cand, str) else list(h_cand)
+        if len(h_cands) != len(cands):
+            raise ValueError("give one harmful candidate per candidate seed")
+        per_seed = [r + harmful_checks(h_report, h_base, hc)
+                    for r, hc in zip(per_seed, h_cands, strict=True)]  # fmt: skip
+    result, detail = _merge(per_seed)
+    candidate = cands[0] if len(cands) == 1 else f"{cands[0]} (+{len(cands) - 1} seeds)"
     passed = all(ch.passed for ch in result)
     by: dict[bool, int] = defaultdict(int)
     for ch in result:
@@ -152,5 +183,6 @@ def gate(report: Path, baseline: str, candidate: str, out: Path,
     out.mkdir(parents=True, exist_ok=True)
     (out / "gate.md").write_text("\n".join(lines) + "\n")
     (out / "gate.json").write_text(json.dumps(
-        {"passed": passed, "checks": [asdict(ch) for ch in result]}, indent=2) + "\n")  # fmt: skip
+        {"passed": passed, "candidates": cands, "checks": [asdict(ch) for ch in result],
+         "per_seed": detail}, indent=2) + "\n")  # fmt: skip
     return passed
