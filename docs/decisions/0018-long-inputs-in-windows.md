@@ -1,7 +1,7 @@
 # 0018: Long inputs scored in windows (opt-in until measured)
 
-- **Status:** built 2026-11-24 and measured 2026-11-25, off by default. Turning it on by
-  default is the maintainer's choice.
+- **Status:** built 2026-11-24, measured 2026-11-25. **Opt-in** (the maintainer's choice,
+  2026-11-25): `classifier_long = "windows"`.
 - **Builds on:** [0015](0015-classifier-sees-every-view.md) (the views the classifier
   scores)
 

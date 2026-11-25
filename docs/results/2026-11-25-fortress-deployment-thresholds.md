@@ -59,12 +59,47 @@ false positives on the other half, then swapped the halves:
 - **What is not yet tested:** these documents come from the same sources as training. Other
   kinds of tool output, such as API JSON, search results or code, are not covered here.
 
+## Real tool output (added the same day): the document threshold is too strict
+
+The documents above are web pages, Markdown, emails and SEP data. A test on real tool
+output followed: 2,236 harmless tool outputs (API and function responses from glaive_fc,
+hermes_fc, toolace and toucan) and 16,585 harmless user requests to use tools. Neither
+model trained on them: v3's recipe leaves the tool-call sources out, and v1 never had them.
+
+| Harmless text | v1 | v3 |
+|---|---:|---:|
+| Tool outputs at the document threshold | 4.38% | 3.09% |
+| … toucan only (665) | 11.3% | 6.5% |
+| Tool outputs at the user threshold | 1.07% | 0.89% |
+| User requests to use tools, at the user threshold | 0.57% | 0.39% |
+
+So the document threshold blocks about 3% of real tool output, three times its target. The
+LLMail gain above (65–68%) carries that cost.
+
+**Set fairly** (`tool_mix.py`): the threshold is set at 1% on the documents plus half the
+tool outputs, split by cluster, and tested on the other half.
+
+| | v1, fold 1 / 2 | v3, fold 1 / 2 |
+|---|---|---|
+| Tool threshold | 1.50 / 1.91 | 0.22 / 1.86 |
+| Held-out tool outputs blocked | 1.76% / 1.36% | 2.46% / 1.00% |
+| LLMail caught | 51.6% / 49.0% | 56.5% / 50.6% |
+| BIPIA caught | 18.4% / 17.6% | 14.4% / 13.6% |
+
+- **The gain shrinks:** set this way, the per-role gain is about 7–13 points on LLMail,
+  close to what windows give.
+- **The threshold is unstable:** it swings between folds (0.22 against 1.86 for v3).
+  2,236 tool outputs from four sources are too few to fix a 1% threshold.
+- **Decision:** the tool threshold stays off by default
+  ([decision 0019](../decisions/0019-per-role-thresholds.md)). The lasting fix is to train
+  on tool outputs as harmless text, with each text's role marked (B1 in the ROADMAP).
+
 ## Reading the results
 
-- **Per-role thresholds are the largest gain measured so far,** for either model, with no
-  retraining. LLMail goes from 43–44% to 65–68%, and no harmless set gets worse. Harmless
-  documents score far lower than ordinary messages, so a document can be judged much more
-  strictly.
+- **Per-role thresholds help both models with no retraining, but less than the table
+  above shows.** Against the web and email documents alone, LLMail goes from 43–44% to
+  65–68%. Measured fairly, with real tool output, the gain is about 7–13 points, at 1–2.5%
+  of tool outputs blocked.
 - **Windows add about 6 points on LLMail.** For v3 they also raise the harmless jackhhao
   prompts blocked from 3.2% to 4.1%, and each extra window is one more model call.
 - **The fixes help both models equally,** so v3 against v1 is unchanged.

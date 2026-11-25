@@ -1,7 +1,7 @@
 # 0019: A separate attack threshold for tool results
 
-- **Status:** built and measured 2026-11-25. The default (on or off, and the value shipped
-  with Fortress) is the maintainer's choice.
+- **Status:** built and measured 2026-11-25. **Off by default** (the maintainer's choice of
+  the same day, after the tool-output check below). It can be set by hand.
 - **Builds on:** [0015](0015-classifier-sees-every-view.md) (every view, its own threshold),
   [0017](0017-disguises-carry-no-label.md) (the gate)
 
@@ -40,10 +40,28 @@ The proxy already knows each checked text's role: the user's turn or a tool resu
 | Held-out harmless documents blocked (two folds) | 1.03%, 0.89% | 1.03%, 0.89% |
 | LLMail's 160 harmless emails blocked | 0% | 0% |
 
+## Real tool output (2026-11-25)
+
+Harmless API and function responses (2,236, never trained on by either model) are blocked
+at 3.1% (v3) and 4.4% (v1) at the document threshold: three times its target. Tool output
+scores higher than web pages and emails.
+
+Set fairly, at 1% on documents plus half the tool outputs and tested on the other half:
+
+| | v1 | v3 |
+|---|---|---|
+| Tool threshold (two folds) | 1.50–1.91 | 0.22–1.86 |
+| Held-out tool outputs blocked | 1.4–1.8% | 1.0–2.5% |
+| LLMail caught (from 43–44%) | 49–52% | 51–57% |
+
+The threshold is unstable with this little tool output. So it stays off by default. The
+next model is trained on tool outputs as harmless text, with roles marked (ROADMAP B1), and
+its tool threshold is set on a larger tool-output set.
+
 ## Before it is on by default
 
 - **Ship the value per model** in `fortress.json` (for example `thresholds.attack_tool`). A
   threshold belongs to the files it was set on, as the views threshold does.
-- **Check other kinds of tool output** (API JSON, search results, code) for false
-  positives. The calibration documents are web pages, Markdown, emails and SEP data.
+- **Set it on real tool output as well as documents:** enough of it, from enough sources,
+  that the threshold holds steady between folds.
 - **Say it in the configuration guide and the model card,** with the measured trade-off.

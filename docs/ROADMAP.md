@@ -70,11 +70,11 @@ Four causes limit the model:
 
 | Step | Work | Status |
 |---|---|---|
-| A1 | Thresholds per role: the proxy uses a higher threshold for the user's turn and a lower one for tool results and documents, each set on harmless text of that role. No training. | **done** 2026-11-25 ([decision 0019](decisions/0019-per-role-thresholds.md)): LLMail 43 → 65–68%, held-out harmless documents about 1% blocked; the default is the maintainer's choice |
-| A2 | Measure long inputs in windows ([decision 0018](decisions/0018-long-inputs-in-windows.md)) on v3, then decide its default. No training. | **measured** 2026-11-25: LLMail about +6 points, jackhhao harmless +0.9 for v3; off by default, the maintainer's choice |
+| A1 | Thresholds per role: the proxy uses a higher threshold for the user's turn and a lower one for tool results and documents, each set on harmless text of that role. No training. | **done** 2026-11-25 ([decision 0019](decisions/0019-per-role-thresholds.md)): against web and email documents LLMail 43 → 65–68%, but that blocks about 3% of real tool output. Set fairly on tool output, the gain is +7–13 points and the threshold is unstable, so it stays **off by default**; folded into B1 |
+| A2 | Measure long inputs in windows ([decision 0018](decisions/0018-long-inputs-in-windows.md)) on v3, then decide its default. No training. | **done** 2026-11-25: LLMail about +6 points, jackhhao harmless +0.9 for v3; **opt-in** (the maintainer's choice) |
 | A3 | Gate: compare look-alike letters (held out) with the candidate's own plain-text recall, as for the other disguises, since v1's number there is a shortcut | **done** 2026-11-25 |
 | A4 | Gate v3 with A1–A3 against v1; releasing v3 is the maintainer's decision | **done** 2026-11-25 ([results](results/2026-11-25-fortress-deployment-thresholds.md)): 38 of 41 checks pass against v1 as shipped; fails on the developer check (2 of 8, bar 1), jackhhao harmless prompts (3.2–4.1% against 1.3%) and OR-Bench in the harmful output (51.0% against 50.9%) |
-| B1 | Role marking: training items tagged user, tool result or document, and the proxy passes the tag (design note first) | v3.1 |
+| B1 | Role marking: training items tagged user, tool result or document, and the proxy passes the tag (design note first). Train on real tool outputs as harmless text, and set the tool threshold on a larger tool-output set | v3.1 |
 | B2 | Find which source (`wildchat_dev` or `dev_secrets`) raises the harmless jackhhao blocks; filter it, do not drop it | v3.1 |
 | B3 | Honest screening: a development split for comparing candidates, the suite's test half for the final check only, 3 seeds per screening run | v3.1 |
 | C1 | DeBERTa-v3-base as a teacher, distilled into xsmall (same speed) | v4 |
