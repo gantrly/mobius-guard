@@ -363,8 +363,19 @@ def _run(a: argparse.Namespace) -> int:
     elif cmd == "doc-calibration":
         from .roles import document_calibration
 
-        m = document_calibration(Path(a.data), [Path(p) for p in a.exclude_train], Path(a.out))
+        m = document_calibration(Path(a.data), [Path(p) for p in a.exclude_train], Path(a.out),
+                                 extra=[Path(p) for p in a.extra])  # fmt: skip
         log(f"doc-calibration: wrote {a.out}: {m['items']} items {json.dumps(m['by_source'])}")
+    elif cmd == "mark-roles":
+        from .roles import mark_roles
+
+        s = mark_roles(Path(a.data), Path(a.out), Path(a.holdout))
+        log(f"mark-roles: wrote {a.out}: {json.dumps(s['counts'])}")
+    elif cmd == "add-items":
+        from .roles import add_items
+
+        m = add_items(Path(a.suite), Path(a.items), Path(a.out))
+        log(f"add-items: wrote {a.out}: {m['added']} added, {m['items']} items")
     elif cmd == "role-offset":
         from .roles import role_offset
 
@@ -507,6 +518,19 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("doc-calibration", help="harmless documents to set a document threshold on")
     p.add_argument("--data", required=True, help="a training set (its val split is used)")
     p.add_argument("--exclude-train", nargs="*", default=[], help="train.jsonl files to leave out")
+    p.add_argument("--extra", nargs="*", default=[], help="items.jsonl files to add (tool outputs)")
+    p.add_argument("--out", required=True)
+
+    p = sub.add_parser(
+        "mark-roles", help="role-marked training data, half the tool outputs held out"
+    )
+    p.add_argument("--data", required=True, help="a training set (after augment)")
+    p.add_argument("--out", required=True)
+    p.add_argument("--holdout", required=True, help="where the held-out tool outputs go")
+
+    p = sub.add_parser("add-items", help="a suite copy with more items")
+    p.add_argument("--suite", required=True)
+    p.add_argument("--items", required=True)
     p.add_argument("--out", required=True)
 
     p = sub.add_parser("role-offset", help="a run scored with a document threshold for documents")

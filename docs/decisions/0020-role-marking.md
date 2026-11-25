@@ -1,6 +1,8 @@
 # 0020: Tell the classifier where a text comes from (role marking)
 
-- **Status:** proposed, 2026-11-25, for the maintainer's choice. Nothing is built yet.
+- **Status:** accepted 2026-11-25. The maintainer asked for the best chance at a model that
+  can be published in one cycle. Built the same day: the proxy, the harness and the
+  training data.
 - **Builds on:** [0017](0017-disguises-carry-no-label.md) (the gate),
   [0019](0019-per-role-thresholds.md) (per-role thresholds),
   [0018](0018-long-inputs-in-windows.md) (windows)
@@ -29,8 +31,8 @@ model. It works with the current tokenizer, model architecture and ONNX export, 
 change to any of them.
 - **The alternative:** new special tokens. They are cleaner, but they mean resizing the
   embeddings and a custom export, for the same information.
-- **Every view and every window gets the marker,** not only the first window of a long
-  text.
+- **Every view gets the marker.** Windows (opt-in, decision 0018) mark only the first
+  window for now: the marker is part of the text before it is split.
 - **Spoofing:** a marker an attacker writes inside a document must not count. The proxy
   breaks up `[user]` and `[tool]` where they occur inside a text (for example to
   `[ user ]`) before adding its own.
@@ -45,8 +47,12 @@ change to any of them.
 - **The tool-call sources come back.** v3 left them out because they cost LLMail. With
   roles marked, their harmless user requests ("send an email to …") are `[user]`, and their
   harmless API outputs are `[tool]`. That is the data the model lacked.
-- **Half of their tool outputs are held out** (by cluster, about 1,100). They are used to
-  set and test the tool threshold, never for training.
+- **Half of their tool outputs are held out** (by cluster, about 1,100), never trained on:
+  - a quarter sets the tool threshold, with the harmless documents of `doc-calibration`;
+  - a quarter (`tool_outputs`) is added to the suite as a harmless set, scored as `[tool]`.
+
+  The gate then requires the candidate, at its tool threshold, to block no more of these
+  than v1 as shipped. That check would catch a "tool means attack" shortcut.
 
 **3. A fair share of both labels in each role.** In the planned data, `[tool]` items are
 about 48% attacks and `[user]` items about 26%.
@@ -61,8 +67,12 @@ about 48% attacks and `[user]` items about 26%.
 - the tool threshold on held-out harmless documents and tool outputs, marked `[tool]`.
 
 Both ship in `fortress.json`, which also says the model expects markers
-(`"role_marker": true`). The proxy adds markers only for a model that says so, so v1 and
-v3 run as before.
+(`"role_marker": true`), with `thresholds.attack_tool` and, for every-view scoring,
+`views_thresholds`. The proxy adds markers only for a model that says so, so v1 and v3 run
+as before. A threshold set in the config still wins over the model's own.
+
+**The comparison** is with v1 as users run it today (every view, one threshold). The
+candidate runs as it would ship: markers and its two thresholds.
 
 **5. Evaluation roles.** The suite's LLMail, BIPIA and LLMail harmless emails, with their
 disguised copies, are scored as `[tool]`. Everything else is `[user]`, including the

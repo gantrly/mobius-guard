@@ -21,6 +21,7 @@ from typing import Any
 import anyio
 
 from .apis import Api, Json, Text
+from .classifier import mark
 from .config import Config
 from .normalize import View, views
 from .rules import RULES, Hit, Rule, check
@@ -70,13 +71,15 @@ class Guard:
         thresholds: dict[str, float] | None = None,
         views_thresholds: dict[str, float] | None = None,
         roles: tuple[str, ...] = CHECKED_ROLES,
+        role_marker: bool = False,
     ) -> None:
         self.cfg = cfg
         self.rules = rules
         self.roles = roles
         if scorer is None:
-            scorer, thresholds, views_thresholds = _load_scorer(cfg)
+            scorer, thresholds, views_thresholds, role_marker = _load_scorer(cfg)
         self.scorer = scorer
+        self.role_marker = role_marker  # the model reads each text with its role (decision 0020)
         pol = cfg.policy
         # Every view goes to the classifier only at a threshold meant for it: the model's
         # views threshold, one in the config, or none at all (scores only logged).
@@ -92,10 +95,14 @@ class Guard:
         self.harmful_threshold = (
             pol.harmful_threshold if pol.harmful_threshold is not None else own.get("harmful")
         )
-        self.tool_threshold = (
-            pol.classifier_threshold_tool if pol.classifier_threshold_tool is not None
-            else self.attack_threshold
-        )  # fmt: skip
+        # The config's tool threshold; else, when no attack threshold is configured, the model's
+        # own tool threshold if it ships one; else the same threshold as other texts.
+        if pol.classifier_threshold_tool is not None:
+            self.tool_threshold = pol.classifier_threshold_tool
+        elif pol.classifier_threshold is None and own.get("attack_tool") is not None:
+            self.tool_threshold = own["attack_tool"]
+        else:
+            self.tool_threshold = self.attack_threshold
 
     def _attack_threshold(self, role: str) -> float | None:
         return self.tool_threshold if role == "tool" else self.attack_threshold
@@ -145,6 +152,8 @@ class Guard:
             list(dict.fromkeys(v.text for v in vs)) if self.classifier_views else [t.text]
             for t, vs in zip(checked, seen, strict=True)
         ]
+        if self.role_marker:
+            groups = [[mark(x, t.role) for x in g] for t, g in zip(checked, groups, strict=True)]
         flat = list(dict.fromkeys(x for g in groups for x in g))
         got = dict(zip(flat, scorer(flat), strict=True))
 
@@ -173,22 +182,25 @@ class Guard:
         return {"status": 403, "message": msg, "code": "prompt_blocked", "details": d.details()}
 
 
-def _load_scorer(cfg: Config) -> tuple[Scorer | None, dict[str, float], dict[str, float] | None]:
+def _load_scorer(
+    cfg: Config,
+) -> tuple[Scorer | None, dict[str, float], dict[str, float] | None, bool]:
     """The configured classifier's scorer, its own thresholds (none for the published
     classifiers, which only log scores until ``classifier_threshold`` is set) and its
-    thresholds for scoring every view (None when it has none)."""
+    thresholds for scoring every view (None when it has none), and whether it reads role
+    markers."""
     name = cfg.policy.classifier
     if not name:
-        return None, {}, None
+        return None, {}, None, False
     from .classifier import HF_MODELS, ONNX_MODELS, HFClassifier, OnnxClassifier
 
     if name in ONNX_MODELS:
         windows = cfg.policy.classifier_long == "windows"
         onnx = OnnxClassifier(ONNX_MODELS[name], directory=cfg.policy.classifier_dir,
                               windows=windows)  # fmt: skip
-        return onnx.score_texts, onnx.thresholds, onnx.views_thresholds
+        return onnx.score_texts, onnx.thresholds, onnx.views_thresholds, onnx.role_marker
     if name not in HF_MODELS:
         known = sorted([*ONNX_MODELS, *HF_MODELS])
         raise ValueError(f"unknown classifier {name!r}; choose from {known}")
     model: Any = HFClassifier(HF_MODELS[name], windows=cfg.policy.classifier_long == "windows")
-    return model.score_texts, {}, None
+    return model.score_texts, {}, None, False

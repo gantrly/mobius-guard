@@ -21,12 +21,24 @@ from __future__ import annotations
 
 import importlib
 import json
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 WINDOW_STRIDE = 128  # tokens shared by neighbouring windows, so no phrase is only ever split
+
+# Role marking (decision 0020): a model whose fortress.json says "role_marker": true reads
+# each text with its role in front. A marker inside the text is broken up first, so a
+# document cannot pass itself off as the user's turn.
+ROLE_MARKERS = {"user": "[user]\n", "tool": "[tool]\n"}
+_MARKER = re.compile(r"\[(user|tool)\]", re.IGNORECASE)
+
+
+def mark(text: str, role: str) -> str:
+    """``text`` as a role-marked model reads it; a role other than tool counts as user."""
+    return ROLE_MARKERS["tool" if role == "tool" else "user"] + _MARKER.sub(r"[ \1 ]", text)
 
 
 def window_stride(max_length: int) -> int:
@@ -240,6 +252,9 @@ class OnnxClassifier:
         self.max_length = int(meta["max_length"])
         fpr = str(meta["default_fpr"])
         self.thresholds = {o: float(meta["thresholds"][o][fpr]) for o in self.outputs}
+        # A model can ship a threshold for tool results (decision 0019).
+        if "attack_tool" in meta["thresholds"]:
+            self.thresholds["attack_tool"] = float(meta["thresholds"]["attack_tool"][fpr])
         # Only for the files it was set on: another model keeps to its original text.
         own, every = spec.views_attack or (None, None)
         self.views_thresholds: dict[str, float] | None = (
@@ -247,6 +262,10 @@ class OnnxClassifier:
             if every is not None and own is not None and abs(self.thresholds["attack"] - own) < 1e-9
             else None
         )
+        # A model can also ship its own thresholds for scoring every view.
+        if "views_thresholds" in meta:
+            self.views_thresholds = {k: float(v[fpr]) for k, v in meta["views_thresholds"].items()}
+        self.role_marker = bool(meta.get("role_marker", False))
         self.np: Any = importlib.import_module("numpy")
         ort: Any = importlib.import_module("onnxruntime")
         tok: Any = importlib.import_module("tokenizers").Tokenizer.from_file(

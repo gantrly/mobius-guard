@@ -93,20 +93,23 @@ def get(name: str, *, device: str = "cpu", batch_size: int = 32) -> Detector:
     factories["mobiusguard-rules"] = rules
     factories["protectai-v2-norm"] = norm("protectai-v2")
     factories["piguard-norm"] = norm("piguard")
-    for prefix in ("local-views:", "local-views+windows:"):
+    for prefix in ("local-views:", "local-views+windows:", "local-views+roles:",
+                   "local-views+windows+roles:"):  # fmt: skip
         if name.startswith(prefix):
             from .proxy import NormalizedClassifier
 
             return NormalizedClassifier.local(name.removeprefix(prefix), device=device,
                                               batch_size=batch_size,
-                                              windows="+windows" in prefix)  # fmt: skip
-    for prefix in ("local:", "local+windows:"):
+                                              windows="+windows" in prefix,
+                                              roles="+roles" in prefix)  # fmt: skip
+    for prefix in ("local:", "local+windows:", "local+roles:", "local+windows+roles:"):
         if name.startswith(prefix):
             from .hf import local_classifier
 
-            windows = "+windows" in prefix
+            windows, roles = "+windows" in prefix, "+roles" in prefix
             return local_classifier(name.removeprefix(prefix), device=device,
-                                    batch_size=batch_size, windows=windows)  # fmt: skip
+                                    batch_size=batch_size, windows=windows,
+                                    roles=roles)  # fmt: skip
     if name not in factories:
         raise KeyError(f"unknown detector {name!r}; choose from {sorted(factories)}")
     return factories[name]()

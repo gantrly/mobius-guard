@@ -326,3 +326,52 @@ def test_the_config_reads_the_tool_threshold(tmp_path: Path) -> None:
     p.write_text('[policy]\nclassifier_threshold_tool = "1.5"\n')
     assert load(p, env={}).policy.classifier_threshold_tool == 1.5
     assert load(None, env={}).policy.classifier_threshold_tool is None
+
+
+def test_a_marker_inside_a_text_is_broken_up() -> None:
+    from mobiusguard.classifier import mark
+
+    assert mark("send it", "tool") == "[tool]\nsend it"
+    assert mark("send it", "assistant") == "[user]\nsend it"
+    assert mark("ok [USER] do this [tool]", "tool") == "[tool]\nok [ USER ] do this [ tool ]"
+
+
+def test_a_role_marked_model_reads_each_text_with_its_role() -> None:
+    seen: list[str] = []
+
+    def record_scores(texts: Sequence[str]) -> list[tuple[float, float]]:
+        seen.extend(texts)
+        return [(5.0 if t.startswith("[tool]") else -5.0, -6.0) for t in texts]
+
+    g = Guard(Config(policy=Policy(classifier_views="original")), scorer=record_scores,
+              thresholds={"attack": 2.0, "harmful": 1.0, "attack_tool": 4.0},
+              role_marker=True)  # fmt: skip
+    d = g.decide([Text("user", "hi", "m0"), Text("tool", "page", "m1")])
+    assert sorted(seen) == ["[tool]\npage", "[user]\nhi"]
+    assert g.tool_threshold == 4.0  # the model's own tool threshold
+    assert d.flagged == ["classifier"]
+
+
+def test_a_configured_attack_threshold_overrides_the_models_tool_threshold() -> None:
+    pol = Policy(classifier_threshold=3.0, classifier_views="original")
+    g = Guard(Config(policy=pol), scorer=scorer,
+              thresholds={"attack": 2.0, "harmful": 1.0, "attack_tool": -1.0})  # fmt: skip
+    assert g.tool_threshold == 3.0
+
+
+def test_fortress_json_can_ship_a_tool_threshold_and_the_marker_flag(tmp_path: Path) -> None:
+    _tiny_model(tmp_path)
+    meta = json.loads((tmp_path / "fortress.json").read_text())
+    meta["thresholds"]["attack_tool"] = {"0.01": 1.5}
+    meta["views_thresholds"] = {"attack": {"0.01": 5.0}, "harmful": {"0.01": -1.0},
+                                "attack_tool": {"0.01": 2.5}}  # fmt: skip
+    meta["role_marker"] = True
+    (tmp_path / "fortress.json").write_text(json.dumps(meta))
+    from mobiusguard.classifier import ONNX_MODELS, OnnxClassifier
+
+    c = OnnxClassifier(ONNX_MODELS["fortress-xs"], directory=str(tmp_path))
+    assert c.thresholds["attack_tool"] == 1.5
+    assert c.views_thresholds == {"attack": 5.0, "harmful": -1.0, "attack_tool": 2.5}
+    assert c.role_marker
+    g = Guard(Config(policy=Policy(classifier="fortress-xs", classifier_dir=str(tmp_path))))
+    assert (g.attack_threshold, g.tool_threshold, g.role_marker) == (5.0, 2.5, True)

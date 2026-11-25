@@ -15,6 +15,7 @@ from __future__ import annotations
 import hashlib
 from collections.abc import Sequence
 
+from mobiusguard.classifier import mark
 from mobiusguard.normalize import views
 from mobiusguard.rules import RULES, check
 
@@ -52,28 +53,35 @@ class NormalizedClassifier(HFClassifier):
     """A pretrained classifier scored on every view of a text; the highest score counts."""
 
     def __init__(self, key: str = "", *, spec: HFModel | None = None, device: str = "cpu",
-                 batch_size: int = 32, windows: bool = False) -> None:  # fmt: skip
+                 batch_size: int = 32, windows: bool = False,
+                 roles: bool = False) -> None:  # fmt: skip
         spec = spec or HF_MODELS[key]
         super().__init__(spec, device=device, batch_size=batch_size, windows=windows)
-        prefix = "local-views+windows:" if windows else "local-views:"
+        self.roles = roles  # mark each view with its item's role (decision 0020)
+        prefix = "local-views" + ("+windows" if windows else "") + ("+roles" if roles else "") + ":"
         self.name = f"{key}-norm" if key else spec.name.replace("local:", prefix, 1)
 
     @classmethod
     def local(cls, path: str, *, device: str = "cpu", batch_size: int = 32,
-              windows: bool = False) -> NormalizedClassifier:  # fmt: skip
+              windows: bool = False, roles: bool = False) -> NormalizedClassifier:  # fmt: skip
         """A model trained here (``local:DIR``), given every view of each text."""
-        return cls(spec=local_spec(path), device=device, batch_size=batch_size, windows=windows)
+        return cls(spec=local_spec(path), device=device, batch_size=batch_size,
+                   windows=windows, roles=roles)  # fmt: skip
 
     def fingerprint(self) -> dict[str, str]:
-        return {**super().fingerprint(), "views": "original+normalized+base64, max"}
+        out = {**super().fingerprint(), "views": "original+normalized+base64, max"}
+        return {**out, "roles": "marked (decision 0020)"} if self.roles else out
 
     def score_group(self, items: Sequence[Item], idx: Sequence[int]) -> list[float]:
         owners: list[int] = []
         texts: list[str] = []
+        from ..roles import role_of
+
         for k, i in enumerate(idx):
+            role = role_of(items[i])
             for v in views(items[i].text):
                 owners.append(k)
-                texts.append(v.text)
+                texts.append(mark(v.text, role) if self.roles else v.text)
         order = sorted(range(len(texts)), key=lambda j: len(texts[j]))
         scored = self.score_texts([texts[j] for j in order])
         best = [float("-inf")] * len(idx)

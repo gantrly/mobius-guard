@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from mobiusguard_eval import roles
-from mobiusguard_eval.items import Item, write_jsonl
+from mobiusguard_eval.items import Item, read_jsonl, write_jsonl
 
 
 def _it(i: str, source: str, label: int = 0, split: str = "test") -> Item:
@@ -55,3 +55,51 @@ def test_calibration_takes_harmless_documents_not_trained_on(tmp_path: Path) -> 
     m = roles.document_calibration(data, [other], tmp_path / "cal")
     assert m["items"] == 2  # a and b: c is an attack, d is not a document, e was trained on
     assert m["by_source"] == {"sep": 1, "browsesafe_md": 1}
+
+
+def _src_item(i: int, source: str, turn: str = "", label: int = 0, split: str = "train",
+              cluster: str = "") -> Item:  # fmt: skip
+    meta = {"turn": turn} if turn else {}
+    return Item(id=f"{source}:{i}", text=f"text {i}", label=label, source=source,  # type: ignore[arg-type]
+                family=source, split=split, cluster=cluster or f"{source}:{i}", meta=meta)  # type: ignore[arg-type]  # fmt: skip
+
+
+def test_roles_by_source_and_turn() -> None:
+    assert roles.role_of(_src_item(1, "browsesafe_md")) == "tool"
+    assert roles.role_of(_src_item(1, "toucan", turn="tool")) == "tool"
+    assert roles.role_of(_src_item(1, "toucan", turn="user")) == "user"
+    assert roles.role_of(_src_item(1, "wildchat")) == "user"
+    assert roles.role_of(_src_item(1, "llmail", label=1)) == "tool"
+    assert roles.role_of(_src_item(1, "obf-benign:spaced")) == "user"
+
+
+def test_mark_roles_marks_every_text_and_holds_out_half_the_tool_outputs(tmp_path: Path) -> None:
+    data = tmp_path / "data"
+    data.mkdir()
+    tools = [_src_item(i, "glaive_fc", turn="tool") for i in range(400)]
+    copies = [
+        Item(id=f"{t.id}~aug:spaced", text="t e x t", label=0, source="glaive_fc",
+             family="glaive_fc", split="train", cluster=t.cluster,
+             meta={"turn": "tool", "augmented": "spaced", "original": t.id})
+        for t in tools[:100]
+    ]  # fmt: skip
+    users = [_src_item(i, "glaive_fc", turn="user") for i in range(400, 450)]
+    docs = [_src_item(i, "sep", label=i % 2) for i in range(20)]
+    write_jsonl(data / "train.jsonl", tools + copies + users + docs)
+    write_jsonl(data / "val.jsonl", [])
+    (data / "summary.json").write_text(json.dumps({"ids_sha256": "x", "rule": "r"}))
+    s = roles.mark_roles(data, tmp_path / "out", tmp_path / "held")
+    kept = list(read_jsonl(tmp_path / "out" / "train.jsonl"))
+    cal = list(read_jsonl(tmp_path / "held" / "calibration" / "items.jsonl"))
+    test = list(read_jsonl(tmp_path / "held" / "test" / "items.jsonl"))
+    assert all(it.text.startswith(("[user]\n", "[tool]\n")) for it in kept)
+    assert all(it.text.startswith("[tool]\n") for it in kept if it.source == "sep")
+    assert 120 < len(cal) + len(test) < 280  # about half of the 400 tool outputs
+    held = {it.id for it in cal + test}
+    trained_copies = {it.meta["original"] for it in kept if it.meta.get("augmented")}
+    assert held
+    assert trained_copies  # some copies train (their originals do too)
+    assert not held & trained_copies  # no held-out output's disguised copy is trained on
+    assert all(it.source == "tool_outputs" and it.split == "test" for it in cal + test)
+    assert all(not it.text.startswith("[") for it in cal + test)  # stored unmarked
+    assert s["role_marker"] is True
