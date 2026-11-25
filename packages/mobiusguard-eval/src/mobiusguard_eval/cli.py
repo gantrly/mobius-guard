@@ -354,6 +354,16 @@ def _run(a: argparse.Namespace) -> int:
 
         manifest = extend_suite(Path(a.suite), Path(a.out))
         log(f"extend-suite: wrote {a.out}: {json.dumps(manifest['added'])}")
+    elif cmd == "doc-calibration":
+        from .roles import document_calibration
+
+        m = document_calibration(Path(a.data), [Path(p) for p in a.exclude_train], Path(a.out))
+        log(f"doc-calibration: wrote {a.out}: {m['items']} items {json.dumps(m['by_source'])}")
+    elif cmd == "role-offset":
+        from .roles import role_offset
+
+        info = role_offset(Path(a.run), Path(a.calibration), Path(a.suite), Path(a.out))
+        log(f"role-offset: wrote {a.out}: {json.dumps(info)}")
     elif cmd == "gate":
         from .gate import gate
 
@@ -481,6 +491,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--group-weight", type=float, help="fix the developer group's weight")
 
     p = sub.add_parser("extend-suite", help="the suite plus harmless disguised and dev sets")
+    p.add_argument("--suite", required=True)
+    p.add_argument("--out", required=True)
+
+    p = sub.add_parser("doc-calibration", help="harmless documents to set a document threshold on")
+    p.add_argument("--data", required=True, help="a training set (its val split is used)")
+    p.add_argument("--exclude-train", nargs="*", default=[], help="train.jsonl files to leave out")
+    p.add_argument("--out", required=True)
+
+    p = sub.add_parser("role-offset", help="a run scored with a document threshold for documents")
+    p.add_argument("--run", required=True, help="a score run on the suite")
+    p.add_argument("--calibration", required=True, help="the same model's doc-calibration scores")
     p.add_argument("--suite", required=True)
     p.add_argument("--out", required=True)
 
