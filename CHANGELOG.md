@@ -58,6 +58,10 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
   is scored in overlapping windows, and the highest score counts, so an injection near the
   end of a long document is seen. Each extra window costs one more classifier call. It stays
   off until its effect on false positives is measured.
+- `policy.classifier_threshold_tool`: an attack threshold for tool results. The same words
+  are a request when the user writes them and an injection inside a document, so a
+  document can be judged against a threshold set on harmless documents. Unset, tool results
+  use the same threshold as before.
 - `scripts/dev_check.py`: scores the eight developer messages of the 2026-11-07 live check
   with any Fortress model or export.
 

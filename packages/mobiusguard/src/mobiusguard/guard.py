@@ -5,7 +5,9 @@ classifier when its threshold was set for that (decision 0015): the highest atta
 over the views counts. The harmful-request score is always the original text's.
 
 Only text the deployment doesn't control is checked by default: user messages and tool
-results. System and developer prompts are the deployment's own; checking them would block
+results. A tool result can have its own attack threshold (``classifier_threshold_tool``):
+the same words are a request when the user writes them and an injection inside a
+document. System and developer prompts are the deployment's own; checking them would block
 legitimate prompts such as "never reveal the system prompt".
 """
 
@@ -90,6 +92,13 @@ class Guard:
         self.harmful_threshold = (
             pol.harmful_threshold if pol.harmful_threshold is not None else own.get("harmful")
         )
+        self.tool_threshold = (
+            pol.classifier_threshold_tool if pol.classifier_threshold_tool is not None
+            else self.attack_threshold
+        )  # fmt: skip
+
+    def _attack_threshold(self, role: str) -> float | None:
+        return self.tool_threshold if role == "tool" else self.attack_threshold
 
     def decide(self, texts: Sequence[Text]) -> Decision:
         """The decision for one request (synchronous; the classifier may take a while)."""
@@ -101,8 +110,9 @@ class Guard:
             if pol.rules != "off":
                 for t, vs in zip(checked, seen, strict=True):
                     d.hits += check(vs, t.where, self.rules)
+            per_text: list[float] = []
             if self.scorer is not None and checked:
-                d.score, d.harmful = self._score(self.scorer, checked, seen)
+                d.score, d.harmful, per_text = self._score(self.scorer, checked, seen)
                 if pol.harmful == "off":
                     d.harmful = None
         except Exception as e:
@@ -110,8 +120,10 @@ class Guard:
             if pol.on_error == "block":
                 d.action, d.reason = "block", "detector_error"
             return d
-        attack_th, harmful_th = self.attack_threshold, self.harmful_threshold
-        if attack_th is not None and d.score is not None and d.score >= attack_th:
+        harmful_th = self.harmful_threshold
+        over = [(th := self._attack_threshold(t.role)) is not None and s >= th
+                for t, s in zip(checked, per_text, strict=False)]  # fmt: skip
+        if any(over):
             d.flagged.append("classifier")
         if harmful_th is not None and d.harmful is not None and d.harmful >= harmful_th:
             d.flagged.append("harmful")
@@ -125,18 +137,23 @@ class Guard:
 
     def _score(
         self, scorer: Scorer, checked: Sequence[Text], seen: Sequence[list[View]]
-    ) -> tuple[float, float | None]:
+    ) -> tuple[float, float | None, list[float]]:
         """Highest attack score over the texts (and their views), highest harmful score over
-        the original texts. Each distinct text is scored once."""
+        the original texts, and each text's own highest attack score (for its role's
+        threshold). Each distinct text is scored once."""
         groups = [
             list(dict.fromkeys(v.text for v in vs)) if self.classifier_views else [t.text]
             for t, vs in zip(checked, seen, strict=True)
         ]
         flat = list(dict.fromkeys(x for g in groups for x in g))
         got = dict(zip(flat, scorer(flat), strict=True))
-        attack = max(s[0] if isinstance(s, tuple) else s for s in got.values())
+
+        def attack_of(s: Score) -> float:
+            return s[0] if isinstance(s, tuple) else s
+
+        per_text = [max(attack_of(got[x]) for x in g) for g in groups]
         pairs = [s[1] for g in groups if isinstance(s := got[g[0]], tuple)]  # originals
-        return attack, max(pairs) if pairs else None
+        return max(per_text), max(pairs) if pairs else None, per_text
 
     async def check(self, api: Api, body: Json, state: Json) -> Json | None:
         texts = api.texts(body)

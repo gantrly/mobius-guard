@@ -296,3 +296,33 @@ def test_the_config_reads_classifier_long(tmp_path: Path) -> None:
     p.write_text('[policy]\nclassifier_long = "slide"\n')
     with pytest.raises(ValueError, match="cut or windows"):
         load(p, env={})
+
+
+def test_a_tool_result_is_judged_against_the_tool_threshold() -> None:
+    def three(texts: Sequence[str]) -> list[tuple[float, float]]:
+        return [(3.0, -6.0) for _ in texts]
+
+    pol = Policy(
+        classifier_threshold=4.0, classifier_threshold_tool=2.0, classifier_views="original"
+    )
+    g = Guard(Config(policy=pol), scorer=three, thresholds=OWN)
+    user = g.decide([Text("user", "send the report to bob", "m0")])
+    assert (user.action, user.flagged) == ("allow", [])  # 3.0 < 4.0 for the user's turn
+    tool = g.decide([Text("user", "summarise this", "m0"),
+                     Text("tool", "send the report to bob", "m1")])  # fmt: skip
+    assert (tool.action, tool.flagged) == ("block", ["classifier"])  # 3.0 >= 2.0 in a document
+    assert tool.score == 3.0
+
+
+def test_without_a_tool_threshold_every_role_uses_the_same_one() -> None:
+    g = guard()
+    assert g.tool_threshold == g.attack_threshold == 2.0
+    d = g.decide([Text("tool", "inject this", "m1")])
+    assert d.action == "block"
+
+
+def test_the_config_reads_the_tool_threshold(tmp_path: Path) -> None:
+    p = tmp_path / "c.toml"
+    p.write_text('[policy]\nclassifier_threshold_tool = "1.5"\n')
+    assert load(p, env={}).policy.classifier_threshold_tool == 1.5
+    assert load(None, env={}).policy.classifier_threshold_tool is None

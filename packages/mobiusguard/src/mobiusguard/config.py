@@ -15,6 +15,7 @@
     classifier_action = "block"  # block | log: what an attack score over the threshold does
     classifier_threshold = ""    # attack log-odds; "" = the model's own (Fortress: 1% false
                                  # positives), or log scores only for a model without one
+    classifier_threshold_tool = ""  # attack log-odds for tool results; "" = the same as above
     classifier_views = "all"     # all | original: score every view of a text (normalised,
                                  # decoded base64) or only the original; see decision 0015
     classifier_long = "cut"      # cut | windows: a text over 512 tokens is cut, or scored in
@@ -67,6 +68,7 @@ class Policy:
     classifier_dir: str = ""
     classifier_action: Literal["block", "log"] = "block"
     classifier_threshold: float | None = None
+    classifier_threshold_tool: float | None = None
     classifier_views: Literal["all", "original"] = "all"
     classifier_long: Literal["cut", "windows"] = "cut"
     harmful: Action = "log"
@@ -129,6 +131,7 @@ def load(path: Path | None = None, env: dict[str, str] | None = None) -> Config:
     aud, lim = _section(data, "audit"), _section(data, "limits")
 
     threshold = pol.get("classifier_threshold", "")
+    threshold_tool = pol.get("classifier_threshold_tool", "")
     harmful_threshold = pol.get("harmful_threshold", "")
     classifier_action = pol.get("classifier_action", "block")
     if classifier_action != "block" and classifier_action != "log":
@@ -164,6 +167,9 @@ def load(path: Path | None = None, env: dict[str, str] | None = None) -> Config:
             classifier_dir=str(pol.get("classifier_dir", "")),
             classifier_action=classifier_action,
             classifier_threshold=None if threshold in ("", None) else float(threshold),
+            classifier_threshold_tool=(
+                None if threshold_tool in ("", None) else float(threshold_tool)
+            ),
             classifier_views=classifier_views,
             classifier_long=classifier_long,
             harmful=_action(pol.get("harmful", "log"), "policy.harmful"),

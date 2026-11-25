@@ -23,6 +23,7 @@ classifier_threshold = ""        # attack log-odds; "" = the model's own (Fortre
                                  # PIGuard / ProtectAI v2: log scores, never block on them
 classifier_views = "all"         # all | original: score every view of a text, or only itself
 classifier_long = "cut"          # cut | windows: score a text over 512 tokens in windows
+classifier_threshold_tool = ""   # attack threshold for tool results; "" = classifier_threshold
 harmful = "log"                  # block | log | off: Fortress's harmful-request output
 harmful_threshold = ""           # harmful log-odds; "" = the model's own
 on_error = "block"               # block | allow: what happens when a detector fails
