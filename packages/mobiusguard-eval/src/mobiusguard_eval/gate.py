@@ -193,10 +193,15 @@ def gate(report: Path, baseline: str, candidate: str | Sequence[str], out: Path,
     """``candidate``: one detector name, or one per seed of the same recipe. ``harmful`` =
     (report, baseline name, candidate name or names) of the ``#harmful`` scores, the
     candidate names in the same seed order. ``extra``: more reports with the same detector
-    names (the Phase 1 suite); their checks are named after the report's directory."""
+    names (the Phase 1 suite); their checks are named after the report's directory (its
+    parent's, when the directory is called ``report``)."""
     cands = [candidate] if isinstance(candidate, str) else list(candidate)
+
+    def label(r: Path) -> str:  # "report" is the usual name, so name it after its parent
+        return f"{r.parent.name if r.name == 'report' else r.name}: "
+
     per_seed = [checks(report, baseline, c)
-                + [ch for r in extra for ch in checks(r, baseline, c, prefix=f"{r.parent.name}: ")]
+                + [ch for r in extra for ch in checks(r, baseline, c, prefix=label(r))]
                 for c in cands]  # fmt: skip
     if harmful:
         h_report, h_base, h_cand = harmful
