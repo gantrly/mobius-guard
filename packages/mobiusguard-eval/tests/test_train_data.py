@@ -24,12 +24,16 @@ def _texts(n: int, stem: str) -> list[str]:
 
 
 def test_no_training_source_is_an_evaluation_source() -> None:
+    from mobiusguard_eval.ledger import SHARED_REPOS
+
     evaluation = ledger_sources()
     eval_repos = {f.location for s in evaluation for f in s.files}
+    eval_files = {(f.location, f.path) for s in evaluation for f in s.files}
     eval_ids = {s.id for s in evaluation}
     for s in training_sources():
         assert s.id not in eval_ids
-        assert not {f.location for f in s.files} & eval_repos, s.id
+        assert not ({f.location for f in s.files} & eval_repos) - set(SHARED_REPOS), s.id
+        assert not {(f.location, f.path) for f in s.files} & eval_files, s.id
 
 
 def test_held_out_and_conflicting_texts_are_dropped(tmp_path: Path) -> None:

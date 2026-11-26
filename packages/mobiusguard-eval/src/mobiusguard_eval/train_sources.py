@@ -382,7 +382,7 @@ _add(
 
 # ------------------------------------------------------------------------------ benign
 
-_LANGS = {
+LANGS = {
     "English": "en", "Chinese": "zh", "Russian": "ru", "French": "fr", "Spanish": "es",
     "Portuguese": "pt", "German": "de", "Arabic": "ar", "Italian": "it", "Turkish": "tr",
     "Japanese": "ja", "Korean": "ko", "Polish": "pl", "Vietnamese": "vi", "Indonesian": "id",
@@ -399,7 +399,7 @@ def _wildchat(paths: list[Path]) -> Iterator[Item]:
         i, first = next(((i, t) for i, t in enumerate(turns) if t.get("role") == "user"),
                         (0, None))  # fmt: skip
         if first and (text := _keep(first.get("content"))):
-            lang = _LANGS.get(str(r["language"]), "other")
+            lang = LANGS.get(str(r["language"]), "other")
             mod = cast("list[dict[str, Any]]", r["openai_moderation"] or [])
             # Real users do ask for harmful things: a message the moderation API flagged is
             # not known to be harmless, so its harmful label is left unknown.
@@ -1055,7 +1055,7 @@ def _wildchat_dev(paths: list[Path]) -> Iterator[Item]:
                 continue
             rng = random.Random(f"wildchat_dev:{raw[:200]}")  # noqa: S311 - a sample
             if text := _keep(_fit(raw, rng)):
-                lang = _LANGS.get(str(r["language"]), "other")
+                lang = LANGS.get(str(r["language"]), "other")
                 yield make_item(text, BENIGN, "wildchat_dev", lang=lang, meta=_m("0", turn="user"))
 
 

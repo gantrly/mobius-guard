@@ -118,7 +118,27 @@ own variance. The noise floor (three seeds) is still needed.
 
 The estimates come before near-duplicate removal, and the final counts come from the box.
 
-## Next steps (not started)
+## Built 2026-11-26: the loaders
+
+In [`sources.py`](../../packages/mobiusguard-eval/src/mobiusguard_eval/sources.py), with
+tests on made-up files. Not run on real data yet. Two findings changed the plan:
+- **LLMail has no team field** in the labelled file (only `attack_attempt` and `reason`), so
+  the halves are split by near-duplicate cluster, as for every other set. A team split
+  would need a join with the 264 MB raw file. The file also marks about 2,000 attempts as
+  the boolean `true` rather than the string `"True"`; `llmail_full` takes both (`llmail`'s
+  3,000 sample takes only the string, unchanged).
+- **BIPIA gives every document every attack,** so a split by document would put all 125
+  attacks in both halves. `bipia_embedded` puts documents and attacks each in one of two
+  groups and keeps only pairs from the same group (about half). Each group is one half
+  (`meta["half"]`, which the screening split follows), so the halves share neither
+  documents nor attacks.
+
+**Still open:** the report's 95% intervals count rows. On `bipia_embedded`, 10,000 rows per
+half come from about 62 attacks and 100 documents, so those intervals are too narrow. An
+interval by cluster (or by attack) is a change to what is measured and goes to the
+maintainer first.
+
+## Next steps
 
 All are box work. Nothing is downloaded or processed on the Mac.
 1. **Loaders** in `sources.py`: `llmail_full` (phase 2, team split), `bipia_embedded`

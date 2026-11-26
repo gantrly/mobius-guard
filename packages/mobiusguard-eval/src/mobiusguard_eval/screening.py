@@ -29,6 +29,10 @@ BOTH = frozenset({"dev_check"})  # fixed checks, in both halves
 
 
 def half(it: Item) -> str:
+    # A source that must keep two things apart sets the half itself (bipia_embedded: no
+    # document or attack in both halves).
+    if it.meta.get("half") in ("screen", "final"):
+        return it.meta["half"]
     key = it.cluster or it.id
     return (
         "screen" if int(hashlib.sha256(f"{SALT}:{key}".encode()).hexdigest(), 16) % 2 else "final"

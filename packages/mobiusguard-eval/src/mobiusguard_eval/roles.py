@@ -33,7 +33,8 @@ from .run import load_scores
 
 # Suite sources that arrive in deployment as tool results or documents; "tool_outputs" is
 # the held-out half of the tool-call sources' outputs (``mark_roles``).
-DOCUMENT_SOURCES = frozenset({"llmail", "bipia", "llmail_benign", "tool_outputs"})
+DOCUMENT_SOURCES = frozenset({"llmail", "bipia", "llmail_benign", "tool_outputs",
+                              "llmail_full", "bipia_embedded"})  # fmt: skip
 # Training sources whose texts are documents or tool results (decision 0020).
 TOOL_TRAIN_SOURCES = frozenset({"browsesafe_md", "browsesafe_html", "nemotron_ipi", "sep",
                                 "injecagent", "rgeada_tool", "gandalf_sum"})  # fmt: skip

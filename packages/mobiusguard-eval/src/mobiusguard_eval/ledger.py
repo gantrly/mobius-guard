@@ -50,6 +50,11 @@ class Source:
 
 
 LEDGER: dict[str, Source] = {}
+# Datasets that both a training and an evaluation source read, each from different files.
+# Training builds also drop near duplicates of the suite, so the files must not overlap.
+SHARED_REPOS = {
+    "allenai/WildChat-4.8M": "wildchat_dev trains on 6 files; wildchat_dev_test reads 4 others",
+}
 # Training sources for the v0.2 classifier (decision 0012). Kept apart from LEDGER, so the
 # evaluation suite never includes them; none of LEDGER's sources may appear here.
 TRAINING: dict[str, Source] = {}
