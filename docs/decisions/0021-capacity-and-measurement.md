@@ -74,14 +74,14 @@ several seeds.
 | Choice | Options | Recommendation |
 |---|---|---|
 | The teacher's data recipe | **R**: role marking, BIPIA ×4, jackhhao fixed, harmful XSTest worse. **D**: v3's recipe, simpler. | R: a stronger model may remove the XSTest regression, and the gate would show it |
-| GPU | **L4** (g6.xlarge): about 2.5 h per base epoch. **L40S** (g6e.xlarge, $2.33/h): about half the time at about twice the hourly price. | **Decided 2026-11-25:** no new box. marker-bench switches to g6e.xlarge for the teacher runs only, then back to g6.xlarge |
+| GPU | **L4** (g6.xlarge): about 2.5 h per base epoch. **L40S** (g6e.xlarge, $2.33/h): about half the time at about twice the hourly price. | **Decided 2026-11-26:** stay on the L4 (marker-bench as it is, no new box, no type switch). The cost is about the same either way; long runs go fire-and-forget with auto power-off |
 | The developer-check bar | **At most 1 of 8** (today). **The false-positive rate on the new developer set,** no higher than v1's. | The new set, with the 8 kept as a smoke test |
 
 ## Costs
 
 - **Phase 1:** data work and about 1 h of box scoring.
-- **Phase 2:** about 2.5 h on an L4 for the deciding test, then about 7 h for the full
-  teacher.
+- **Phase 2:** about 2.5 h on the L4 for the deciding test, then about 7.5 h for the full
+  teacher (estimates; a timing sample comes first).
 - **Phase 3:** about 2 h per student seed.
 
 Every run more than about 30 minutes needs a measured estimate and the maintainer's yes.
