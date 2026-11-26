@@ -44,6 +44,8 @@ BASES = {  # name: (repo, revision)
         "4b419818330868dff6a60ad3e6b1c730f8b8c0c6",
     ),
     "mmbert-small": ("jhu-clsp/mmBERT-small", "abc32620dd4f6ab06f5fbe905dc25f310618e09f"),
+    # The teacher (decision 0021): same tokenizer as xsmall, 86M-parameter backbone. MIT.
+    "deberta-v3-base": ("microsoft/deberta-v3-base", "8ccc9b6f36199bec6961081d44eb72fb3f7353f3"),
 }
 LABELS = {0: "attack", 1: "harmful"}  # two independent outputs (multi-label)
 

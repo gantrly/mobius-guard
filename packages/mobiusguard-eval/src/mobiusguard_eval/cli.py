@@ -40,7 +40,7 @@ from .checkpoint import fingerprint, write_atomic
 from .fetch import fetch
 from .items import Item
 from .suite import build, is_built, ledger_sources, load_suite
-from .train import TrainConfig
+from .train import BASES, TrainConfig
 
 TRAIN_DEFAULTS = TrainConfig(base="")  # a slots dataclass: its class attributes are descriptors
 
@@ -477,7 +477,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("train", help="fine-tune one base model with one seed")
     p.add_argument("--data", required=True)
     p.add_argument("--out", required=True)
-    p.add_argument("--base", required=True, choices=["deberta-v3-xsmall", "mmbert-small"])
+    p.add_argument("--base", required=True, choices=sorted(BASES))
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--epochs", type=int, default=TRAIN_DEFAULTS.epochs)
     p.add_argument("--lr", type=float, default=TRAIN_DEFAULTS.lr)

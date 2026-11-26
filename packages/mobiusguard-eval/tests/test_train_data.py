@@ -193,3 +193,15 @@ def test_rng_state_restores_after_loading_onto_another_device(tmp_path: Path) ->
     torch.manual_seed(99)
     restore_rng(torch, loaded, cuda=False)
     assert torch.equal(torch.rand(3), expected)
+
+
+def test_every_base_is_a_cli_choice_and_pinned() -> None:
+    from mobiusguard_eval import cli
+    from mobiusguard_eval.train import BASES
+
+    for name, (repo, revision) in BASES.items():
+        ns = cli.build_parser().parse_args(["train", "--data", "d", "--out", "o", "--base", name])
+        assert ns.base == name
+        assert "/" in repo
+        assert len(revision) == 40  # a full commit, not a branch
+    assert "deberta-v3-base" in BASES  # the decision 0021 teacher
