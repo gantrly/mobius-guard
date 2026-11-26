@@ -138,12 +138,45 @@ per half come from about 62 attacks, so they were too narrow. Since
 [decision 0023](../decisions/0023-intervals-by-unit.md) the gate uses an interval by unit
 (here, the attack).
 
+## Built on the box 2026-11-26: `runs/suite-p1`
+
+The suite was built with `build --sources oasst llmail_benign llmail_full bipia_embedded
+wildchat_dev_test`, which took 164 s on marker-bench at commit `2960a45`. It holds 77,232
+items, after 7,412 repeats inside a source were removed.
+
+| Set | Items | Screening half (test) |
+|---|---:|---:|
+| `llmail_full` | 20,357 attacks (21,007 attempts, less repeats) | 9,744 |
+| `bipia_embedded` | 14,785 attacks + 178 clean documents | 8,595 |
+| `wildchat_dev_test` | 4,407 (5,000 sample, less repeats) | 2,106 |
+| `llmail_benign` | 160 | 79 |
+| `oasst` | 16,277 calibration + 16,068 test | 8,092 test |
+| Disguised copies (5 disguises) | 1,000 each | 548 each |
+
+- **BIPIA: fewer attacks than planned (20,600).** In a document with no sentence break (most
+  tables), the middle placement lands at the start, so it repeats the start placement and
+  is removed. BIPIA's own builder can do the same.
+- **v1 on the screening half** (as shipped: every view, one threshold, at 1%):
+
+| Set | v1 | 95% interval by row | by unit |
+|---|---:|---|---|
+| LLMail caught | 40.3% | 39.3–41.2 | 33.4–46.9 (5,135 clusters) |
+| BIPIA inside documents caught | 6.3% | 5.8–6.8 | 2.8–10.6 (79 attacks) |
+| Real developer messages blocked | **9.8%** | 8.6–11.1 | 7.9–11.8 |
+| Ordinary chat (oasst1) blocked | 0.9% | 0.7–1.1 | 0.7–1.1 |
+
+**Readings:**
+- **v1 blocks about 1 in 10 real developer messages,** 10× its rate on ordinary chat. That
+  is the developer bar of decision 0021: a candidate may block no more.
+- **The interval by unit matters.** LLMail's near-duplicate clusters widen ±1 point to about
+  ±7.
+- **Still to do:** the near-duplicate check of these sets against the training builds
+  (`runs/train-*`). Until then, a model's score here may include items it trained on, most
+  likely `wildchat_dev_test` against `wildchat`'s WildChat-1M shard.
+
 ## Next steps
 
-All are box work. Nothing is downloaded or processed on the Mac.
-1. **Loaders** in `sources.py`: `llmail_full` (phase 2, team split), `bipia_embedded`
-   (email/table/code), `wildchat_dev_test` (4 unused files). Ledger entries and tests go
-   with them.
-2. **On the box:** fetch, build, near-duplicate check against `runs/train-*`, then counts
-   only.
-3. **Score v1 and v3** on the new sets, and run the three noise-floor seeds.
+1. **The near-duplicate check** against the training builds, on the box, counts only.
+2. **The scores of R-xsmall (seeds 0 and 1) and the teacher** on the screening half, which
+   are running, and a results note.
+3. **The noise floor:** three xsmall seeds.
