@@ -126,3 +126,11 @@ def test_wildchat_dev_test_filters_like_training(tmp_path: Path) -> None:
     assert [it.text for it in items] == [dev]
     assert items[0].label == BENIGN
     assert items[0].lang == "en"
+
+
+def test_bipia_embedded_attacks_share_their_attack_as_unit(tmp_path: Path) -> None:
+    from mobiusguard_eval.items import unit
+
+    items = list(sources._bipia_embedded(_bipia_files(tmp_path)))  # pyright: ignore[reportPrivateUsage]
+    attacks = [it for it in items if it.label == ATTACK]
+    assert {unit(it) for it in attacks} == {f"bipia-attack:{it.meta['attack']}" for it in attacks}

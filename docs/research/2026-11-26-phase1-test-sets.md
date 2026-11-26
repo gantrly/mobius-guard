@@ -133,10 +133,10 @@ tests on made-up files. Not run on real data yet. Two findings changed the plan:
   (`meta["half"]`, which the screening split follows), so the halves share neither
   documents nor attacks.
 
-**Still open:** the report's 95% intervals count rows. On `bipia_embedded`, 10,000 rows per
-half come from about 62 attacks and 100 documents, so those intervals are too narrow. An
-interval by cluster (or by attack) is a change to what is measured and goes to the
-maintainer first.
+**Intervals:** the report's 95% intervals counted rows. On `bipia_embedded`, 10,000 rows
+per half come from about 62 attacks, so they were too narrow. Since
+[decision 0023](../decisions/0023-intervals-by-unit.md) the gate uses an interval by unit
+(here, the attack).
 
 ## Next steps
 

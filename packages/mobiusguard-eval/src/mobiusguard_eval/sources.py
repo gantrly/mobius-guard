@@ -502,7 +502,9 @@ def _bipia_embedded(paths: list[Path]) -> Iterator[Item]:
                     continue
                 for position in ("start", "middle", "end"):
                     text = bipia_insert(context, attack, position, f"{chash}:{name}")
-                    meta = {**base, "attack": name, "position": position}
+                    # One attack in ~100 documents is one unit for intervals (decision 0023).
+                    meta = {**base, "attack": name, "position": position,
+                            "unit": f"bipia-attack:{name}"}  # fmt: skip
                     yield make_item(text, ATTACK, "bipia_embedded", meta=meta)
 
 

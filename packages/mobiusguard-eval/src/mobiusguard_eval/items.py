@@ -44,6 +44,13 @@ class Item:
         return Item(**d)
 
 
+def unit(it: Item) -> str:
+    """What a row is not independent of, for intervals (decision 0023): the source's own
+    unit (``meta["unit"]``, e.g. one attack in many documents), else the near-duplicate
+    cluster, else the item itself."""
+    return it.meta.get("unit") or it.cluster or it.id
+
+
 def normalize(text: str) -> str:
     """The form used for duplicate detection: NFKC, case-folded, whitespace collapsed."""
     return " ".join(unicodedata.normalize("NFKC", text).casefold().split())

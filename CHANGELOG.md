@@ -6,6 +6,14 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
 
 ## Unreleased
 
+- **Evaluation: 95% intervals by unit** ([decision 0023](docs/decisions/0023-intervals-by-unit.md)):
+  `metrics.json` adds `ci95_units`, a bootstrap over attacks or near-duplicate clusters, and
+  the gate uses it. Rows that share an attack no longer count as independent. Sets of
+  independent rows are unchanged.
+- **Evaluation: larger held-out sets** ([decision 0021](docs/decisions/0021-capacity-and-measurement.md)):
+  `llmail_full` (all of LLMail phase 2), `bipia_embedded` (BIPIA's test attacks inside its
+  documents) and `wildchat_dev_test` (real developer messages), and `train --base
+  deberta-v3-base --micro-batch N` for a larger teacher on a 24 GB GPU.
 - **Red-teaming** (`mobiusguard-eval redteam`, [guide](docs/red-team.md),
   [decision 0014](docs/decisions/0014-red-team-runner.md)): attack a configuration with
   garak's prompt-injection probes in 26 mutated forms, each as a user message and as a
