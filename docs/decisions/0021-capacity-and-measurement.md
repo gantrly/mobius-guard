@@ -1,7 +1,7 @@
 # 0021: More capacity, and measurements that can see progress (Fortress v4 plan)
 
-- **Status:** proposed, 2026-11-25. The plan is agreed in outline; three choices below are
-  open for the maintainer. Nothing is built or run yet.
+- **Status:** proposed, 2026-11-25. The plan is agreed in outline; two choices below are
+  open for the maintainer (the GPU is decided). Nothing is built or run yet.
 - **Builds on:** [0017](0017-disguises-carry-no-label.md) (disguises and the gate),
   [0020](0020-role-marking.md) (role marking),
   [results 2026-11-25](../results/2026-11-25-fortress-role-marking.md) (why the weak areas
@@ -33,15 +33,16 @@ So the next round changes two things: the measurement first, then the model's ca
 
 **Phase 1: measurements that can see progress (ROADMAP C2).** No training.
 - **Bigger held-out indirect-injection test sets,** from sources no Fortress model trains
-  on, each checked for licence and for near duplicates of training data. Candidates to
-  research:
-  - far more of LLMail-Inject, whose challenge released several hundred thousand
-    submissions (the suite holds 2,981);
-  - BIPIA's other test combinations;
-  - the test splits of benchmarks whose train splits we use, such as BrowseSafe++, kept
-    only after a near-duplicate check against training.
-- **A developer false-positive set:** hundreds to thousands of real harmless developer
-  messages, for example from WildChat-4.8M files never used for training, filtered as
+  on, each checked for licence and for near duplicates of training data. Researched
+  2026-11-26 ([research note](../research/2026-11-26-phase1-test-sets.md)):
+  - **LLMail-Inject:** all of phase 2's 37,303 labelled unique submissions (MIT), split by
+    team. The suite holds 3,000.
+  - **BIPIA:** the 125 test attacks put inside the email, table and code test documents
+    (41,250 prompts, 200 clean documents). The suite holds the bare attacks only.
+  - **BrowseSafe++ is not usable:** its train split is training data, and its test split
+    can be scored only through the authors' leaderboard.
+- **A developer false-positive set:** thousands of real harmless developer messages from
+  4 WildChat-4.8M files never used for training (80 of 86 are unused), filtered as
   `wildchat_dev` is. The 8-message developer check becomes a smoke test, not a bar.
 - **The noise floor:** three seeds of the xsmall recipe (1 epoch) on the screening half.
   This gives the smallest difference that counts as real.
@@ -73,7 +74,7 @@ several seeds.
 | Choice | Options | Recommendation |
 |---|---|---|
 | The teacher's data recipe | **R**: role marking, BIPIA ×4, jackhhao fixed, harmful XSTest worse. **D**: v3's recipe, simpler. | R: a stronger model may remove the XSTest regression, and the gate would show it |
-| GPU | **L4** (g6.xlarge): about 2.5 h per base epoch. **L40S** (g6e): about half the time at about twice the hourly price. | L40S for the teacher: about the same cost, answers sooner |
+| GPU | **L4** (g6.xlarge): about 2.5 h per base epoch. **L40S** (g6e.xlarge, $2.33/h): about half the time at about twice the hourly price. | **Decided 2026-11-25:** no new box. marker-bench switches to g6e.xlarge for the teacher runs only, then back to g6.xlarge |
 | The developer-check bar | **At most 1 of 8** (today). **The false-positive rate on the new developer set,** no higher than v1's. | The new set, with the 8 kept as a smoke test |
 
 ## Costs
