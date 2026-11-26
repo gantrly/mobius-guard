@@ -260,12 +260,13 @@ def step_train_data(suite: Path, out: Path, *, cap: int, source_ids: Sequence[st
 
 def step_train(data: Path, out: Path, *, base: str, seed: int, epochs: int, lr: float,
                batch_size: int, max_length: int, limit: int, device: str,
-               checkpoint_minutes: float, stop_after_minutes: float) -> None:  # fmt: skip
+               checkpoint_minutes: float, stop_after_minutes: float,
+               micro_batch: int = 0) -> None:  # fmt: skip
     from .train import train
 
     cfg = TrainConfig(base=base, seed=seed, epochs=epochs, lr=lr, batch_size=batch_size,
                       max_length=max_length, limit=limit, checkpoint_minutes=checkpoint_minutes,
-                      stop_after_minutes=stop_after_minutes)  # fmt: skip
+                      stop_after_minutes=stop_after_minutes, micro_batch=micro_batch)  # fmt: skip
     result = train(data, cfg, out, device=device, log=log)
     if "best_epoch" in result:
         log(f"train: best epoch {result['best_epoch']}, wrote {out / 'best'}")
@@ -398,7 +399,7 @@ def _run(a: argparse.Namespace) -> int:
         step_train(Path(a.data), Path(a.out), base=a.base, seed=a.seed, epochs=a.epochs, lr=a.lr,
                    batch_size=a.batch_size, max_length=a.max_length, limit=a.limit,
                    device=a.device, checkpoint_minutes=a.checkpoint_minutes,
-                   stop_after_minutes=a.stop_after_minutes)  # fmt: skip
+                   stop_after_minutes=a.stop_after_minutes, micro_batch=a.micro_batch)  # fmt: skip
     elif cmd == "build":
         step_build(Path(a.out), a.sources, force=a.force)
     elif cmd == "score":
@@ -489,6 +490,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="write a resume point this often")  # fmt: skip
     p.add_argument("--stop-after-minutes", type=float, default=0.0,
                    help="rehearsal: stop, score val, save the model in partial/")  # fmt: skip
+    p.add_argument("--micro-batch", type=int, default=0,
+                   help="split batches into pieces this size (same math)")  # fmt: skip
 
     p = sub.add_parser("judge", help="two LLM judges label a training build (paid, Bedrock)")
     p.add_argument("--data", required=True, help="a train-data build")

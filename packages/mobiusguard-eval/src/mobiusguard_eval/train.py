@@ -63,12 +63,17 @@ class TrainConfig:
     limit: int = 0  # use only N training items (and N/9 val items): the small run
     checkpoint_minutes: float = 20.0  # not part of the run's identity
     stop_after_minutes: float = 0.0  # 0 = run to the end; not part of the run's identity
+    # Split each batch into pieces of this size and sum their gradients (0 = whole batch).
+    # The same batches, loss and schedule, so not part of the run's identity: it only lets
+    # a larger base fit in GPU memory.
+    micro_batch: int = 0
 
     def key(self) -> dict[str, Any]:
         """What makes two runs the same run (and a resume point usable)."""
         d = asdict(self)
         d.pop("checkpoint_minutes")
         d.pop("stop_after_minutes")
+        d.pop("micro_batch")
         return d
 
 
@@ -168,10 +173,27 @@ def train(
         rng.shuffle(result)
         return result
 
-    def loss_of(logits: Any, targets: Any, weights: Any) -> Any:
-        known = (targets >= 0) * weights
-        per = bce(logits.float(), targets.clamp(min=0)) * known
-        return per.sum() / known.sum().clamp(min=1e-6)
+    def loss_parts(chunk: Sequence[Item]) -> Any:
+        """The batch's weighted-mean loss, with backward run piece by piece (micro_batch):
+        each piece's weighted sum over the whole batch's weight, so the gradients add up to
+        the whole batch's."""
+        size = cfg.micro_batch or len(chunk)
+        pieces = [encode(chunk[i : i + size]) for i in range(0, len(chunk), size)]
+        weight: Any = torch.zeros((), device=device)
+        for _, targets, weights in pieces:
+            weight = weight + ((targets >= 0) * weights).sum()
+        denom: Any = weight.clamp(min=1e-6)
+        total: Any = torch.zeros((), device=device)
+        for enc, targets, weights in pieces:
+            with torch.autocast("cuda", dtype=torch.bfloat16, enabled=use_bf16):
+                logits = model(**enc).logits
+            known = (targets >= 0) * weights
+            part = (bce(logits.float(), targets.clamp(min=0)) * known).sum() / denom
+            if not torch.isfinite(part):
+                return part
+            part.backward()
+            total = total + part.detach()
+        return total
 
     def scores(items: Sequence[Item]) -> tuple[list[float], list[float]]:
         model.eval()
@@ -239,14 +261,11 @@ def train(
         loss_sum, n = carried if epoch == start_epoch else (0.0, 0)
         t0, seen = time.time(), 0
         for step in range(first, len(batches)):
-            enc, targets, weights = encode([train_items[j] for j in batches[step]])
-            with torch.autocast("cuda", dtype=torch.bfloat16, enabled=use_bf16):
-                loss = loss_of(model(**enc).logits, targets, weights)
+            loss = loss_parts([train_items[j] for j in batches[step]])
             if not torch.isfinite(loss):
                 where = f"epoch {epoch + 1} step {step}"
                 raise FloatingPointError(f"{cfg.base}: loss is {float(loss)} at {where}; "
                                          "the last resume point is unchanged")  # fmt: skip
-            loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             opt.step()
             sched.step()

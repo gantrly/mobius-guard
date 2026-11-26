@@ -205,3 +205,19 @@ def test_every_base_is_a_cli_choice_and_pinned() -> None:
         assert "/" in repo
         assert len(revision) == 40  # a full commit, not a branch
     assert "deberta-v3-base" in BASES  # the decision 0021 teacher
+
+
+def test_micro_batch_is_not_part_of_the_run() -> None:
+    # Pieces of a batch sum to the same gradient, so a run resumed or compared with a
+    # different micro_batch is the same run.
+    from mobiusguard_eval import cli
+    from mobiusguard_eval.train import TrainConfig
+
+    assert (
+        TrainConfig(base="deberta-v3-base", micro_batch=8).key()
+        == TrainConfig(base="deberta-v3-base").key()
+    )
+    ns = cli.build_parser().parse_args(
+        ["train", "--data", "d", "--out", "o", "--base", "deberta-v3-base", "--micro-batch", "8"]
+    )
+    assert ns.micro_batch == 8
