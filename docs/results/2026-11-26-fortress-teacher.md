@@ -78,3 +78,29 @@ Decision 0021 says a teacher that is clearly better goes on to a 3-epoch teacher
 distillation ([decision 0022](../decisions/0022-distillation.md)). Before that, the Phase 1
 sets can be built and scored with this saved teacher, v1 and R-xsmall. That needs no
 training.
+
+## Update, the same evening: the gate fixed, and an overnight chain
+
+**The gate's rules now match decisions 0021 and 0023:**
+- **The developer bar is the new developer set:** no more blocked than v1. The 8 sentences
+  are a smoke test.
+- **Languages** are judged by v1's interval, plus a pooled check of all languages but English.
+- **The gate reads both suites.**
+
+**Re-gated on suite v0.3 and the Phase 1 suite, the teacher passes 55 of 57 checks.** The two
+failures:
+- **Harmful output on OR-Bench hard:** 59.0% blocked, against v1's 49.5%.
+- **Harmless spaced-out text:** 7.3% blocked, against the 5% bar.
+
+**Recipe R2** targets both: R, plus 2× loss weight on 25,941 harmless items from the
+hard-harmless sources (PHTest, CoCoNot, Aegis, WildJailbreak benign, JBB benign), plus 4,191
+extra harmless spaced copies. None of the held-out tool outputs is in its training data.
+
+**Overnight** (`mg-v4night`), in order:
+1. **A 1-epoch R2 teacher,** scored and gated on both suites.
+2. **The recipe choice,** by a rule fixed before the run: R2 only if it passes at least as
+   many checks as R, blocks less of OR-Bench hard, and stays within 3 points of R on Phase 1
+   LLMail and BIPIA.
+3. **The 3-epoch teacher** on the chosen recipe, scored and gated on both suites.
+
+Results follow in a note of 2026-11-27.
