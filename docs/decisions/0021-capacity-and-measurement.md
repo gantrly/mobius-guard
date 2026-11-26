@@ -1,7 +1,8 @@
 # 0021: More capacity, and measurements that can see progress (Fortress v4 plan)
 
-- **Status:** proposed, 2026-11-25. The plan is agreed in outline; two choices below are
-  open for the maintainer (the GPU is decided). Nothing is built or run yet.
+- **Status:** accepted 2026-11-26. Proposed 2026-11-25; the maintainer decided the three
+  choices below on 2026-11-26 (recipe R, the L4, the new developer set as the bar). Nothing
+  is built or run yet.
 - **Builds on:** [0017](0017-disguises-carry-no-label.md) (disguises and the gate),
   [0020](0020-role-marking.md) (role marking),
   [results 2026-11-25](../results/2026-11-25-fortress-role-marking.md) (why the weak areas
@@ -69,13 +70,13 @@ So the next round changes two things: the measurement first, then the model's ca
 sets, against v1 as shipped. Every comparison before then uses the screening half and
 several seeds.
 
-## Open choices (the maintainer's)
+## Choices (the maintainer's, decided 2026-11-26)
 
 | Choice | Options | Recommendation |
 |---|---|---|
-| The teacher's data recipe | **R**: role marking, BIPIA ×4, jackhhao fixed, harmful XSTest worse. **D**: v3's recipe, simpler. | R: a stronger model may remove the XSTest regression, and the gate would show it |
+| The teacher's data recipe | **R**: role marking, BIPIA ×4, jackhhao fixed, harmful XSTest worse. **D**: v3's recipe, simpler. | **Decided 2026-11-26: R.** A stronger model may remove the XSTest regression, and the gate would show it |
 | GPU | **L4** (g6.xlarge): about 2.5 h per base epoch. **L40S** (g6e.xlarge, $2.33/h): about half the time at about twice the hourly price. | **Decided 2026-11-26:** stay on the L4 (marker-bench as it is, no new box, no type switch). The cost is about the same either way; long runs go fire-and-forget with auto power-off |
-| The developer-check bar | **At most 1 of 8** (today). **The false-positive rate on the new developer set,** no higher than v1's. | The new set, with the 8 kept as a smoke test |
+| The developer-check bar | **At most 1 of 8** (today). **The false-positive rate on the new developer set,** no higher than v1's. | **Decided 2026-11-26: the new set.** The bar is no higher a false-positive rate than v1's; the 8 stay as a smoke test |
 
 ## Costs
 
