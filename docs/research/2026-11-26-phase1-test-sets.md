@@ -170,13 +170,13 @@ items, after 7,412 repeats inside a source were removed.
   is the developer bar of decision 0021: a candidate may block no more.
 - **The interval by unit matters.** LLMail's near-duplicate clusters widen ±1 point to about
   ±7.
-- **Still to do:** the near-duplicate check of these sets against the training builds
-  (`runs/train-*`). Until then, a model's score here may include items it trained on, most
-  likely `wildchat_dev_test` against `wildchat`'s WildChat-1M shard.
+- **Near-duplicate check against training: clean.** Against recipe R's build, 3 of 4,407
+  developer messages are near duplicates, all via `wildchat_dev`; there are no exact
+  matches, and none anywhere else
+  ([results](../results/2026-11-26-fortress-phase1.md)).
 
 ## Next steps
 
-1. **The near-duplicate check** against the training builds, on the box, counts only.
-2. **The scores of R-xsmall (seeds 0 and 1) and the teacher** on the screening half, which
-   are running, and a results note.
-3. **The noise floor:** three xsmall seeds.
+1. **Done:** the near-duplicate check, and the scores of v1, R-xsmall and the teacher
+   ([results](../results/2026-11-26-fortress-phase1.md)).
+2. **The noise floor:** three xsmall seeds, or a second teacher seed.
