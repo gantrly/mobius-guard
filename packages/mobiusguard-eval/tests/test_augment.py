@@ -155,7 +155,7 @@ def test_the_gate_passes_a_model_that_reads_through_disguises(tmp_path: Path) ->
 
 
 @pytest.mark.parametrize(("spaced_fpr", "spaced_recall", "dev_k"),
-                         [(0.30, 0.50, 1), (0.02, 0.10, 1), (0.02, 0.50, 3)])  # fmt: skip
+                         [(0.30, 0.50, 1), (0.02, 0.10, 1)])  # fmt: skip
 def test_the_gate_fails_on_any_broken_rule(
     tmp_path: Path, spaced_fpr: float, spaced_recall: float, dev_k: int
 ) -> None:
@@ -215,7 +215,7 @@ def test_the_harmful_checks_guard_harmful_recall_and_over_blocking(
 
 
 def test_a_check_must_pass_for_every_seed(tmp_path: Path) -> None:
-    good, bad = _detector(0.02, 0.50, 1), _detector(0.02, 0.50, 3)
+    good, bad = _detector(0.02, 0.50, 1), _detector(0.30, 0.50, 1)  # bad: blocks spaced text
     report = _report(tmp_path, _detector(0.94, 0.995, 5), good)
     m = json.loads((report / "metrics.json").read_text())
     m["detectors"]["c2"] = bad
@@ -228,6 +228,81 @@ def test_a_check_must_pass_for_every_seed(tmp_path: Path) -> None:
     assert gate.gate(report, "b", ["c"], tmp_path / "one")
     assert not gate.gate(report, "b", ["c", "c2"], tmp_path / "two")
     out = json.loads((tmp_path / "two" / "gate.json").read_text())
-    dev = next(d for d in out["per_seed"] if d["name"].startswith("dev_check"))
-    assert dev["seeds"] == [1, 3]
+    dev = next(d for d in out["per_seed"] if d["name"].startswith("obf-benign:spaced"))
+    assert dev["seeds"] == [0.02, 0.3]
     assert dev["passed"] == [True, False]
+
+
+def test_the_eight_developer_messages_are_a_smoke_test_not_a_bar(tmp_path: Path) -> None:
+    report = _report(tmp_path, _detector(0.94, 0.995, 5), _detector(0.02, 0.50, 4))
+    assert gate.gate(report, "b", "c", tmp_path / "out")
+    row = next(c for c in gate.checks(report, "b", "c") if c.name.startswith("dev_check"))
+    assert row.rule == "smoke test, not a bar"
+
+
+@pytest.mark.parametrize(("cand_rate", "passes"), [(0.03, True), (0.098, True), (0.11, False)])
+def test_the_developer_set_is_the_bar(tmp_path: Path, cand_rate: float, passes: bool) -> None:
+    base, cand = _detector(0.94, 0.995, 5), _detector(0.02, 0.50, 1)
+    base["fpr"][gate.DEV_SET] = _rates(0.098)  # type: ignore[index]
+    cand["fpr"][gate.DEV_SET] = _rates(cand_rate)  # type: ignore[index]
+    report = _report(tmp_path, base, cand)
+    assert gate.gate(report, "b", "c", tmp_path / "out") is passes
+
+
+def test_languages_use_the_interval_and_a_pooled_check(tmp_path: Path) -> None:
+    base, cand = _detector(0.94, 0.995, 5), _detector(0.02, 0.50, 1)
+    # 2 of 120 against 0 of 120: within the baseline's interval (was a fail at +1 point).
+    base["fpr_by_language"] = {"en": _rates(0.01)["at"], "pt": _rates(0.0, n=120, k=0)["at"]}  # type: ignore[index]
+    cand["fpr_by_language"] = {"en": _rates(0.01)["at"], "pt": _rates(0.0, n=120, k=2)["at"]}  # type: ignore[index]
+    report = _report(tmp_path, base, cand)
+    names = {c.name: c for c in gate.checks(report, "b", "c")}
+    assert names["ordinary messages (pt) blocked"].passed
+    assert "ordinary messages (all but en, pooled) blocked" in names
+
+
+def test_a_phase1_style_report_gets_only_its_checks(tmp_path: Path) -> None:
+    main = _report(tmp_path, _detector(0.94, 0.995, 5), _detector(0.02, 0.50, 1))
+    p1 = tmp_path / "p1" / "report"
+    p1.mkdir(parents=True)
+    det_b = {"recall": {"llmail_full": _rates(0.40)}, "fpr": {gate.DEV_SET: _rates(0.098),
+             "oasst": _rates(0.009)}, "fpr_by_language": {}}  # fmt: skip
+    det_c = {"recall": {"llmail_full": _rates(0.56)}, "fpr": {gate.DEV_SET: _rates(0.03),
+             "oasst": _rates(0.008)}, "fpr_by_language": {}}  # fmt: skip
+    (p1 / "metrics.json").write_text(json.dumps({"detectors": {"b": det_b, "c": det_c}}))
+    assert gate.gate(main, "b", "c", tmp_path / "out", extra=[p1])
+    names = [c.name for c in gate.checks(p1, "b", "c", prefix="p1: ")]
+    assert names == [
+        "p1: llmail_full caught",
+        "p1: wildchat_dev_test blocked (the developer bar)",
+        "p1: oasst blocked",
+    ]
+
+
+def test_recipe_r2_weights_hard_benign_items_and_adds_harmless_spaced_copies(
+    tmp_path: Path,
+) -> None:
+    from dataclasses import replace
+
+    data = tmp_path / "clean"
+    data.mkdir()
+    hard = [replace(_item(i, 0, "phtest"), meta={"harmful": "0"}) for i in range(500)]
+    attacks = [_item(i, 1) for i in range(1000, 1500)]
+    benign = [_item(i, 0) for i in range(2000, 3000)]
+    write_jsonl(data / "train.jsonl", hard + attacks + benign)
+    write_jsonl(data / "val.jsonl", [_item(i, 0, split="val") for i in range(5000, 5050)])
+    (data / "summary.json").write_text(json.dumps({"ids_sha256": "x"}))
+    plain = augment.augment(data, tmp_path / "r")
+    r2 = augment.augment(data, tmp_path / "r2", hard_benign_weight=2.0, extra_benign_spaced=0.04)
+    out = list(read_jsonl(tmp_path / "r2" / "train.jsonl"))
+    weighted = [it for it in out if it.source == "phtest" and not it.meta.get("augmented")]
+    assert all(item_weight(it) == 2.0 for it in weighted)
+    extra = r2["counts"].get("extra_spaced/benign/train", 0)
+    assert extra > 0
+    spaced = [it for it in out if it.meta.get("augmented") == "spaced"]
+    assert all(it.label == 0 for it in spaced if it.meta["original"] not in
+               {a.id for a in attacks})  # fmt: skip
+    assert r2["ids_sha256"] != plain["ids_sha256"]
+    assert r2["augment"]["hard_benign_weight"] == 2.0
+    # Attacks get exactly the copies they got without R2.
+    plain_out = list(read_jsonl(tmp_path / "r" / "train.jsonl"))
+    assert sum(it.label == 1 for it in out) == sum(it.label == 1 for it in plain_out)

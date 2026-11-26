@@ -52,6 +52,10 @@ DEV_GROUP = frozenset({
     "magicoder", "self_oss", "opencodeinstruct", "codefeedback",
 })  # fmt: skip
 HELD_OUT = "homoglyph"  # never used in training: the suite's check of an unseen disguise
+# Recipe R2 (2026-11-26): harmless prompts that sound harmful. The teacher blocked 59% of
+# OR-Bench hard's harmless prompts (v1 49.5%); these sources teach the harmful output that
+# topic alone is not harm, so R2 gives their harmless items more weight.
+HARD_BENIGN = frozenset({"phtest", "coconot", "aegis2", "wildjailbreak_benign", "jbb_benign"})
 
 _LEET = {"a": "4@", "e": "3", "i": "1!", "o": "0", "s": "5$", "t": "7", "g": "9", "b": "8",
          "l": "1", "z": "2"}  # fmt: skip
@@ -137,13 +141,29 @@ def weigh(it: Item, w: float) -> Item:
     return replace(it, meta={**it.meta, "weight": f"{w:.4f}"})
 
 
+def hard_benign(it: Item) -> bool:
+    return it.source in HARD_BENIGN and it.label == 0 and it.meta.get("harmful") == "0"
+
+
+def extra_spaced(it: Item, rate: float) -> bool:
+    """Recipe R2: an extra spaced copy for a share of the harmless items that got none."""
+    return (rate > 0 and it.label == 0 and len(it.text) <= MAX_CHARS
+            and not it.meta.get("augmented") and pick(it) is None
+            and _unit(f"extra-spaced:{it.id}") < rate)  # fmt: skip
+
+
 def augment(data: Path, out: Path, *, exclude: Sequence[str] = (),
-            weight: float | None = None) -> dict[str, Any]:  # fmt: skip
+            weight: float | None = None, hard_benign_weight: float = 1.0,
+            extra_benign_spaced: float = 0.0) -> dict[str, Any]:  # fmt: skip
     """Write ``out/{train,val}.jsonl`` and ``summary.json``: the items of ``data`` with
     their group weights, plus one disguised copy for the picked items.
 
     ``exclude`` leaves sources out (to find which ones move a result); ``weight`` fixes the
-    group weight instead of computing it, so leaving sources out changes nothing else."""
+    group weight instead of computing it, so leaving sources out changes nothing else.
+    Recipe R2: ``hard_benign_weight`` multiplies the loss weight of harmless items from
+    ``HARD_BENIGN``; ``extra_benign_spaced`` gives that share of the harmless items that
+    got no copy an extra spaced one. Both labels no longer get the same share of spaced
+    copies, on purpose: the gate's spaced-attack check shows whether that costs recall."""
     parts = {p: [it for it in read_jsonl(data / f"{p}.jsonl") if it.source not in exclude]
              for p in ("train", "val")}  # fmt: skip
     w = weight if weight is not None else group_weight([it for v in parts.values() for it in v])
@@ -154,10 +174,17 @@ def augment(data: Path, out: Path, *, exclude: Sequence[str] = (),
         result: list[Item] = []
         for it in items:
             it = weigh(it, w)
+            if hard_benign_weight != 1.0 and hard_benign(it):
+                base_w = float(it.meta.get("weight", "1"))
+                it = replace(it, meta={**it.meta, "weight": f"{base_w * hard_benign_weight:.4f}"})
+                counts[f"hard_benign_weighted/{part}"] += 1
             result.append(it)
             if name := pick(it):
                 result.append(disguise(it, name))
                 counts[f"{name}/{'attack' if it.label else 'benign'}/{part}"] += 1
+            elif extra_spaced(it, extra_benign_spaced):
+                result.append(disguise(it, "spaced"))
+                counts[f"extra_spaced/benign/{part}"] += 1
         write_jsonl(out / f"{part}.jsonl", result)
         ids += [f"{it.id}\t{it.meta.get('weight', '1')}" for it in result]
         counts[f"items/{part}"] = len(result)
@@ -174,6 +201,9 @@ def augment(data: Path, out: Path, *, exclude: Sequence[str] = (),
             "dev_group": sorted(DEV_GROUP),
             "dev_group_weight": round(w, 4),
             "excluded": sorted(exclude),
+            "hard_benign": sorted(HARD_BENIGN),
+            "hard_benign_weight": hard_benign_weight,
+            "extra_benign_spaced": extra_benign_spaced,
         },
         "counts": dict(sorted(counts.items())),
         # IDs and weights: two sets with the same items but other weights are other data.

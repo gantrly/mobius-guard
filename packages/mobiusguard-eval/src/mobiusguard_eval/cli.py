@@ -348,7 +348,9 @@ def _run(a: argparse.Namespace) -> int:
         from .augment import augment
 
         summary = augment(Path(a.data), Path(a.out), weight=a.group_weight,
-                          exclude=[s for s in a.exclude.split(",") if s])  # fmt: skip
+                          exclude=[s for s in a.exclude.split(",") if s],
+                          hard_benign_weight=a.hard_benign_weight,
+                          extra_benign_spaced=a.extra_benign_spaced)  # fmt: skip
         log(f"augment: wrote {a.out}: {json.dumps(summary['counts'])}")
     elif cmd == "extend-suite":
         from .augment import extend_suite
@@ -388,7 +390,8 @@ def _run(a: argparse.Namespace) -> int:
         harmful = None
         if a.harmful_report:
             harmful = (Path(a.harmful_report), a.harmful_baseline, a.harmful_candidate)
-        ok = gate(Path(a.report), a.baseline, a.candidate, Path(a.out), harmful=harmful)
+        ok = gate(Path(a.report), a.baseline, a.candidate, Path(a.out), harmful=harmful,
+                  extra=[Path(r) for r in a.extra_report])  # fmt: skip
         log(f"gate: {'PASS' if ok else 'FAIL'}, see {a.out}/gate.md")
         if not ok:
             raise SystemExit(1)
@@ -509,6 +512,18 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out", required=True)
     p.add_argument("--exclude", default="", help="comma-separated sources to leave out")
     p.add_argument("--group-weight", type=float, help="fix the developer group's weight")
+    p.add_argument(
+        "--hard-benign-weight",
+        type=float,
+        default=1.0,
+        help="loss weight of harmless items from HARD_BENIGN sources (recipe R2)",
+    )
+    p.add_argument(
+        "--extra-benign-spaced",
+        type=float,
+        default=0.0,
+        help="extra spaced copies of this share of harmless items (recipe R2)",
+    )
 
     p = sub.add_parser("extend-suite", help="the suite plus harmless disguised and dev sets")
     p.add_argument("--suite", required=True)
@@ -551,6 +566,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--harmful-report", help="a report of both models' #harmful scores")
     p.add_argument("--harmful-baseline", help="detector name in the harmful report")
     p.add_argument("--harmful-candidate", nargs="+", help="names in the harmful report")
+    p.add_argument(
+        "--extra-report",
+        nargs="*",
+        default=[],
+        help="more reports with the same detectors (e.g. the Phase 1 suite)",
+    )
 
     p = sub.add_parser("export", help="ONNX + INT8 export of a trained model, with checks")
     p.add_argument("--model", required=True, help="a trained model directory (best/ or partial/)")
