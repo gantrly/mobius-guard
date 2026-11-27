@@ -2,6 +2,14 @@
 
 - **Status:** accepted, 2026-11-27 (the maintainer). Not yet published: the release waits for
   the maintainer's OK on the model card and the measured CPU latency.
+- **Export, 2026-11-27:** the release export's dynamic INT8 (per-channel, `reduce_range`, every
+  MatMul and Gather) does not agree with PyTorch for this model: correlation 0.92 (attack)
+  and 0.89 (harmful), against the bar of 0.98; the float32 ONNX matches (largest difference
+  1.6e-5). In a 24-text small run, keeping each layer's second feed-forward MatMul (its input
+  is the GELU output) in float32 passes (0.9994 / 0.9985, 308 MB), as do 8-bit weight-only
+  quantisation and float32. A sweep of 8 variants on 500 texts, with latency, runs on the box
+  overnight. Shipping anything but the current INT8 needs an `export` option and the
+  maintainer's choice, recorded here.
 - **Builds on:** [0013](0013-releasing-fortress-v0.2.md) (Fortress-XS; "XS leaves room for a
   larger one"), [0020](0020-role-marking.md) (role marking),
   [0021](0021-capacity-and-measurement.md) (the teacher), [0022](0022-distillation.md)
