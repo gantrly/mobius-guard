@@ -59,6 +59,7 @@ harmless prompts, and fails only the Russian check by one message.
 - **Replace Fortress-XS:** rejected for the CPU latency.
 - **Wait for a student that passes:** the second distillation (α 0.3, 2 epochs) was running
   when this was decided. A student that passes would become the next Fortress-XS; that does
-  not change this decision.
+  not change this decision. It failed the gate too, 44 of 46
+  ([results](../results/2026-11-27-fortress-distillation.md)).
 - **A second seed first:** about 4 h 20 min of GPU time. It can follow; it would only show
   how much the numbers move between seeds, not change the shipped files.

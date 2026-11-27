@@ -1,8 +1,11 @@
 # 0022: Distil the teacher into xsmall (Fortress v4, Phase 3)
 
-- **Status:** proposed, 2026-11-26. Five choices below are open for the maintainer. Nothing is
-  built. This phase runs only if the teacher passes its deciding test (decision 0021,
-  Phase 2).
+- **Status:** run with the recommended choices and the maintainer's go, on teacher
+  T3. Built at `2be9ea1`. **Tried twice on 2026-11-27, neither student passed the gate**
+  (44 of 46 each): α 0.5 for 1 epoch, then α 0.3 for 2 epochs
+  ([results](../results/2026-11-27-fortress-distillation.md)). As planned under *What would
+  change the plan*, the teacher ships as an opt-in model
+  ([decision 0024](0024-fortress-base.md)). A third try waits for the maintainer.
 - **Builds on:** [0021](0021-capacity-and-measurement.md) (the plan),
   [0020](0020-role-marking.md) (role marking, recipe R), [0017](0017-disguises-carry-no-label.md)
   (the gate)

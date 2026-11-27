@@ -6,6 +6,17 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
 
 ## Unreleased
 
+- **Fortress-Base** ([decision 0024](docs/decisions/0024-fortress-base.md)), not yet
+  published: a larger, opt-in classifier (DeBERTa-v3-base) next to Fortress-XS, for
+  documents, email and developer traffic. The proxy knows `classifier = "fortress-base"`;
+  until it is published it loads only from a local directory. Fortress-XS stays the default.
+- **Evaluation: distillation** ([decision 0022](docs/decisions/0022-distillation.md)):
+  `teacher-scores` writes a teacher's logits for every training item and extra text, and
+  `train --teacher-scores --alpha --temperature --extra-train` trains a student on labels
+  and the teacher's soft targets.
+- **Evaluation: `model-meta`** writes a released model's `fortress.json` from its score
+  runs: thresholds per role and per view at 0.1%, 1% and 5% false positives, with the
+  unreliable ones listed.
 - **Evaluation: 95% intervals by unit** ([decision 0023](docs/decisions/0023-intervals-by-unit.md)):
   `metrics.json` adds `ci95_units`, a bootstrap over attacks or near-duplicate clusters, and
   the gate uses it. Rows that share an attack no longer count as independent. Sets of
