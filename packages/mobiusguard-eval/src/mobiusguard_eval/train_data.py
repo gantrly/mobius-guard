@@ -138,8 +138,12 @@ def build(
     cap: int = CAP,
     seed: str = "",
     log: Callable[[str], None] = lambda _m: None,
+    spill: bool = False,
 ) -> dict[str, Any]:
-    """Write ``train.jsonl``, ``val.jsonl``, ``dropped.jsonl`` and ``summary.json``."""
+    """Write ``train.jsonl``, ``val.jsonl``, ``dropped.jsonl`` and ``summary.json``.
+
+    ``spill`` also writes ``spill.jsonl``: items that passed every check but were cut by
+    their source's cap. They are text for distillation (decision 0022), never labels."""
     suite_ids = suite_key(suite)
     counts: dict[str, Counter[str]] = defaultdict(Counter)
     for s in sources:
@@ -197,6 +201,7 @@ def build(
             kept.append((it, c))
 
     final: list[Item] = []
+    spilled: list[Item] = []
     per_source: dict[str, list[tuple[Item, int]]] = defaultdict(list)
     for it, c in kept:
         per_source[it.source].append((it, c))
@@ -205,6 +210,10 @@ def build(
         for it, c in mine[: _source_cap(s, cap)]:
             # Name a cluster by its first training member's ID: stable across rebuilds.
             final.append(replace(it, cluster=str(c)))
+        spilled += [it for it, _ in mine[_source_cap(s, cap) :]]
+    if spill:
+        write_jsonl(out / "spill.jsonl", spilled)
+        log(f"train-data: {len(spilled):,} items cut by the caps written to spill.jsonl")
     # Twins join their clusters into one unit for the split (union-find over clusters).
     parent: dict[str, str] = {}
 

@@ -240,33 +240,41 @@ def pipeline(
 
 
 def step_train_data(suite: Path, out: Path, *, cap: int, source_ids: Sequence[str] | None = None,
-                    seed: str = "", force: bool = False) -> None:  # fmt: skip
+                    seed: str = "", force: bool = False, spill: bool = False) -> None:  # fmt: skip
     from . import train_data
     from .train_sources import training_sources
 
     sources = training_sources(list(source_ids) if source_ids else None)
     items = load_suite(suite)
     key = train_data.build_key(sources, train_data.suite_key(items), cap, seed)
-    if not force and train_data.is_built(out, key):
+    if (
+        not force
+        and train_data.is_built(out, key)
+        and (not spill or (out / "spill.jsonl").exists())
+    ):
         log(f"train-data: {out} is up to date, skipping (--force to rebuild)")
         return
     loaded: dict[str, list[Item]] = {}
     for s in sources:
         loaded[s.id] = list(s.parse(fetch(s)))
         log(f"train-data: {s.id} {len(loaded[s.id]):,} items")
-    summary = train_data.build(sources, loaded, items, out, cap=cap, seed=seed, log=log)
+    summary = train_data.build(sources, loaded, items, out, cap=cap, seed=seed, log=log,
+                               spill=spill)  # fmt: skip
     log(f"train-data: {summary['items']}, labels {dict(summary['labels'])}")
 
 
 def step_train(data: Path, out: Path, *, base: str, seed: int, epochs: int, lr: float,
                batch_size: int, max_length: int, limit: int, device: str,
                checkpoint_minutes: float, stop_after_minutes: float,
-               micro_batch: int = 0) -> None:  # fmt: skip
+               micro_batch: int = 0, teacher_scores: str = "", extra_train: str = "",
+               alpha: float = 1.0, temperature: float = 1.0) -> None:  # fmt: skip
     from .train import train
 
     cfg = TrainConfig(base=base, seed=seed, epochs=epochs, lr=lr, batch_size=batch_size,
                       max_length=max_length, limit=limit, checkpoint_minutes=checkpoint_minutes,
-                      stop_after_minutes=stop_after_minutes, micro_batch=micro_batch)  # fmt: skip
+                      stop_after_minutes=stop_after_minutes, micro_batch=micro_batch,
+                      teacher_scores=teacher_scores, extra_train=extra_train, alpha=alpha,
+                      temperature=temperature)  # fmt: skip
     result = train(data, cfg, out, device=device, log=log)
     if "best_epoch" in result:
         log(f"train: best epoch {result['best_epoch']}, wrote {out / 'best'}")
@@ -339,7 +347,7 @@ def _run(a: argparse.Namespace) -> int:
         return _train_fetch(a)
     if cmd == "train-data":
         step_train_data(Path(a.suite), Path(a.out), cap=a.cap, source_ids=a.sources,
-                        seed=a.sample_seed, force=a.force)  # fmt: skip
+                        seed=a.sample_seed, force=a.force, spill=a.spill)  # fmt: skip
     elif cmd == "judge":
         step_judge(Path(a.data), Path(a.out), workers=a.workers, limit=a.limit)
     elif cmd == "apply-judges":
@@ -402,7 +410,21 @@ def _run(a: argparse.Namespace) -> int:
         step_train(Path(a.data), Path(a.out), base=a.base, seed=a.seed, epochs=a.epochs, lr=a.lr,
                    batch_size=a.batch_size, max_length=a.max_length, limit=a.limit,
                    device=a.device, checkpoint_minutes=a.checkpoint_minutes,
-                   stop_after_minutes=a.stop_after_minutes, micro_batch=a.micro_batch)  # fmt: skip
+                   stop_after_minutes=a.stop_after_minutes, micro_batch=a.micro_batch,
+                   teacher_scores=a.teacher_scores, extra_train=a.extra_train, alpha=a.alpha,
+                   temperature=a.temperature)  # fmt: skip
+    elif cmd == "distill-pool":
+        from .distill import pool
+
+        s = pool(Path(a.spill), [Path(p) for p in a.held_out], [Path(p) for p in a.train],
+                 Path(a.out), size=a.size, log=log)  # fmt: skip
+        log(f"distill-pool: {s['items']:,} items ({s['near_held_out']:,} near held-out dropped)")
+    elif cmd == "teacher-scores":
+        from .distill import teacher_scores
+
+        n = teacher_scores(Path(a.model), [Path(p) for p in a.items], Path(a.out),
+                           device=a.device, batch_size=a.batch_size, log=log)  # fmt: skip
+        log(f"teacher-scores: {n:,} items scored, wrote {a.out}")
     elif cmd == "build":
         step_build(Path(a.out), a.sources, force=a.force)
     elif cmd == "score":
@@ -477,6 +499,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--sources", nargs="*", help="training source IDs (default: all)")
     p.add_argument("--sample-seed", default="", help="draw a different random sample")
     p.add_argument("--force", action="store_true")
+    p.add_argument(
+        "--spill",
+        action="store_true",
+        help="also write spill.jsonl: items cut by the caps (distillation text)",
+    )
 
     p = sub.add_parser("train", help="fine-tune one base model with one seed")
     p.add_argument("--data", required=True)
@@ -493,8 +520,26 @@ def build_parser() -> argparse.ArgumentParser:
                    help="write a resume point this often")  # fmt: skip
     p.add_argument("--stop-after-minutes", type=float, default=0.0,
                    help="rehearsal: stop, score val, save the model in partial/")  # fmt: skip
+    p.add_argument("--teacher-scores", default="", help="distillation: teacher-scores JSONL")
+    p.add_argument("--extra-train", default="", help="distillation: distill-only items.jsonl")
+    p.add_argument("--alpha", type=float, default=1.0, help="distillation: the labels' share")
+    p.add_argument("--temperature", type=float, default=1.0, help="distillation: T")
     p.add_argument("--micro-batch", type=int, default=0,
                    help="split batches into pieces this size (same math)")  # fmt: skip
+
+    p = sub.add_parser("distill-pool", help="extra text for distillation (decision 0022)")
+    p.add_argument("--spill", required=True, help="a train-data build's spill.jsonl")
+    p.add_argument("--held-out", nargs="+", required=True, help="items files to stay clear of")
+    p.add_argument("--train", nargs="+", required=True, help="training files (IDs left out)")
+    p.add_argument("--size", type=int, default=50_000)
+    p.add_argument("--out", required=True)
+
+    p = sub.add_parser("teacher-scores", help="a teacher's logits for training items")
+    p.add_argument("--model", required=True, help="the teacher's best/ directory")
+    p.add_argument("--items", nargs="+", required=True, help="items JSONL files")
+    p.add_argument("--out", required=True)
+    p.add_argument("--device", default="cuda")
+    p.add_argument("--batch-size", type=int, default=64)
 
     p = sub.add_parser("judge", help="two LLM judges label a training build (paid, Bedrock)")
     p.add_argument("--data", required=True, help="a train-data build")

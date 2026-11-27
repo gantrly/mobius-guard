@@ -306,3 +306,20 @@ def test_recipe_r2_weights_hard_benign_items_and_adds_harmless_spaced_copies(
     # Attacks get exactly the copies they got without R2.
     plain_out = list(read_jsonl(tmp_path / "r" / "train.jsonl"))
     assert sum(it.label == 1 for it in out) == sum(it.label == 1 for it in plain_out)
+
+
+def test_an_extra_report_does_not_check_shared_sets_twice(tmp_path: Path) -> None:
+    main = _report(tmp_path, _detector(0.94, 0.995, 5), _detector(0.02, 0.50, 1))
+    p1 = tmp_path / "p1" / "report"
+    p1.mkdir(parents=True)
+    lang = {"en": _rates(0.01)["at"], "ru": _rates(0.005)["at"]}
+    det_b = {"recall": {"llmail_full": _rates(0.40)},
+             "fpr": {"oasst": _rates(0.009)}, "fpr_by_language": lang}  # fmt: skip
+    det_c = {"recall": {"llmail_full": _rates(0.56)},
+             "fpr": {"oasst": _rates(0.5)}, "fpr_by_language": lang}  # fmt: skip
+    (p1 / "metrics.json").write_text(json.dumps({"detectors": {"b": det_b, "c": det_c}}))
+    # oasst is checked in the main report; the extra report's copy is skipped, languages too.
+    assert gate.gate(main, "b", "c", tmp_path / "out", extra=[p1])
+    names = [c["name"] for c in json.loads((tmp_path / "out" / "gate.json").read_text())["checks"]]
+    assert "p1: llmail_full caught" in names
+    assert not [n for n in names if n.startswith("p1: ordinary") or n == "p1: oasst blocked"]

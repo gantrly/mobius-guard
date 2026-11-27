@@ -94,9 +94,12 @@ def _pooled(rates: dict[str, Any], skip: str = "en") -> tuple[int, int]:
     return k, n
 
 
-def checks(report: Path, baseline: str, candidate: str, prefix: str = "") -> list[Check]:
+def checks(report: Path, baseline: str, candidate: str, prefix: str = "",
+           shared: frozenset[str] = frozenset()) -> list[Check]:  # fmt: skip
     """Every check the report holds data for: a report without disguised or developer
-    sets (the Phase 1 suite) gets only the checks that apply to it."""
+    sets (the Phase 1 suite) gets only the checks that apply to it. ``shared``: harmless
+    sets the main report already checks (an extra report's ordinary messages), skipped
+    here with their language checks, so one message can't fail twice."""
     from .metrics import wilson
 
     m = json.loads((report / "metrics.json").read_text())["detectors"]
@@ -136,19 +139,20 @@ def checks(report: Path, baseline: str, candidate: str, prefix: str = "") -> lis
         bv, cv = _at(b["fpr"][DEV_SET])["rate"], _at(c["fpr"][DEV_SET])["rate"]
         add(f"{DEV_SET} blocked (the developer bar)", bv, cv, f"<= {bv:.1%}", cv <= bv)
     for src in sorted(c["fpr"]):
-        if src.startswith("obf-benign:") or src in ("dev_check", DEV_SET):
+        if src.startswith("obf-benign:") or src in ("dev_check", DEV_SET) or src in shared:
             continue
         hi = _ci(b["fpr"][src])[1]
         cv = _at(c["fpr"][src])["rate"]
         add(f"{src} blocked", _at(b["fpr"][src])["rate"], cv, f"<= {hi:.1%}", cv <= hi)
     # Per language: at most the baseline's upper bound (one message is 0.8 points of 120).
     # All languages but English pooled: the same rule, with the power the small ones lack.
-    for lang in sorted(c["fpr_by_language"]):
+    langs: dict[str, Any] = {} if shared else c["fpr_by_language"]
+    for lang in sorted(langs):
         hi = _ci(b["fpr_by_language"][lang])[1]
         bv, cv = _at(b["fpr_by_language"][lang])["rate"], _at(c["fpr_by_language"][lang])["rate"]
         add(f"ordinary messages ({lang}) blocked", bv, cv, f"<= {hi:.1%}", cv <= hi)
-    bk, bn = _pooled(b["fpr_by_language"])
-    ck, cn = _pooled(c["fpr_by_language"])
+    bk, bn = _pooled(b["fpr_by_language"] if langs else {})
+    ck, cn = _pooled(langs)
     if bn and cn:
         hi = wilson(bk, bn)[1]
         add("ordinary messages (all but en, pooled) blocked", bk / bn, ck / cn, f"<= {hi:.1%}",
@@ -200,8 +204,11 @@ def gate(report: Path, baseline: str, candidate: str | Sequence[str], out: Path,
     def label(r: Path) -> str:  # "report" is the usual name, so name it after its parent
         return f"{r.parent.name if r.name == 'report' else r.name}: "
 
+    main = json.loads((report / "metrics.json").read_text())["detectors"]
+    shared = frozenset(main[baseline]["fpr"])  # sets the main report already checks
     per_seed = [checks(report, baseline, c)
-                + [ch for r in extra for ch in checks(r, baseline, c, prefix=label(r))]
+                + [ch for r in extra
+                   for ch in checks(r, baseline, c, prefix=label(r), shared=shared)]
                 for c in cands]  # fmt: skip
     if harmful:
         h_report, h_base, h_cand = harmful
