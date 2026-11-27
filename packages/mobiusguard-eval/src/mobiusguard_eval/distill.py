@@ -77,16 +77,25 @@ def pool(spill: Path, held_out: Sequence[Path], train: Sequence[Path], out: Path
     return summary
 
 
+def by_id_sample(items: list[Item], n: int) -> list[Item]:
+    """The first ``n`` items by a hash of their IDs (all when ``n`` is 0): the same items
+    ``train --limit n`` takes from each file."""
+    return (
+        sorted(items, key=lambda it: hashlib.sha256(it.id.encode()).hexdigest())[:n] if n else items
+    )
+
+
 def teacher_scores(model: Path, files: Sequence[Path], out: Path, *, device: str = "cuda",
-                   batch_size: int = 64, max_length: int = 512,
+                   batch_size: int = 64, max_length: int = 512, limit: int = 0,
                    log: Callable[[str], None] = lambda _m: None) -> int:  # fmt: skip
-    """Write ``out`` (JSONL): the teacher's raw logits for every item of ``files``."""
+    """Write ``out`` (JSONL): the teacher's raw logits for every item of ``files`` (or each
+    file's ``limit`` items that ``train --limit`` would take: the small run)."""
     torch: Any = importlib.import_module("torch")
     tf: Any = importlib.import_module("transformers")
     tok: Any = tf.AutoTokenizer.from_pretrained(model)
     net: Any = tf.AutoModelForSequenceClassification.from_pretrained(model).to(device).eval()
     use_bf16 = device.startswith("cuda") and torch.cuda.is_bf16_supported()
-    items = [it for f in files for it in read_jsonl(f)]
+    items = [it for f in files for it in by_id_sample(list(read_jsonl(f)), limit)]
     order = sorted(range(len(items)), key=lambda j: len(items[j].text))  # less padding
     rows: dict[int, tuple[float, float]] = {}
     with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16, enabled=use_bf16):

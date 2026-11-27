@@ -423,7 +423,8 @@ def _run(a: argparse.Namespace) -> int:
         from .distill import teacher_scores
 
         n = teacher_scores(Path(a.model), [Path(p) for p in a.items], Path(a.out),
-                           device=a.device, batch_size=a.batch_size, log=log)  # fmt: skip
+                           device=a.device, batch_size=a.batch_size, limit=a.limit,
+                           log=log)  # fmt: skip
         log(f"teacher-scores: {n:,} items scored, wrote {a.out}")
     elif cmd == "build":
         step_build(Path(a.out), a.sources, force=a.force)
@@ -540,6 +541,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out", required=True)
     p.add_argument("--device", default="cuda")
     p.add_argument("--batch-size", type=int, default=64)
+    p.add_argument("--limit", type=int, default=0, help="each file's train --limit items only")
 
     p = sub.add_parser("judge", help="two LLM judges label a training build (paid, Bedrock)")
     p.add_argument("--data", required=True, help="a train-data build")

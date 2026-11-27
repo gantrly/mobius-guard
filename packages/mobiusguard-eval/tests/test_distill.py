@@ -103,3 +103,11 @@ def test_the_pool_drops_near_held_out_and_training_items(tmp_path: Path) -> None
         if it.id == doc.id:
             assert it.text.startswith("[tool]\n")
     assert json.loads((tmp_path / "pool" / "summary.json").read_text())["items"] == 15
+
+
+def test_the_small_run_scores_the_items_a_limited_training_run_takes() -> None:
+    from mobiusguard_eval.train import _subset  # pyright: ignore[reportPrivateUsage]
+
+    items = [make_item(t, BENIGN, "w") for t in _texts(50, "x")]
+    assert [it.id for it in distill.by_id_sample(items, 7)] == [it.id for it in _subset(items, 7)]
+    assert distill.by_id_sample(items, 0) == items
