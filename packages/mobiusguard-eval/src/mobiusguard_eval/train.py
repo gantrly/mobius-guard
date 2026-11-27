@@ -206,7 +206,8 @@ def train(
     sched: Any = tf.get_linear_schedule_with_warmup(opt, int(cfg.warmup * total), total)
     use_bf16 = device.startswith("cuda") and torch.cuda.is_bf16_supported()
 
-    def encode(chunk: Sequence[Item]) -> tuple[dict[str, Any], Any, Any, Any]:
+    def encode(chunk: Sequence[Item], *, soft_targets: bool = True,
+               ) -> tuple[dict[str, Any], Any, Any, Any]:  # fmt: skip
         enc = tok([it.text for it in chunk], truncation=True, max_length=cfg.max_length,
                   padding=True, return_tensors="pt")  # fmt: skip
         # A distill-only item's labels are unknown: only the teacher's scores teach.
@@ -214,8 +215,9 @@ def train(
                                 else [float(it.label), _harmful(it)] for it in chunk],
                                device=device)  # fmt: skip
         weights = torch.tensor([[item_weight(it)] for it in chunk], device=device)
+        # Validation scores the student alone: its items have no teacher scores.
         soft = (torch.tensor([list(teacher[it.id]) for it in chunk], device=device)
-                if teacher is not None else None)  # fmt: skip
+                if teacher is not None and soft_targets else None)  # fmt: skip
         return {k: v.to(device) for k, v in enc.items()}, targets, weights, soft
 
     def plan(epoch: int) -> list[list[int]]:
@@ -266,7 +268,7 @@ def train(
         with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16, enabled=use_bf16):
             for i in range(0, len(order), cfg.batch_size):
                 idx = order[i : i + cfg.batch_size]
-                enc, _, _, _ = encode([items[j] for j in idx])
+                enc, _, _, _ = encode([items[j] for j in idx], soft_targets=False)
                 logits = model(**enc).logits.float()
                 for j, a, h in zip(idx, logits[:, 0].tolist(), logits[:, 1].tolist(), strict=True):
                     attack[j], harmful[j] = a, h
