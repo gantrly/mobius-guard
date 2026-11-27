@@ -426,6 +426,20 @@ def _run(a: argparse.Namespace) -> int:
                            device=a.device, batch_size=a.batch_size, limit=a.limit,
                            log=log)  # fmt: skip
         log(f"teacher-scores: {n:,} items scored, wrote {a.out}")
+    elif cmd == "model-meta":
+        from . import model_meta
+
+        meta = model_meta.fortress_meta(
+            name=a.name, version=a.version, base=a.base, suite=Path(a.suite),
+            attack=Path(a.attack), attack_views=Path(a.attack_views),
+            attack_tool=Path(a.attack_tool), attack_tool_views=Path(a.attack_tool_views),
+            harmful=Path(a.harmful), training=Path(a.training), code_commit=a.code_commit,
+        )  # fmt: skip
+        model_meta.write(meta, Path(a.out))
+        f = meta["default_fpr"]
+        log(f"model-meta: wrote {a.out}; at {f}: "
+            f"{ {k: v[f] for k, v in meta['thresholds'].items()} }, views "
+            f"{ {k: v[f] for k, v in meta['views_thresholds'].items()} }")  # fmt: skip
     elif cmd == "build":
         step_build(Path(a.out), a.sources, force=a.force)
     elif cmd == "score":
@@ -542,6 +556,20 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--device", default="cuda")
     p.add_argument("--batch-size", type=int, default=64)
     p.add_argument("--limit", type=int, default=0, help="each file's train --limit items only")
+
+    p = sub.add_parser("model-meta", help="fortress.json for a released model (decision 0024)")
+    p.add_argument("--name", required=True)
+    p.add_argument("--version", type=int, required=True)
+    p.add_argument("--base", required=True, help="the base model, as repo@commit")
+    p.add_argument("--suite", required=True, help="the suite the user runs scored")
+    p.add_argument("--attack", required=True, help="score run: attack, original text")
+    p.add_argument("--attack-views", required=True, help="score run: attack, every view")
+    p.add_argument("--attack-tool", required=True, help="doc-cal run: attack, original text")
+    p.add_argument("--attack-tool-views", required=True, help="doc-cal run: attack, every view")
+    p.add_argument("--harmful", required=True, help="score run: harmful, original text")
+    p.add_argument("--training", required=True, help="the training build (summary.json)")
+    p.add_argument("--code-commit", required=True)
+    p.add_argument("--out", required=True)
 
     p = sub.add_parser("judge", help="two LLM judges label a training build (paid, Bedrock)")
     p.add_argument("--data", required=True, help="a train-data build")

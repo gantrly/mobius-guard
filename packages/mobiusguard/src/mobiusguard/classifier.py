@@ -212,6 +212,14 @@ ONNX_MODELS = {
         # original text (docs/results/2026-11-10-classifier-views.md)
         views_attack=(2.7634, 3.110666513442993),
     ),
+    # The larger model (decision 0024): DeBERTa-v3-base, role-marked; more accurate, about
+    # 4x the transformer's parameters. Its fortress.json ships every threshold it uses.
+    "fortress-base": OnnxModel(
+        name="fortress-base",
+        repo="gantrly/fortress-base",
+        revision="",  # not published yet: set to its Hugging Face commit at release
+        licence="Apache-2.0",
+    ),
 }
 ONNX_FILES = ("model.int8.onnx", "tokenizer.json", "fortress.json")
 

@@ -9,7 +9,7 @@
 
     [policy]
     rules = "block"              # block | log | off
-    classifier = ""              # "", "fortress-xs" (needs mobiusguard[onnx]),
+    classifier = ""              # "", "fortress-xs" or "fortress-base" (need mobiusguard[onnx]),
                                  # "piguard" or "protectai-v2" (need mobiusguard[classifier])
     classifier_dir = ""          # a local copy of Fortress's files; "" = download the pinned one
     classifier_action = "block"  # block | log: what an attack score over the threshold does

@@ -375,3 +375,25 @@ def test_fortress_json_can_ship_a_tool_threshold_and_the_marker_flag(tmp_path: P
     assert c.role_marker
     g = Guard(Config(policy=Policy(classifier="fortress-xs", classifier_dir=str(tmp_path))))
     assert (g.attack_threshold, g.tool_threshold, g.role_marker) == (5.0, 2.5, True)
+
+
+def test_fortress_base_loads_from_a_directory_until_it_is_published(tmp_path: Path) -> None:
+    """Decision 0024: the larger model, role-marked, with its own thresholds."""
+    from mobiusguard.classifier import ONNX_MODELS
+
+    spec = ONNX_MODELS["fortress-base"]
+    assert (spec.repo, spec.views_attack) == ("gantrly/fortress-base", None)
+    if not spec.revision:
+        with pytest.raises(ValueError, match="classifier_dir"):
+            Guard(Config(policy=Policy(classifier="fortress-base")))
+    else:
+        assert len(spec.revision) == 40
+    _tiny_model(tmp_path)
+    meta = json.loads((tmp_path / "fortress.json").read_text())
+    meta["thresholds"]["attack_tool"] = {"0.01": 1.5}
+    meta["views_thresholds"] = {"attack": {"0.01": 5.0}, "harmful": {"0.01": -1.0},
+                                "attack_tool": {"0.01": 2.5}}  # fmt: skip
+    meta["role_marker"] = True
+    (tmp_path / "fortress.json").write_text(json.dumps(meta))
+    g = Guard(Config(policy=Policy(classifier="fortress-base", classifier_dir=str(tmp_path))))
+    assert (g.attack_threshold, g.tool_threshold, g.role_marker) == (5.0, 2.5, True)
