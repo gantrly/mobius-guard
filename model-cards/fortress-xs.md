@@ -278,6 +278,23 @@ and the run's results note is
   48% for shorter ones. Score long text in overlapping windows.
 - **The harmful output over-blocks** harmless prompts that sound harmful (48% on OR-Bench
   hard).
+- **Developer and agent text.** Short, harmless messages about keys, databases, tokens or
+  calling a tool can score as attacks. In a live check, "my key is in the vault and the db
+  is the prod postgres" scored 6.92 against the 2.76 threshold, and four such messages
+  scored 5.7–6.9. None of the false-positive test sets covers this kind of text. Where
+  users send it, log instead of blocking (`classifier_action = "log"` in Mobius Guard) or
+  raise the threshold, measured on your own traffic.
+- **Disguised harmless text.** It blocks most harmless messages written in a disguise, not
+  only disguised attacks. On 1,000 harmless test messages, measured 2026-11-24:
+  - 94% are blocked once spaced out letter by letter;
+  - 79% in leetspeak;
+  - 17% with invisible characters;
+  - 5% with look-alike letters.
+
+  It caught spaced-out attacks (99.5%) by blocking spaced text, not by reading it: in
+  plain text it catches 53% of the same attacks. Mobius Guard's normalised view does not
+  remove these false positives, because the original text is scored too
+  ([results](https://github.com/gantrly/mobius-guard/blob/main/docs/results/2026-11-24-fortress-v2-diagnosis.md)).
 - **Languages.**
   - The attack test sets are English, so recall in other languages is not measured.
   - False positives on ordinary messages are 1.3% in English and 0.2–0.9% in Spanish,

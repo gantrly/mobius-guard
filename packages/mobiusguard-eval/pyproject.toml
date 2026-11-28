@@ -60,6 +60,11 @@ train = [
     "onnxruntime>=1.20",
     "onnxscript>=0.2",
 ]
+# The red-team runner's PyRIT converters and attackers (decision 0014). garak is not an
+# extra: it pins transformers below what `hf`/`train` need, so it runs in its own environment.
+pyrit = [
+    "pyrit==1.1.0",
+]
 # The label-cleaning judges (Amazon Bedrock).
 judge = [
     "boto3>=1.40",

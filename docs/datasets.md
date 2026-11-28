@@ -24,9 +24,20 @@ name, so it may have seen others.
 | orbench | [bench-llm/or-bench](https://huggingface.co/datasets/bench-llm/or-bench) hard-1k | CC-BY-4.0 | hard benign | 1,319 | - |
 | oasst | [OpenAssistant/oasst1](https://huggingface.co/datasets/OpenAssistant/oasst1) user messages | Apache-2.0 | ordinary traffic (calibration) | 32,765 | - |
 
+**Phase 1 held-out sets** (decision 0021; built as their own suite with `build --sources`,
+next to suite v0.3; [research note](research/2026-11-26-phase1-test-sets.md)):
+
+| ID | Source | Licence | Role | Items used | Trained on by |
+|---|---|---|---|---|---|
+| llmail_full | same as llmail, phase 2 | MIT | attack attempts | all, about 21,000 | - |
+| bipia_embedded | [microsoft/BIPIA](https://github.com/microsoft/BIPIA): test attacks inside the email, table and code test documents, at start, middle or end | MIT ³ | attacks + clean documents | about 20,600 + 200 | - (PIGuard used the train attacks) |
+| wildchat_dev_test | [allenai/WildChat-4.8M](https://huggingface.co/datasets/allenai/WildChat-4.8M), files 9, 11, 31, 39 | ODC-BY-1.0 | harmless developer messages | fixed 5,000 sample | - (training's wildchat_dev reads 6 other files) |
+
 ¹ The card's metadata says both Apache-2.0 and CC-BY-4.0; we follow the stricter.
 ² MIT for the repository; some third-party data under `benchmark/` has other licences.
 These two files are not among the exceptions, but we don't redistribute them.
+³ The documents carry their sources' licences: emails from OpenAI Evals (MIT), tables from
+WikiTableQuestions and code from Stack Exchange (CC-BY-SA-4.0). Scored, never redistributed.
 
 **Credits.** XSTest (Röttger et al.), OR-Bench (Cui et al.) and deepset/prompt-injections are
 CC-BY-4.0; reports that use them credit them here. BIPIA (Yi et al.), LLMail-Inject (Abdelnabi

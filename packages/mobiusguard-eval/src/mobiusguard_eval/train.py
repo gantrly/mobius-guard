@@ -5,6 +5,9 @@ One run = one base model and one seed. The model has two independent outputs (si
 each read as log-odds): ``attack`` (an injection or a jailbreak) and ``harmful`` (a harmful
 request). The harmful loss skips items whose harmful label is unknown.
 
+An item's loss counts ``meta["weight"]`` times (default 1; ``augment`` weights a group of
+sources), and the batch loss is the weighted mean, so unweighted data trains as before.
+
 After each epoch both outputs are scored on ``val`` (never on the evaluation suite): AUC and
 recall at 1% false positives, the threshold set on val's own negatives. The epoch with the
 best mean of the two recalls is kept in ``best/``.
@@ -31,6 +34,7 @@ from pathlib import Path
 from typing import Any
 
 from .checkpoint import fingerprint, write_atomic
+from .distill import file_sha256, load_teacher_scores
 from .items import Item, read_jsonl
 from .metrics import auc, threshold_at_fpr
 from .run import git_commit
@@ -41,6 +45,8 @@ BASES = {  # name: (repo, revision)
         "4b419818330868dff6a60ad3e6b1c730f8b8c0c6",
     ),
     "mmbert-small": ("jhu-clsp/mmBERT-small", "abc32620dd4f6ab06f5fbe905dc25f310618e09f"),
+    # The teacher (decision 0021): same tokenizer as xsmall, 86M-parameter backbone. MIT.
+    "deberta-v3-base": ("microsoft/deberta-v3-base", "8ccc9b6f36199bec6961081d44eb72fb3f7353f3"),
 }
 LABELS = {0: "attack", 1: "harmful"}  # two independent outputs (multi-label)
 
@@ -58,12 +64,28 @@ class TrainConfig:
     limit: int = 0  # use only N training items (and N/9 val items): the small run
     checkpoint_minutes: float = 20.0  # not part of the run's identity
     stop_after_minutes: float = 0.0  # 0 = run to the end; not part of the run's identity
+    # Split each batch into pieces of this size and sum their gradients (0 = whole batch).
+    # The same batches, loss and schedule, so not part of the run's identity: it only lets
+    # a larger base fit in GPU memory.
+    micro_batch: int = 0
+    # Distillation (decision 0022): the teacher's logits as soft targets. Files count in the
+    # run's identity by their sha256, not their path.
+    teacher_scores: str = ""  # a teacher-scores JSONL (``distill.teacher_scores``)
+    extra_train: str = ""  # distill-only items added to train (``distill.pool``)
+    alpha: float = 1.0  # the labels' share of the loss; 1 = no teacher
+    temperature: float = 1.0
 
     def key(self) -> dict[str, Any]:
         """What makes two runs the same run (and a resume point usable)."""
         d = asdict(self)
         d.pop("checkpoint_minutes")
         d.pop("stop_after_minutes")
+        d.pop("micro_batch")
+        d.pop("teacher_scores")
+        d.pop("extra_train")
+        if self.alpha == 1.0 and self.temperature == 1.0:  # runs from before distillation
+            d.pop("alpha")
+            d.pop("temperature")
         return d
 
 
@@ -89,6 +111,30 @@ def _harmful(it: Item) -> float:
     return {"1": 1.0, "0": 0.0}.get(it.meta.get("harmful", ""), -1.0)
 
 
+def item_weight(it: Item) -> float:
+    return float(it.meta.get("weight", "1"))
+
+
+def loss_terms(torch: Any, bce: Any, logits: Any, targets: Any, weights: Any, soft: Any,
+               alpha: float, temperature: float) -> tuple[Any, Any]:  # fmt: skip
+    """(weighted loss sum, weight sum) of a batch piece; their ratio over a whole batch is
+    its loss.
+
+    Label term: BCE on known labels (a target of -1 is unknown). Teacher term (decision
+    0022): ``T² · BCE(student / T, sigmoid(teacher / T))`` on both outputs, for every item.
+    ``alpha`` weighs the label term, ``1 - alpha`` the teacher's. With ``alpha`` 1 or no
+    teacher it is the plain weighted label loss."""
+    known = (targets >= 0).float()
+    hard = bce(logits.float(), targets.clamp(min=0)) * known
+    if soft is None or alpha >= 1.0:
+        return (hard * weights).sum(), (known * weights).sum()
+    t = temperature
+    teach = bce(logits.float() / t, torch.sigmoid(soft / t)) * (t * t)
+    num = (weights * (alpha * hard + (1 - alpha) * teach)).sum()
+    den = (weights * (alpha * known + (1 - alpha))).sum()
+    return num, den
+
+
 def val_metrics(scores: Sequence[float], labels: Sequence[int]) -> dict[str, float]:
     pos = [s for s, y in zip(scores, labels, strict=True) if y == 1]
     neg = [s for s, y in zip(scores, labels, strict=True) if y == 0]
@@ -110,7 +156,14 @@ def train(
     tf: Any = importlib.import_module("transformers")
     repo, revision = BASES[cfg.base]
     summary = json.loads((data / "summary.json").read_text())
-    key = {"config": cfg.key(), "data": summary["ids_sha256"], "base": [repo, revision]}
+    key: dict[str, Any] = {"config": cfg.key(), "data": summary["ids_sha256"],
+                           "base": [repo, revision]}  # fmt: skip
+    if cfg.teacher_scores:
+        key["teacher_scores"] = file_sha256(Path(cfg.teacher_scores))
+    if cfg.extra_train:
+        key["extra_train"] = file_sha256(Path(cfg.extra_train))
+    if cfg.alpha < 1.0 and not cfg.teacher_scores:
+        raise ValueError("alpha below 1 needs --teacher-scores")
     out.mkdir(parents=True, exist_ok=True)
     done = out / "metrics.json"
     if done.exists() and json.loads(done.read_text()).get("key") == fingerprint(key):
@@ -121,7 +174,22 @@ def train(
     torch.manual_seed(cfg.seed)
     train_items = _subset(list(read_jsonl(data / "train.jsonl")), cfg.limit)
     val_items = _subset(list(read_jsonl(data / "val.jsonl")), cfg.limit // 9 if cfg.limit else 0)
-    log(f"train: {cfg.base} seed {cfg.seed}: {len(train_items):,} train, {len(val_items):,} val")
+    if cfg.extra_train:
+        extra = _subset(list(read_jsonl(Path(cfg.extra_train))), cfg.limit)
+        if any(not it.meta.get("distill_only") for it in extra):
+            raise ValueError(f"{cfg.extra_train}: extra items must be distill_only")
+        train_items += extra
+        log(f"train: {len(extra):,} distill-only items added")
+    teacher = load_teacher_scores(Path(cfg.teacher_scores)) if cfg.teacher_scores else None
+    if teacher is not None:
+        missing = [it.id for it in train_items if it.id not in teacher]
+        if missing:
+            raise ValueError(f"{len(missing):,} training items have no teacher score, "
+                             f"e.g. {missing[0]}")  # fmt: skip
+    log(
+        f"train: {cfg.base} seed {cfg.seed}: {len(train_items):,} train, {len(val_items):,} val"
+        + (f"; teacher alpha {cfg.alpha} T {cfg.temperature}" if teacher else "")
+    )
 
     tok: Any = tf.AutoTokenizer.from_pretrained(repo, revision=revision)
     # float32 weights: DeBERTa-v3's checkpoint is float16, which transformers 5 keeps by
@@ -138,11 +206,19 @@ def train(
     sched: Any = tf.get_linear_schedule_with_warmup(opt, int(cfg.warmup * total), total)
     use_bf16 = device.startswith("cuda") and torch.cuda.is_bf16_supported()
 
-    def encode(chunk: Sequence[Item]) -> tuple[dict[str, Any], Any]:
+    def encode(chunk: Sequence[Item], *, soft_targets: bool = True,
+               ) -> tuple[dict[str, Any], Any, Any, Any]:  # fmt: skip
         enc = tok([it.text for it in chunk], truncation=True, max_length=cfg.max_length,
                   padding=True, return_tensors="pt")  # fmt: skip
-        targets = torch.tensor([[float(it.label), _harmful(it)] for it in chunk], device=device)
-        return {k: v.to(device) for k, v in enc.items()}, targets
+        # A distill-only item's labels are unknown: only the teacher's scores teach.
+        targets = torch.tensor([[-1.0, -1.0] if it.meta.get("distill_only")
+                                else [float(it.label), _harmful(it)] for it in chunk],
+                               device=device)  # fmt: skip
+        weights = torch.tensor([[item_weight(it)] for it in chunk], device=device)
+        # Validation scores the student alone: its items have no teacher scores.
+        soft = (torch.tensor([list(teacher[it.id]) for it in chunk], device=device)
+                if teacher is not None and soft_targets else None)  # fmt: skip
+        return {k: v.to(device) for k, v in enc.items()}, targets, weights, soft
 
     def plan(epoch: int) -> list[list[int]]:
         """The epoch's batches: shuffled, then length-sorted inside windows, then shuffled
@@ -158,10 +234,31 @@ def train(
         rng.shuffle(result)
         return result
 
-    def loss_of(logits: Any, targets: Any) -> Any:
-        known = targets >= 0
-        per = bce(logits.float(), targets.clamp(min=0)) * known
-        return per.sum() / known.sum().clamp(min=1)
+    def loss_parts(chunk: Sequence[Item]) -> Any:
+        """The batch's weighted-mean loss, with backward run piece by piece (micro_batch):
+        each piece's weighted sum over the whole batch's weight, so the gradients add up to
+        the whole batch's."""
+        size = cfg.micro_batch or len(chunk)
+        pieces = [encode(chunk[i : i + size]) for i in range(0, len(chunk), size)]
+        weight: Any = torch.zeros((), device=device)
+        for _, targets, weights, soft in pieces:
+            # The weight sum needs no logits; zeros stand in for them.
+            _, w = loss_terms(torch, bce, torch.zeros_like(targets), targets, weights, soft,
+                              cfg.alpha, cfg.temperature)  # fmt: skip
+            weight = weight + w
+        denom: Any = weight.clamp(min=1e-6)
+        total: Any = torch.zeros((), device=device)
+        for enc, targets, weights, soft in pieces:
+            with torch.autocast("cuda", dtype=torch.bfloat16, enabled=use_bf16):
+                logits = model(**enc).logits
+            num, _ = loss_terms(torch, bce, logits, targets, weights, soft, cfg.alpha,
+                                cfg.temperature)  # fmt: skip
+            part = num / denom
+            if not torch.isfinite(part):
+                return part
+            part.backward()
+            total = total + part.detach()
+        return total
 
     def scores(items: Sequence[Item]) -> tuple[list[float], list[float]]:
         model.eval()
@@ -171,7 +268,7 @@ def train(
         with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16, enabled=use_bf16):
             for i in range(0, len(order), cfg.batch_size):
                 idx = order[i : i + cfg.batch_size]
-                enc, _ = encode([items[j] for j in idx])
+                enc, _, _, _ = encode([items[j] for j in idx], soft_targets=False)
                 logits = model(**enc).logits.float()
                 for j, a, h in zip(idx, logits[:, 0].tolist(), logits[:, 1].tolist(), strict=True):
                     attack[j], harmful[j] = a, h
@@ -229,14 +326,11 @@ def train(
         loss_sum, n = carried if epoch == start_epoch else (0.0, 0)
         t0, seen = time.time(), 0
         for step in range(first, len(batches)):
-            enc, targets = encode([train_items[j] for j in batches[step]])
-            with torch.autocast("cuda", dtype=torch.bfloat16, enabled=use_bf16):
-                loss = loss_of(model(**enc).logits, targets)
+            loss = loss_parts([train_items[j] for j in batches[step]])
             if not torch.isfinite(loss):
                 where = f"epoch {epoch + 1} step {step}"
                 raise FloatingPointError(f"{cfg.base}: loss is {float(loss)} at {where}; "
                                          "the last resume point is unchanged")  # fmt: skip
-            loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             opt.step()
             sched.step()

@@ -1,0 +1,17 @@
+# examples/ollama.toml with Fortress-XS: the classifier blocks attacks at its own threshold
+# (1% false positives on ordinary messages) and only logs the harmful output.
+#
+#   pip install "mobiusguard[onnx]"
+#   mobiusguard serve --config examples/ollama-fortress.toml
+
+[upstream.openai]
+base_url = "http://127.0.0.1:11434/v1"
+
+[upstream.anthropic]
+base_url = "http://127.0.0.1:11434/v1"
+
+[policy]
+classifier = "fortress-xs"
+
+[audit]
+path = "mobiusguard-audit.jsonl"

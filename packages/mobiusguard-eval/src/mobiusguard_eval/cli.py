@@ -12,7 +12,8 @@
                                      where the login is), without building anything
     train-data --suite S --out runs/train-v0.2 [--cap 20000]   build the training set
     train --data D --base B --seed N --out runs/model-B-sN [--limit N]   fine-tune one run
-    export --model DIR --out DIR [--val D/val.jsonl]   ONNX + INT8, parity, CPU latency
+    export --model DIR --out DIR [--val D/val.jsonl] [--quantize int8-ffn2-float]
+                                                        ONNX + INT8, parity, CPU latency
     judge --data D --out runs/judged            two LLM judges label a training build (paid)
     apply-judges --data D --judged J --out D2   clean a build with the judges' labels
 
@@ -40,7 +41,7 @@ from .checkpoint import fingerprint, write_atomic
 from .fetch import fetch
 from .items import Item
 from .suite import build, is_built, ledger_sources, load_suite
-from .train import TrainConfig
+from .train import BASES, TrainConfig
 
 TRAIN_DEFAULTS = TrainConfig(base="")  # a slots dataclass: its class attributes are descriptors
 
@@ -240,41 +241,51 @@ def pipeline(
 
 
 def step_train_data(suite: Path, out: Path, *, cap: int, source_ids: Sequence[str] | None = None,
-                    seed: str = "", force: bool = False) -> None:  # fmt: skip
+                    seed: str = "", force: bool = False, spill: bool = False) -> None:  # fmt: skip
     from . import train_data
     from .train_sources import training_sources
 
     sources = training_sources(list(source_ids) if source_ids else None)
     items = load_suite(suite)
     key = train_data.build_key(sources, train_data.suite_key(items), cap, seed)
-    if not force and train_data.is_built(out, key):
+    if (
+        not force
+        and train_data.is_built(out, key)
+        and (not spill or (out / "spill.jsonl").exists())
+    ):
         log(f"train-data: {out} is up to date, skipping (--force to rebuild)")
         return
     loaded: dict[str, list[Item]] = {}
     for s in sources:
         loaded[s.id] = list(s.parse(fetch(s)))
         log(f"train-data: {s.id} {len(loaded[s.id]):,} items")
-    summary = train_data.build(sources, loaded, items, out, cap=cap, seed=seed, log=log)
+    summary = train_data.build(sources, loaded, items, out, cap=cap, seed=seed, log=log,
+                               spill=spill)  # fmt: skip
     log(f"train-data: {summary['items']}, labels {dict(summary['labels'])}")
 
 
 def step_train(data: Path, out: Path, *, base: str, seed: int, epochs: int, lr: float,
                batch_size: int, max_length: int, limit: int, device: str,
-               checkpoint_minutes: float, stop_after_minutes: float) -> None:  # fmt: skip
+               checkpoint_minutes: float, stop_after_minutes: float,
+               micro_batch: int = 0, teacher_scores: str = "", extra_train: str = "",
+               alpha: float = 1.0, temperature: float = 1.0) -> None:  # fmt: skip
     from .train import train
 
     cfg = TrainConfig(base=base, seed=seed, epochs=epochs, lr=lr, batch_size=batch_size,
                       max_length=max_length, limit=limit, checkpoint_minutes=checkpoint_minutes,
-                      stop_after_minutes=stop_after_minutes)  # fmt: skip
+                      stop_after_minutes=stop_after_minutes, micro_batch=micro_batch,
+                      teacher_scores=teacher_scores, extra_train=extra_train, alpha=alpha,
+                      temperature=temperature)  # fmt: skip
     result = train(data, cfg, out, device=device, log=log)
     if "best_epoch" in result:
         log(f"train: best epoch {result['best_epoch']}, wrote {out / 'best'}")
 
 
-def step_export(model: Path, out: Path, *, val: Path | None, threads: int) -> None:
+def step_export(model: Path, out: Path, *, val: Path | None, threads: int,
+                quantize: str = "int8") -> None:  # fmt: skip
     from .export import export
 
-    result = export(model, out, val=val, threads=threads, log=log)
+    result = export(model, out, val=val, threads=threads, quantize=quantize, log=log)
     if not result["parity"]["fp32_ok"]:
         raise SystemExit("export: float32 ONNX does not match PyTorch")
     if not result["parity"]["int8_ok"]:
@@ -326,6 +337,10 @@ def _train_fetch(a: argparse.Namespace) -> int:
 
 def _run(a: argparse.Namespace) -> int:
     cmd: str = a.command
+    if cmd == "redteam":
+        from .redteam import cli as redteam_cli
+
+        return redteam_cli.main(a)
     if cmd == "sources":
         return _sources(a)
     if cmd == "train-sources":
@@ -334,19 +349,99 @@ def _run(a: argparse.Namespace) -> int:
         return _train_fetch(a)
     if cmd == "train-data":
         step_train_data(Path(a.suite), Path(a.out), cap=a.cap, source_ids=a.sources,
-                        seed=a.sample_seed, force=a.force)  # fmt: skip
+                        seed=a.sample_seed, force=a.force, spill=a.spill)  # fmt: skip
     elif cmd == "judge":
         step_judge(Path(a.data), Path(a.out), workers=a.workers, limit=a.limit)
     elif cmd == "apply-judges":
         step_apply_judges(Path(a.data), Path(a.judged), Path(a.out))
+    elif cmd == "augment":
+        from .augment import augment
+
+        summary = augment(Path(a.data), Path(a.out), weight=a.group_weight,
+                          exclude=[s for s in a.exclude.split(",") if s],
+                          hard_benign_weight=a.hard_benign_weight,
+                          extra_benign_spaced=a.extra_benign_spaced)  # fmt: skip
+        log(f"augment: wrote {a.out}: {json.dumps(summary['counts'])}")
+    elif cmd == "extend-suite":
+        from .augment import extend_suite
+
+        manifest = extend_suite(Path(a.suite), Path(a.out))
+        log(f"extend-suite: wrote {a.out}: {json.dumps(manifest['added'])}")
+    elif cmd == "split-suite":
+        from .screening import split_suite
+
+        m = split_suite(Path(a.suite), Path(a.out))
+        log(f"split-suite: wrote {a.out}: screen {m['screen']['test_items']}, "
+            f"final {m['final']['test_items']} test items")  # fmt: skip
+    elif cmd == "doc-calibration":
+        from .roles import document_calibration
+
+        m = document_calibration(Path(a.data), [Path(p) for p in a.exclude_train], Path(a.out),
+                                 extra=[Path(p) for p in a.extra])  # fmt: skip
+        log(f"doc-calibration: wrote {a.out}: {m['items']} items {json.dumps(m['by_source'])}")
+    elif cmd == "mark-roles":
+        from .roles import mark_roles
+
+        s = mark_roles(Path(a.data), Path(a.out), Path(a.holdout))
+        log(f"mark-roles: wrote {a.out}: {json.dumps(s['counts'])}")
+    elif cmd == "add-items":
+        from .roles import add_items
+
+        m = add_items(Path(a.suite), Path(a.items), Path(a.out))
+        log(f"add-items: wrote {a.out}: {m['added']} added, {m['items']} items")
+    elif cmd == "role-offset":
+        from .roles import role_offset
+
+        info = role_offset(Path(a.run), Path(a.calibration), Path(a.suite), Path(a.out))
+        log(f"role-offset: wrote {a.out}: {json.dumps(info)}")
+    elif cmd == "gate":
+        from .gate import gate
+
+        harmful = None
+        if a.harmful_report:
+            harmful = (Path(a.harmful_report), a.harmful_baseline, a.harmful_candidate)
+        ok = gate(Path(a.report), a.baseline, a.candidate, Path(a.out), harmful=harmful,
+                  extra=[Path(r) for r in a.extra_report])  # fmt: skip
+        log(f"gate: {'PASS' if ok else 'FAIL'}, see {a.out}/gate.md")
+        if not ok:
+            raise SystemExit(1)
     elif cmd == "export":
         step_export(Path(a.model), Path(a.out), val=Path(a.val) if a.val else None,
-                    threads=a.threads)  # fmt: skip
+                    threads=a.threads, quantize=a.quantize)  # fmt: skip
     elif cmd == "train":
         step_train(Path(a.data), Path(a.out), base=a.base, seed=a.seed, epochs=a.epochs, lr=a.lr,
                    batch_size=a.batch_size, max_length=a.max_length, limit=a.limit,
                    device=a.device, checkpoint_minutes=a.checkpoint_minutes,
-                   stop_after_minutes=a.stop_after_minutes)  # fmt: skip
+                   stop_after_minutes=a.stop_after_minutes, micro_batch=a.micro_batch,
+                   teacher_scores=a.teacher_scores, extra_train=a.extra_train, alpha=a.alpha,
+                   temperature=a.temperature)  # fmt: skip
+    elif cmd == "distill-pool":
+        from .distill import pool
+
+        s = pool(Path(a.spill), [Path(p) for p in a.held_out], [Path(p) for p in a.train],
+                 Path(a.out), size=a.size, log=log)  # fmt: skip
+        log(f"distill-pool: {s['items']:,} items ({s['near_held_out']:,} near held-out dropped)")
+    elif cmd == "teacher-scores":
+        from .distill import teacher_scores
+
+        n = teacher_scores(Path(a.model), [Path(p) for p in a.items], Path(a.out),
+                           device=a.device, batch_size=a.batch_size, limit=a.limit,
+                           log=log)  # fmt: skip
+        log(f"teacher-scores: {n:,} items scored, wrote {a.out}")
+    elif cmd == "model-meta":
+        from . import model_meta
+
+        meta = model_meta.fortress_meta(
+            name=a.name, version=a.version, base=a.base, suite=Path(a.suite),
+            attack=Path(a.attack), attack_views=Path(a.attack_views),
+            attack_tool=Path(a.attack_tool), attack_tool_views=Path(a.attack_tool_views),
+            harmful=Path(a.harmful), training=Path(a.training), code_commit=a.code_commit,
+        )  # fmt: skip
+        model_meta.write(meta, Path(a.out))
+        f = meta["default_fpr"]
+        log(f"model-meta: wrote {a.out}; at {f}: "
+            f"{ {k: v[f] for k, v in meta['thresholds'].items()} }, views "
+            f"{ {k: v[f] for k, v in meta['views_thresholds'].items()} }")  # fmt: skip
     elif cmd == "build":
         step_build(Path(a.out), a.sources, force=a.force)
     elif cmd == "score":
@@ -421,11 +516,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--sources", nargs="*", help="training source IDs (default: all)")
     p.add_argument("--sample-seed", default="", help="draw a different random sample")
     p.add_argument("--force", action="store_true")
+    p.add_argument(
+        "--spill",
+        action="store_true",
+        help="also write spill.jsonl: items cut by the caps (distillation text)",
+    )
 
     p = sub.add_parser("train", help="fine-tune one base model with one seed")
     p.add_argument("--data", required=True)
     p.add_argument("--out", required=True)
-    p.add_argument("--base", required=True, choices=["deberta-v3-xsmall", "mmbert-small"])
+    p.add_argument("--base", required=True, choices=sorted(BASES))
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--epochs", type=int, default=TRAIN_DEFAULTS.epochs)
     p.add_argument("--lr", type=float, default=TRAIN_DEFAULTS.lr)
@@ -437,6 +537,41 @@ def build_parser() -> argparse.ArgumentParser:
                    help="write a resume point this often")  # fmt: skip
     p.add_argument("--stop-after-minutes", type=float, default=0.0,
                    help="rehearsal: stop, score val, save the model in partial/")  # fmt: skip
+    p.add_argument("--teacher-scores", default="", help="distillation: teacher-scores JSONL")
+    p.add_argument("--extra-train", default="", help="distillation: distill-only items.jsonl")
+    p.add_argument("--alpha", type=float, default=1.0, help="distillation: the labels' share")
+    p.add_argument("--temperature", type=float, default=1.0, help="distillation: T")
+    p.add_argument("--micro-batch", type=int, default=0,
+                   help="split batches into pieces this size (same math)")  # fmt: skip
+
+    p = sub.add_parser("distill-pool", help="extra text for distillation (decision 0022)")
+    p.add_argument("--spill", required=True, help="a train-data build's spill.jsonl")
+    p.add_argument("--held-out", nargs="+", required=True, help="items files to stay clear of")
+    p.add_argument("--train", nargs="+", required=True, help="training files (IDs left out)")
+    p.add_argument("--size", type=int, default=50_000)
+    p.add_argument("--out", required=True)
+
+    p = sub.add_parser("teacher-scores", help="a teacher's logits for training items")
+    p.add_argument("--model", required=True, help="the teacher's best/ directory")
+    p.add_argument("--items", nargs="+", required=True, help="items JSONL files")
+    p.add_argument("--out", required=True)
+    p.add_argument("--device", default="cuda")
+    p.add_argument("--batch-size", type=int, default=64)
+    p.add_argument("--limit", type=int, default=0, help="each file's train --limit items only")
+
+    p = sub.add_parser("model-meta", help="fortress.json for a released model (decision 0024)")
+    p.add_argument("--name", required=True)
+    p.add_argument("--version", type=int, required=True)
+    p.add_argument("--base", required=True, help="the base model, as repo@commit")
+    p.add_argument("--suite", required=True, help="the suite the user runs scored")
+    p.add_argument("--attack", required=True, help="score run: attack, original text")
+    p.add_argument("--attack-views", required=True, help="score run: attack, every view")
+    p.add_argument("--attack-tool", required=True, help="doc-cal run: attack, original text")
+    p.add_argument("--attack-tool-views", required=True, help="doc-cal run: attack, every view")
+    p.add_argument("--harmful", required=True, help="score run: harmful, original text")
+    p.add_argument("--training", required=True, help="the training build (summary.json)")
+    p.add_argument("--code-commit", required=True)
+    p.add_argument("--out", required=True)
 
     p = sub.add_parser("judge", help="two LLM judges label a training build (paid, Bedrock)")
     p.add_argument("--data", required=True, help="a train-data build")
@@ -449,11 +584,80 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--judged", required=True, help="the judge run's directory")
     p.add_argument("--out", required=True)
 
+    p = sub.add_parser("augment", help="disguised copies (both labels) and group weights")
+    p.add_argument("--data", required=True, help="a cleaned training set")
+    p.add_argument("--out", required=True)
+    p.add_argument("--exclude", default="", help="comma-separated sources to leave out")
+    p.add_argument("--group-weight", type=float, help="fix the developer group's weight")
+    p.add_argument(
+        "--hard-benign-weight",
+        type=float,
+        default=1.0,
+        help="loss weight of harmless items from HARD_BENIGN sources (recipe R2)",
+    )
+    p.add_argument(
+        "--extra-benign-spaced",
+        type=float,
+        default=0.0,
+        help="extra spaced copies of this share of harmless items (recipe R2)",
+    )
+
+    p = sub.add_parser("extend-suite", help="the suite plus harmless disguised and dev sets")
+    p.add_argument("--suite", required=True)
+    p.add_argument("--out", required=True)
+
+    p = sub.add_parser("split-suite", help="screening and final halves of a suite (by cluster)")
+    p.add_argument("--suite", required=True)
+    p.add_argument("--out", required=True)
+
+    p = sub.add_parser("doc-calibration", help="harmless documents to set a document threshold on")
+    p.add_argument("--data", required=True, help="a training set (its val split is used)")
+    p.add_argument("--exclude-train", nargs="*", default=[], help="train.jsonl files to leave out")
+    p.add_argument("--extra", nargs="*", default=[], help="items.jsonl files to add (tool outputs)")
+    p.add_argument("--out", required=True)
+
+    p = sub.add_parser(
+        "mark-roles", help="role-marked training data, half the tool outputs held out"
+    )
+    p.add_argument("--data", required=True, help="a training set (after augment)")
+    p.add_argument("--out", required=True)
+    p.add_argument("--holdout", required=True, help="where the held-out tool outputs go")
+
+    p = sub.add_parser("add-items", help="a suite copy with more items")
+    p.add_argument("--suite", required=True)
+    p.add_argument("--items", required=True)
+    p.add_argument("--out", required=True)
+
+    p = sub.add_parser("role-offset", help="a run scored with a document threshold for documents")
+    p.add_argument("--run", required=True, help="a score run on the suite")
+    p.add_argument("--calibration", required=True, help="the same model's doc-calibration scores")
+    p.add_argument("--suite", required=True)
+    p.add_argument("--out", required=True)
+
+    p = sub.add_parser("gate", help="pass/fail: does a candidate beat the baseline")
+    p.add_argument("--report", required=True, help="a report holding both detectors")
+    p.add_argument("--baseline", required=True, help="detector name in the report")
+    p.add_argument("--candidate", required=True, nargs="+",
+                   help="detector name in the report; several = seeds of one recipe")  # fmt: skip
+    p.add_argument("--out", required=True)
+    p.add_argument("--harmful-report", help="a report of both models' #harmful scores")
+    p.add_argument("--harmful-baseline", help="detector name in the harmful report")
+    p.add_argument("--harmful-candidate", nargs="+", help="names in the harmful report")
+    p.add_argument(
+        "--extra-report",
+        nargs="*",
+        default=[],
+        help="more reports with the same detectors (e.g. the Phase 1 suite)",
+    )
+
     p = sub.add_parser("export", help="ONNX + INT8 export of a trained model, with checks")
     p.add_argument("--model", required=True, help="a trained model directory (best/ or partial/)")
     p.add_argument("--out", required=True)
     p.add_argument("--val", help="val.jsonl of its training set, for the parity check")
     p.add_argument("--threads", type=int, default=4, help="CPU threads for the latency test")
+    p.add_argument("--quantize", choices=["int8", "int8-ffn2-float"], default="int8",
+                   help="int8: every MatMul (Fortress-XS); int8-ffn2-float: the second "
+                   "feed-forward and activation MatMuls stay float32 (Fortress-Base)")  # fmt: skip
 
     p = sub.add_parser("pipeline", help="every step in order, resuming what was saved")
     p.add_argument("--out", default="runs")
@@ -468,6 +672,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-redaction", action="store_true")
     p.add_argument("--force", action="store_true", help="redo every step")
 
+    from .redteam import cli as redteam_cli
+
+    redteam_cli.add_parser(sub)
     return ap
 
 

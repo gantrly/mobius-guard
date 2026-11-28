@@ -24,12 +24,16 @@ def _texts(n: int, stem: str) -> list[str]:
 
 
 def test_no_training_source_is_an_evaluation_source() -> None:
+    from mobiusguard_eval.ledger import SHARED_REPOS
+
     evaluation = ledger_sources()
     eval_repos = {f.location for s in evaluation for f in s.files}
+    eval_files = {(f.location, f.path) for s in evaluation for f in s.files}
     eval_ids = {s.id for s in evaluation}
     for s in training_sources():
         assert s.id not in eval_ids
-        assert not {f.location for f in s.files} & eval_repos, s.id
+        assert not ({f.location for f in s.files} & eval_repos) - set(SHARED_REPOS), s.id
+        assert not {(f.location, f.path) for f in s.files} & eval_files, s.id
 
 
 def test_held_out_and_conflicting_texts_are_dropped(tmp_path: Path) -> None:
@@ -193,3 +197,31 @@ def test_rng_state_restores_after_loading_onto_another_device(tmp_path: Path) ->
     torch.manual_seed(99)
     restore_rng(torch, loaded, cuda=False)
     assert torch.equal(torch.rand(3), expected)
+
+
+def test_every_base_is_a_cli_choice_and_pinned() -> None:
+    from mobiusguard_eval import cli
+    from mobiusguard_eval.train import BASES
+
+    for name, (repo, revision) in BASES.items():
+        ns = cli.build_parser().parse_args(["train", "--data", "d", "--out", "o", "--base", name])
+        assert ns.base == name
+        assert "/" in repo
+        assert len(revision) == 40  # a full commit, not a branch
+    assert "deberta-v3-base" in BASES  # the decision 0021 teacher
+
+
+def test_micro_batch_is_not_part_of_the_run() -> None:
+    # Pieces of a batch sum to the same gradient, so a run resumed or compared with a
+    # different micro_batch is the same run.
+    from mobiusguard_eval import cli
+    from mobiusguard_eval.train import TrainConfig
+
+    assert (
+        TrainConfig(base="deberta-v3-base", micro_batch=8).key()
+        == TrainConfig(base="deberta-v3-base").key()
+    )
+    ns = cli.build_parser().parse_args(
+        ["train", "--data", "d", "--out", "o", "--base", "deberta-v3-base", "--micro-batch", "8"]
+    )
+    assert ns.micro_batch == 8

@@ -22,8 +22,9 @@ from . import __version__
 from .checkpoint import Checkpoint, fingerprint, write_atomic
 from .detectors import Detector
 from .items import ATTACK, BENIGN, Item
+from .items import unit as unit_of
 from .ledger import LEDGER
-from .metrics import TARGET_FPRS, Threshold, auc, threshold_at_fpr, wilson
+from .metrics import TARGET_FPRS, Threshold, auc, threshold_at_fpr, unit_interval, wilson
 
 
 def machine() -> dict[str, str]:
@@ -174,11 +175,15 @@ def compute(items: Sequence[Item], runs: dict[str, dict[str, float]]) -> dict[st
             group: Sequence[Item], ths: list[Threshold] = ths, scores: dict[str, float] = scores
         ) -> list[dict[str, Any]]:
             res: list[dict[str, Any]] = []
+            units = [unit_of(it) for it in group]
             for th in ths:
-                k = sum(1 for it in group if scores[it.id] >= th.value)
+                flags = [scores[it.id] >= th.value for it in group]
+                k = sum(flags)
                 lo, hi = wilson(k, len(group))
+                ulo, uhi, n_units = unit_interval(flags, units)
                 res.append({"target_fpr": th.target_fpr, "rate": k / len(group), "k": k,
-                            "n": len(group), "ci95": [lo, hi]})  # fmt: skip
+                            "n": len(group), "ci95": [lo, hi], "ci95_units": [ulo, uhi],
+                            "units": n_units})  # fmt: skip
             return res
 
         benign_scores = [scores[it.id] for it in test_benign]

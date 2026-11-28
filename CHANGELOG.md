@@ -6,6 +6,94 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
 
 ## Unreleased
 
+- **Fortress-Base** ([model card](https://huggingface.co/gantrly/fortress-base),
+  [decision 0024](docs/decisions/0024-fortress-base.md)): a larger, opt-in classifier
+  (DeBERTa-v3-base) next to Fortress-XS, for documents, email and developer traffic:
+  `classifier = "fortress-base"`, pinned at its Hugging Face commit. On held-out data it
+  catches 68.5% of LLMail-Inject (Fortress-XS 47.4%) and 70.5% of BIPIA inside documents
+  (12.9%), at 2.9× the CPU time (525 ms at 512 tokens). Fortress-XS stays the default.
+  The proxy reads each text with its role in front (`[user]` or `[tool]`) for a model whose
+  `fortress.json` asks for it ([decision 0020](docs/decisions/0020-role-marking.md)), and
+  takes the tool-result threshold from that file.
+- **Evaluation: distillation** ([decision 0022](docs/decisions/0022-distillation.md)):
+  `teacher-scores` writes a teacher's logits for every training item and extra text, and
+  `train --teacher-scores --alpha --temperature --extra-train` trains a student on labels
+  and the teacher's soft targets.
+- **Evaluation: `export --quantize int8-ffn2-float`** keeps each layer's second feed-forward
+  MatMul and the activation-by-activation MatMuls in float32. Plain INT8 broke
+  DeBERTa-v3-base (correlation 0.92 with PyTorch); this agrees at 0.999. The default,
+  `int8`, is unchanged.
+- **Evaluation: `model-meta`** writes a released model's `fortress.json` from its score
+  runs: thresholds per role and per view at 0.1%, 1% and 5% false positives, with the
+  unreliable ones listed.
+- **Evaluation: 95% intervals by unit** ([decision 0023](docs/decisions/0023-intervals-by-unit.md)):
+  `metrics.json` adds `ci95_units`, a bootstrap over attacks or near-duplicate clusters, and
+  the gate uses it. Rows that share an attack no longer count as independent. Sets of
+  independent rows are unchanged.
+- **Evaluation: larger held-out sets** ([decision 0021](docs/decisions/0021-capacity-and-measurement.md)):
+  `llmail_full` (all of LLMail phase 2), `bipia_embedded` (BIPIA's test attacks inside its
+  documents) and `wildchat_dev_test` (real developer messages), and `train --base
+  deberta-v3-base --micro-batch N` for a larger teacher on a 24 GB GPU.
+- **Red-teaming** (`mobiusguard-eval redteam`, [guide](docs/red-team.md),
+  [decision 0014](docs/decisions/0014-red-team-runner.md)): attack a configuration with
+  garak's prompt-injection probes in 26 mutated forms, each as a user message and as a
+  tool result; resumable runs with one row per attempt and no attack text; findings
+  grouped by near-duplicate cluster and mutation; a sealed holdout; and a gate that
+  refuses a patch which blocks more harmless text. `run`, `summary`, `findings`, `seal`,
+  `verify-holdout`, `gate`.
+- **Adaptive attacks** (`mobiusguard-eval redteam adapt`, [decision 0016](docs/decisions/0016-adaptive-attacks.md)):
+  PyRIT's PAIR rewrites each prompt up to 10 times, guided by the guard's verdict and
+  score, against one or more configs; a second model judges whether a rewrite that got
+  through still asks for the same thing. Prompts from the sealed holdout are refused; runs
+  resume; reports carry counts only (`adapt-summary`).
+- **Fortress-XS scores every view of a text** ([decision 0015](docs/decisions/0015-classifier-sees-every-view.md)):
+  the normalised text and decoded base64 as well as the original, as the rules already did,
+  so look-alike letters, invisible characters and spaced-out letters hide less from it. Its
+  attack threshold for this is 3.1107, set on the same ordinary messages as its own 2.7634,
+  so it blocks no more of them. A text with a second view costs one more classifier call.
+  On the red team's sealed holdout, 20.6% of attempts got through instead of 25.4%, but
+  leetspeak alone and injections inside documents got through more often
+  ([results](docs/results/2026-11-10-classifier-views.md#on-the-holdout)).
+  `policy.classifier_views = "original"` keeps the old behaviour.
+- **Input normalisation catches three more disguises** (found by the first red-team run):
+  invisible characters hidden between spaced-out letters, base64 whose text hides
+  invisible characters, and base64 runs spaced out, given look-alike letters or invisible
+  characters after encoding. Rules now see the hidden text; harmless text is unchanged.
+- `mobiusguard-eval[pyrit]`: PyRIT's prompt converters as extra mutations, limited to
+  ones that turn text into text and call no model or service.
+- `examples/ollama-fortress.toml`: the local-model example with Fortress-XS on.
+- `scripts/live_check.py` can send held-out emails (`LIVE_ITEMS`) and time the proxy
+  (`LIVE_OVERHEAD`). [Results with Fortress-XS](docs/results/2026-11-07-live-check-fortress.md):
+  the proxy adds about 9 ms, and Fortress-XS blocks some harmless developer-style messages
+  (keys, databases, tokens, tool calls), now listed in its model card's limits.
+- **Fortress-XS v1 blocks most harmless text written in a disguise.** Measured 2026-11-24
+  on 1,000 harmless messages: 94% are blocked once spaced out letter by letter, 79% in
+  leetspeak and 17% with invisible characters. It caught spaced-out attacks by blocking
+  everything spaced, not by reading them
+  ([results](docs/results/2026-11-24-fortress-v2-diagnosis.md)). Fortress-Base blocks
+  3–3.4% of the same kinds of text
+  ([decision 0017](docs/decisions/0017-disguises-carry-no-label.md)).
+- Harness, for training and gating Fortress models
+  ([decision 0017](docs/decisions/0017-disguises-carry-no-label.md)):
+  - `augment`: disguised training copies of attack and harmless items at the same rate,
+    and group weights;
+  - `extend-suite`: harmless disguised test sets and the developer messages added to a copy
+    of the suite;
+  - `gate`: pass or fail of a candidate model against a baseline;
+  - `local-views:DIR`: scores a trained model on every view of a text, as the proxy does.
+  - Training reads a per-item loss weight.
+- `policy.classifier_long = "windows"` (off by default,
+  [decision 0018](docs/decisions/0018-long-inputs-in-windows.md)): a text over 512 tokens
+  is scored in overlapping windows, and the highest score counts, so an injection near the
+  end of a long document is seen. Each extra window costs one more classifier call. It stays
+  off until its effect on false positives is measured.
+- `policy.classifier_threshold_tool`: an attack threshold for tool results. The same words
+  are a request when the user writes them and an injection inside a document, so a
+  document can be judged against a threshold set on harmless documents. Unset, tool results
+  use the same threshold as before.
+- `scripts/dev_check.py`: scores the eight developer messages of the 2026-11-07 live check
+  with any Fortress model or export.
+
 ## 0.2.0 (2026-11-07)
 
 - **Fortress-XS, Mobius Guard's own classifier.** An 81 MB INT8 ONNX model

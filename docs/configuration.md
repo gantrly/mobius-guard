@@ -15,12 +15,15 @@ api_key_env = ""
 
 [policy]
 rules = "block"                  # block | log | off
-classifier = ""                  # "" | "fortress-xs" (needs mobiusguard[onnx])
+classifier = ""                  # "" | "fortress-xs" | "fortress-base" (need mobiusguard[onnx])
                                  #    | "piguard" | "protectai-v2" (need mobiusguard[classifier])
 classifier_dir = ""              # a local copy of Fortress's files; "" = download the pinned one
 classifier_action = "block"      # block | log: what an attack score over the threshold does
 classifier_threshold = ""        # attack log-odds; "" = the model's own (Fortress), or for
                                  # PIGuard / ProtectAI v2: log scores, never block on them
+classifier_views = "all"         # all | original: score every view of a text, or only itself
+classifier_long = "cut"          # cut | windows: score a text over 512 tokens in windows
+classifier_threshold_tool = ""   # attack threshold for tool results; "" = classifier_threshold
 harmful = "log"                  # block | log | off: Fortress's harmful-request output
 harmful_threshold = ""           # harmful log-odds; "" = the model's own
 on_error = "block"               # block | allow: what happens when a detector fails
@@ -118,6 +121,26 @@ The harmful output only logs by default because it also flags about half of the 
 prompts that only *sound* harmful (48% on OR-Bench hard). Set `harmful = "block"` if your
 traffic tolerates that, or `"off"` to leave it out.
 
+**Disguised text.** The classifier scores every view of a text, as the rules do: the
+original, a normalised copy (invisible characters removed, look-alike letters folded,
+spaced-out letters joined, leetspeak undone) and any decoded base64. The highest attack
+score counts. Because more views raise some harmless scores too, Fortress then uses a
+higher attack threshold set for that (3.1107 instead of 2.7634), on the same ordinary
+messages, so it still blocks no more of them
+([decision 0015](decisions/0015-classifier-sees-every-view.md)). A text with a second view
+costs one more classifier call; about 1 in 6 ordinary messages has one. The harmful output
+always scores the original text. `classifier_views = "original"` scores only the original,
+at the model's own thresholds. With your own `classifier_threshold`, every view is scored
+at that threshold.
+
+**Long text.** The classifier reads 512 tokens, about 2,000 characters of English. By
+default a longer text is cut, so an injection near the end of a long document or email is
+not seen. `classifier_long = "windows"` scores the text in overlapping windows of 512
+tokens instead (128 tokens shared between neighbours) and keeps the highest score. Each
+extra window costs one more classifier call, about 180 ms on 4 CPU threads, and a long
+harmless text gets more chances to score high. It is off by default until its effect on
+false positives is measured ([decision 0018](decisions/0018-long-inputs-in-windows.md)).
+
 A score over a threshold whose action is `log` is recorded in the audit log's `flagged`
 list without blocking. Run with `classifier_action = "log"` for a few days to see what the
 attack output would block before you let it.
@@ -127,6 +150,31 @@ attack output would block before you let it.
   Mobius Guard pins.
 - **Long inputs:** Fortress reads the first 512 tokens of each checked text. An injection
   after that is not seen.
+
+### Fortress-Base (opt-in, more accurate)
+
+The larger sibling ([model card](https://huggingface.co/gantrly/fortress-base),
+[decision 0024](decisions/0024-fortress-base.md)): DeBERTa-v3-base, 308 MB, INT8 ONNX,
+about 104 ms at 128 tokens and 525 ms at 512 on 4 CPU threads, 2.9× Fortress-XS.
+
+```toml
+[policy]
+classifier = "fortress-base"
+```
+
+Choose it when your model reads documents, email, web pages or tool output, or when your
+users are developers. On held-out data, at the same 1% of ordinary messages flagged:
+
+| | Fortress-XS | Fortress-Base |
+|---|---:|---:|
+| LLMail-Inject, injections in emails, caught | 47.4% | 68.5% |
+| BIPIA, injections inside documents, caught | 12.9% | 70.5% |
+| Real developer messages blocked | 10.6% | 6.0% |
+| Harmless spaced-out / leetspeak text blocked | 93.3 / 74.6% | 3.4 / 3.0% |
+
+It reads each text with its role in front (`[user]` or `[tool]`), and tool results have
+their own threshold, set on harmless documents; the proxy does both. Its harmful output flags about a third of harmless spaced-out or
+leetspeak text, so keep `harmful = "log"`, the default.
 
 ### PIGuard and ProtectAI v2
 

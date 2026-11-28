@@ -16,13 +16,15 @@ import importlib
 import json
 import random
 import re
+import tarfile
 from collections import defaultdict
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any, cast
 
-from .items import ATTACK, BENIGN, Item, make_item
+from .items import ATTACK, BENIGN, Item, content_hash, make_item
 from .ledger import TRAINING, Remote, Source, register
+from .redaction import GENERATORS, insert_phrase
 
 
 def _rows_parquet(path: Path, columns: list[str] | None = None) -> Iterator[dict[str, Any]]:
@@ -380,7 +382,7 @@ _add(
 
 # ------------------------------------------------------------------------------ benign
 
-_LANGS = {
+LANGS = {
     "English": "en", "Chinese": "zh", "Russian": "ru", "French": "fr", "Spanish": "es",
     "Portuguese": "pt", "German": "de", "Arabic": "ar", "Italian": "it", "Turkish": "tr",
     "Japanese": "ja", "Korean": "ko", "Polish": "pl", "Vietnamese": "vi", "Indonesian": "id",
@@ -397,7 +399,7 @@ def _wildchat(paths: list[Path]) -> Iterator[Item]:
         i, first = next(((i, t) for i, t in enumerate(turns) if t.get("role") == "user"),
                         (0, None))  # fmt: skip
         if first and (text := _keep(first.get("content"))):
-            lang = _LANGS.get(str(r["language"]), "other")
+            lang = LANGS.get(str(r["language"]), "other")
             mod = cast("list[dict[str, Any]]", r["openai_moderation"] or [])
             # Real users do ask for harmful things: a message the moderation API flagged is
             # not known to be harmless, so its harmful label is left unknown.
@@ -898,6 +900,499 @@ _add(
         "are fine. Its WildChat items are left out (already a source). LICENSE.md is ODC-By.",
     )
 )
+
+
+# ------------------------------------------------------------------- added 2026-11-10
+# Fortress v2 (docs/research/2026-11-10-fortress-v2-data.md). Two gaps, both measured:
+# injections inside documents get through, and harmless developer and agent text gets
+# blocked. Caps are the proposal of 2026-11-10: about 34k harmless developer items and
+# 11k document twins next to the 206k items of 0.2.0, so neither outweighs the attacks.
+# A long text becomes one window of WINDOW_CHARS, as for BrowseSafe++.
+
+_DEV_WIDTH = WINDOW_CHARS["content_markdown"]
+_USER_ROLES = frozenset({"user", "human"})
+_TOOL_ROLES = frozenset({"tool", "function", "observation", "ipython", "function response"})
+
+
+def _fit(text: str, rng: random.Random) -> str:
+    t = text.strip()
+    return control_window(t, _DEV_WIDTH, rng, "content_markdown") if len(t) > _DEV_WIDTH else t
+
+
+def _text_of(content: object) -> str:
+    if isinstance(content, str):
+        return content
+    if content is None:
+        return ""
+    return json.dumps(content, ensure_ascii=False)
+
+
+def conversation_items(turns: list[tuple[str, str]], source: str, key: str,
+                       **meta: str) -> Iterator[Item]:  # fmt: skip
+    """At most one user turn and one tool output of a conversation, each as harmless text.
+
+    One of each keeps a long conversation from filling the cap. Roles are normalised
+    (``human`` is a user; ``function``, ``observation`` and ``ipython`` are tools); system
+    prompts and the assistant's turns are not screened as input, so they are left out.
+    """
+    rng = random.Random(f"{source}:{key}")  # noqa: S311 - a sample, not a secret
+    users = [t for r, t in turns if r.lower() in _USER_ROLES]
+    tools = [t for r, t in turns if r.lower() in _TOOL_ROLES]
+    for kind, pool in (("user", users), ("tool", tools)):
+        if pool and (text := _keep(_fit(rng.choice(pool), rng))):
+            yield make_item(text, BENIGN, source, lang="en", meta=_m("0", turn=kind, **meta))
+
+
+_GLAIVE_TURN = re.compile(r"(?:^|\n+)(USER|ASSISTANT|FUNCTION RESPONSE):\s*")
+
+
+def glaive_turns(chat: str) -> list[tuple[str, str]]:
+    """glaive's chat string ("USER: … ASSISTANT: … FUNCTION RESPONSE: …") as turns."""
+    parts = _GLAIVE_TURN.split(chat)
+    roles = {"USER": "user", "ASSISTANT": "assistant", "FUNCTION RESPONSE": "tool"}
+    return [
+        (roles[parts[i]], parts[i + 1].replace("<|endoftext|>", "").strip())
+        for i in range(1, len(parts) - 1, 2)
+    ]
+
+
+def _glaive(paths: list[Path]) -> Iterator[Item]:
+    for n, r in enumerate(_json_rows(paths[0])):
+        yield from conversation_items(glaive_turns(str(r.get("chat") or "")), "glaive_fc", str(n))
+
+
+def _from_value(convs: object) -> list[tuple[str, str]]:
+    turns = cast("list[dict[str, Any]]", convs or [])
+    return [(str(t.get("from", "")), _text_of(t.get("value"))) for t in turns]
+
+
+def _role_content(msgs: object) -> list[tuple[str, str]]:
+    turns = cast("list[dict[str, Any]]", msgs or [])
+    return [(str(t.get("role", "")), _text_of(t.get("content"))) for t in turns]
+
+
+def _hermes(paths: list[Path]) -> Iterator[Item]:
+    for path in paths:
+        for n, r in enumerate(_json_rows(path)):
+            key = str(r.get("id") or f"{path.name}:{n}")
+            yield from conversation_items(_from_value(r.get("conversations")), "hermes_fc", key,
+                                          category=str(r.get("category") or ""))  # fmt: skip
+
+
+def _toolace(paths: list[Path]) -> Iterator[Item]:
+    for n, r in enumerate(_json_rows(paths[0])):
+        yield from conversation_items(_from_value(r.get("conversations")), "toolace", str(n))
+
+
+def _when2call(paths: list[Path]) -> Iterator[Item]:
+    for n, r in enumerate(_json_rows(paths[0])):
+        yield from conversation_items(_role_content(r.get("messages")), "when2call", str(n))
+
+
+def toucan_turns(messages: object) -> list[tuple[str, str]]:
+    """Toucan keeps each conversation as a JSON string of {role, content} messages."""
+    try:
+        msgs: object = json.loads(messages) if isinstance(messages, str) else messages
+    except json.JSONDecodeError:
+        return []
+    return _role_content(cast("list[Any]", msgs)) if isinstance(msgs, list) else []
+
+
+def _toucan(paths: list[Path]) -> Iterator[Item]:
+    for path in paths:
+        for r in _rows_parquet(path, ["uuid", "subset_name", "messages"]):
+            yield from conversation_items(toucan_turns(r["messages"]), "toucan", str(r["uuid"]),
+                                          subset=str(r["subset_name"] or ""))  # fmt: skip
+
+
+def _single(field: str, source: str) -> Callable[[list[Path]], Iterator[Item]]:
+    """A set of coding requests: each row's ``field`` is one harmless user message."""
+
+    def parse(paths: list[Path]) -> Iterator[Item]:
+        for path in paths:
+            rows = (_rows_parquet(path, [field]) if path.suffix == ".parquet"
+                    else _json_rows(path))  # fmt: skip
+            for r in rows:
+                raw = _text_of(r.get(field))
+                rng = random.Random(f"{source}:{raw[:200]}")  # noqa: S311 - a sample
+                if text := _keep(_fit(raw, rng)):
+                    yield make_item(text, BENIGN, source, lang="en", meta=_m("0", turn="user"))
+
+    return parse
+
+
+# A real user's message is developer text when it names two or more things only
+# developers write about (one alone, "error" or "server", is too common).
+_DEV_CUES = re.compile(
+    r"```|\b(?:def|class|import|function|const|return|select|insert|docker|kubectl|git|npm"
+    r"|pip|api|endpoint|json|yaml|sql|database|token|api[ _]?key|password|env|config|error"
+    r"|exception|traceback|compile|regex|python|javascript|typescript|java|rust|golang|bash"
+    r"|shell|linux|server|http|curl|oauth|jwt|ssh|aws|azure|kubernetes|query|script|repo"
+    r"|deploy|webhook|credential|secret|schema|column|variable)\b",
+    re.IGNORECASE,
+)
+
+
+def developer_text(text: str) -> bool:
+    return len({m.group(0).lower() for m in _DEV_CUES.finditer(text)}) >= 2
+
+
+def _wildchat_dev(paths: list[Path]) -> Iterator[Item]:
+    cols = ["conversation", "language", "toxic", "openai_moderation"]
+    for path in paths:
+        for r in _rows_parquet(path, cols):
+            if r["toxic"]:
+                continue
+            turns = cast("list[dict[str, Any]]", r["conversation"] or [])
+            mod = cast("list[dict[str, Any]]", r["openai_moderation"] or [])
+            i, first = next(((i, t) for i, t in enumerate(turns) if t.get("role") == "user"),
+                            (0, None))  # fmt: skip
+            # Flagged turns are left out, not marked unknown: this source is for harmless text.
+            if not first or i >= len(mod) or mod[i].get("flagged"):
+                continue
+            raw = str(first.get("content") or "")
+            if not developer_text(raw):
+                continue
+            rng = random.Random(f"wildchat_dev:{raw[:200]}")  # noqa: S311 - a sample
+            if text := _keep(_fit(raw, rng)):
+                lang = LANGS.get(str(r["language"]), "other")
+                yield make_item(text, BENIGN, "wildchat_dev", lang=lang, meta=_m("0", turn="user"))
+
+
+# Fake secrets in harmless developer text: the live check of 2026-11-07 found Fortress
+# blocking ordinary messages that hold keys, tokens and connection strings. The values
+# come from the redaction harness's generators (valid formats, random values), placed
+# in coding requests at a sentence end. Redacting them is the redactor's job; to the
+# classifier they are harmless.
+SECRET_KINDS = (
+    "aws_access_key_id", "aws_secret_access_key", "github_token", "github_fine_grained_token",
+    "gitlab_token", "openai_api_key", "anthropic_api_key", "google_api_key",
+    "huggingface_token", "slack_token", "slack_webhook_url", "stripe_secret_key",
+    "npm_token", "json_web_token", "private_key", "connection_string_password",
+    "bearer_token",
+)  # fmt: skip
+
+
+def with_secret(carrier: str, rng: random.Random) -> tuple[str, str]:
+    """The carrier with one fake secret in a typical phrase, and the secret's kind."""
+    kind = rng.choice(SECRET_KINDS)
+    gen, phrases = GENERATORS[kind]
+    return insert_phrase(carrier, rng.choice(phrases).format(gen(rng)), rng), kind
+
+
+def _dev_secrets(paths: list[Path]) -> Iterator[Item]:
+    for r in _rows_parquet(paths[0], ["id", "input"]):
+        rng = random.Random(f"dev_secrets:{r['id']}")  # noqa: S311 - fake values, on purpose
+        carrier = _text_of(r["input"]).strip()
+        if junk(carrier) or len(carrier) > _DEV_WIDTH - 100:
+            continue
+        text, kind = with_secret(carrier, rng)
+        # The whole message must fit one window: a private key alone is about 450 characters.
+        if len(text) > _DEV_WIDTH:
+            continue
+        yield make_item(text, BENIGN, "dev_secrets", lang="en", meta=_m("0", secret=kind))
+
+
+_GLAIVE = ("glaiveai/glaive-function-calling-v2", "e7f4b6456019f5d8bcb991ef0dd67d8ff23221ac")
+_HERMES = ("NousResearch/hermes-function-calling-v1", "dae3e1d28cfbcf4b915c04ea1e072030529b4bda")
+_TOOLACE = ("Team-ACE/ToolACE", "6bda777c88d21e5a204703c1ee45597a8fa4f734")
+_W2C = ("nvidia/When2Call", "0582f7749df63a96fdc3070932e83e72396ace53")
+_TOUCAN = ("Agent-Ark/Toucan-1.5M", "0df3cf37f2abefb380370cfb02eabea2a35ae782")
+_MAGICODER = ("ise-uiuc/Magicoder-OSS-Instruct-75K", "5f839b1f368a76b161028bb9edff055db34022b2")
+_SELFOSS = ("bigcode/self-oss-instruct-sc2-exec-filter-50k",
+            "356bb069eee815daa6e23e9a282eeefe1490ad44")  # fmt: skip
+_CODEFB = ("m-a-p/CodeFeedback-Filtered-Instruction", "a08c213a9748c66c15d0225814be80a2e77adf4a")
+_OCI = ("nvidia/OpenCodeInstruct", "8f3ba5bafe4d6e8db46082cf7ae6741bc370604d")
+_WILDCHAT48 = ("allenai/WildChat-4.8M", "c827c6df8fcf008219ffaffa4d1dd77491099367")
+
+for _src in (
+    Source(
+        id="glaive_fc",
+        title="glaive function calling v2 (user turns and function responses)",
+        homepage="https://huggingface.co/datasets/glaiveai/glaive-function-calling-v2",
+        licence="Apache-2.0",
+        role="benign",
+        files=_hf(*_GLAIVE, "glaive-function-calling-v2.json"),
+        parse=_glaive,
+        cap=4_000,
+        notes="Synthetic chats with function calls; per chat one user turn and one function "
+        "response.",
+    ),
+    Source(
+        id="hermes_fc",
+        title="Hermes function calling v1 (user turns and tool responses)",
+        homepage="https://huggingface.co/datasets/NousResearch/hermes-function-calling-v1",
+        licence="Apache-2.0",
+        role="benign",
+        files=_hf(
+            *_HERMES,
+            "func-calling-singleturn.json",
+            "func-calling.json",
+            "json-mode-agentic.json",
+            "json-mode-singleturn.json",
+        ),
+        parse=_hermes,
+        cap=3_000,
+        notes="Function-calling and JSON-mode chats. Its glaive-function-calling-5k file is "
+        "left out: glaive is its own source.",
+    ),
+    Source(
+        id="toolace",
+        title="ToolACE (user turns and tool responses)",
+        homepage="https://huggingface.co/datasets/Team-ACE/ToolACE",
+        licence="Apache-2.0",
+        role="benign",
+        files=_hf(*_TOOLACE, "data.json"),
+        parse=_toolace,
+        cap=3_000,
+        notes="Synthetic tool-use dialogues over many invented APIs.",
+    ),
+    Source(
+        id="when2call",
+        title="When2Call (NVIDIA), training chats",
+        homepage="https://huggingface.co/datasets/nvidia/When2Call",
+        licence="CC-BY-4.0",
+        role="benign",
+        files=_hf(*_W2C, "train/when2call_train_sft.jsonl"),
+        parse=_when2call,
+        cap=3_000,
+        notes="Questions to a model with tools, some answerable by a tool and some not. Only the "
+        "training file; its test files stay out.",
+    ),
+    Source(
+        id="toucan",
+        title="Toucan-1.5M (real MCP tool outputs), SFT and gpt-oss sample",
+        homepage="https://huggingface.co/datasets/Agent-Ark/Toucan-1.5M",
+        licence="Apache-2.0",
+        role="benign",
+        files=_hf(
+            *_TOUCAN,
+            "SFT/train-00000-of-00003.parquet",
+            "SFT/train-00001-of-00003.parquet",
+            "SFT/train-00002-of-00003.parquet",
+            "OSS/train-00002-of-00047.parquet",
+            "OSS/train-00016-of-00047.parquet",
+            "OSS/train-00024-of-00047.parquet",
+            "OSS/train-00026-of-00047.parquet",
+        ),
+        parse=_toucan,
+        cap=6_000,
+        notes="Agent runs against 495 real MCP servers: tool outputs as the servers returned "
+        "them. The SFT folder and 4 of the 47 gpt-oss files (chosen with seed 0); the Kimi-K2 "
+        "and Qwen3 folders are not used. Personal data was removed by rules only.",
+    ),
+    Source(
+        id="magicoder",
+        title="Magicoder OSS-Instruct 75K (problems)",
+        homepage="https://huggingface.co/datasets/ise-uiuc/Magicoder-OSS-Instruct-75K",
+        licence="MIT",
+        role="benign",
+        files=_hf(*_MAGICODER, "data-oss_instruct-decontaminated.jsonl"),
+        parse=_single("problem", "magicoder"),
+        cap=2_000,
+        notes="Coding problems written from open-source code snippets.",
+    ),
+    Source(
+        id="self_oss",
+        title="StarCoder2 self-OSS-instruct (instructions)",
+        homepage="https://huggingface.co/datasets/bigcode/self-oss-instruct-sc2-exec-filter-50k",
+        licence="ODC-BY-1.0",
+        role="benign",
+        files=_hf(*_SELFOSS, "data/train-00000-of-00001.parquet"),
+        parse=_single("instruction", "self_oss"),
+        cap=2_000,
+        notes="Python coding instructions whose answers passed execution tests.",
+    ),
+    Source(
+        id="codefeedback",
+        title="CodeFeedback filtered instructions (queries)",
+        homepage="https://huggingface.co/datasets/m-a-p/CodeFeedback-Filtered-Instruction",
+        licence="Apache-2.0",
+        role="benign",
+        files=_hf(*_CODEFB, "CodeFeedback-Filtered-Instruction.jsonl"),
+        parse=_single("query", "codefeedback"),
+        cap=2_000,
+        notes="Coding questions in many languages, filtered for quality.",
+    ),
+    Source(
+        id="opencodeinstruct",
+        title="OpenCodeInstruct (NVIDIA), inputs, 3 of 50 files",
+        homepage="https://huggingface.co/datasets/nvidia/OpenCodeInstruct",
+        licence="CC-BY-4.0",
+        role="benign",
+        files=_hf(
+            *_OCI,
+            "data/train-00002-of-00050.parquet",
+            "data/train-00024-of-00050.parquet",
+            "data/train-00026-of-00050.parquet",
+        ),
+        parse=_single("input", "opencodeinstruct"),
+        cap=2_000,
+        notes="Synthetic coding requests. Files chosen with seed 0; the fourth pulled file is "
+        "dev_secrets' carrier, so no text is in both.",
+    ),
+    Source(
+        id="wildchat_dev",
+        title="WildChat-4.8M, first user turns about software (6 of 86 files)",
+        homepage="https://huggingface.co/datasets/allenai/WildChat-4.8M",
+        licence="ODC-BY-1.0",
+        role="benign",
+        files=_hf(
+            *_WILDCHAT48, *(f"data/train-{i:05d}-of-00086.parquet" for i in (5, 33, 49, 53, 62, 65))
+        ),
+        parse=_wildchat_dev,
+        languages=("multilingual",),
+        cap=4_000,
+        notes="Real users' first messages that name two or more developer terms (developer_text), "
+        "not toxic and not flagged by moderation. wildchat (WildChat-1M) overlaps: the builder "
+        "drops near duplicates.",
+    ),
+    Source(
+        id="dev_secrets",
+        title="Coding requests with a fake secret (generated)",
+        homepage="https://huggingface.co/datasets/nvidia/OpenCodeInstruct",
+        licence="CC-BY-4.0",
+        role="benign",
+        files=_hf(*_OCI, "data/train-00048-of-00050.parquet"),
+        parse=_dev_secrets,
+        cap=3_000,
+        notes="OpenCodeInstruct requests with one fake key, token, private key or connection "
+        "string from the redaction harness's generators, in a typical phrase. Harmless: "
+        "redaction handles the secret, the classifier must not block the message.",
+    ),
+):
+    _add(_src)
+
+
+# Injections inside documents, with clean twins.
+_SEP_URL = ("https://codeload.github.com/egozverev/Should-It-Be-Executed-Or-Processed/tar.gz/"
+            "7606c0696f20f5aa433169fd2221f76852d1d4f5")  # fmt: skip
+_SEP_SHA = "ff65f11660823384de75d44522f811b844f37030a9265c02d6f17ab31ab5231f"
+_SEP_FILES = {  # file in the archive -> (clean field, instructed field)
+    "SEP_dataset/SEP_dataset.json": ("prompt_clean", "prompt_instructed"),
+    "datasets/train_dataset.json": ("data_prompt_clean", "data_prompt_instructed"),
+}
+_INJECAGENT_URL = ("https://codeload.github.com/uiuc-kang-lab/InjecAgent/tar.gz/"
+                   "f19c9f2c79a41046eb13c03c51a24c567a8ffa07")  # fmt: skip
+_INJECAGENT_SHA = "299ce57cfeef329dc3f8eb97be0f4f9d35a3226a4613840c9ca93f11972a3a76"
+_INJECAGENT_FILES = ("data/test_cases_dh_base.json", "data/test_cases_ds_base.json")
+
+
+def archive_json(path: Path, names: tuple[str, ...]) -> dict[str, Any]:
+    """JSON files from a GitHub archive (its top folder is the repository and commit)."""
+    want, out = set(names), dict[str, Any]()
+    with tarfile.open(path) as t:
+        for m in t.getmembers():
+            rel = m.name.split("/", 1)[-1]
+            if m.isfile() and rel in want and (f := t.extractfile(m)):
+                out[rel] = json.loads(f.read().decode("utf-8"))
+    missing = want - set(out)
+    if missing:
+        raise ValueError(f"{path.name}: missing {sorted(missing)}")
+    return out
+
+
+def _sep(paths: list[Path]) -> Iterator[Item]:
+    files = archive_json(paths[0], tuple(_SEP_FILES))
+    for name, (clean_f, bad_f) in _SEP_FILES.items():
+        for r in cast("list[dict[str, Any]]", files[name]):
+            good, bad = _keep(r.get(clean_f)), _keep(r.get(bad_f))
+            if not good or not bad or good == bad:
+                continue
+            # Keyed by the clean passage: a passage used twice keeps one group.
+            meta = {"pair": f"sep:{content_hash(good)}", "set": name.split("/")[0]}
+            yield make_item(bad, ATTACK, "sep", lang="en", meta=_m("0", **meta))
+            yield make_item(good, BENIGN, "sep", lang="en", meta=_m("0", **meta))
+
+
+def _injecagent(paths: list[Path]) -> Iterator[Item]:
+    files = archive_json(paths[0], _INJECAGENT_FILES)
+    for name in _INJECAGENT_FILES:
+        for r in cast("list[dict[str, Any]]", files[name]):
+            template = str(r.get("Tool Response Template", ""))
+            inst = str(r.get("Attacker Instruction", ""))
+            bad = _keep(r.get("Tool Response"))
+            if not bad or "<Attacker Instruction>" not in template or inst not in bad:
+                continue
+            good = _keep(template.replace("<Attacker Instruction>", ""))
+            if not good:
+                continue
+            # 17 templates: every response filled from one template and the emptied
+            # template form one group, so the repeated clean twin is kept once.
+            meta = {"pair": f"injecagent:{content_hash(good)}",
+                    "attack_type": str(r.get("Attack Type", ""))}  # fmt: skip
+            yield make_item(bad, ATTACK, "injecagent", lang="en", meta=_m("", **meta))
+            yield make_item(good, BENIGN, "injecagent", lang="en", meta=_m("0", **meta))
+
+
+for _src in (
+    Source(
+        id="sep",
+        title="SEP: passages with and without an inserted instruction",
+        homepage="https://github.com/egozverev/Should-It-Be-Executed-Or-Processed",
+        licence="CC-BY-4.0",
+        role="mixed",
+        files=(Remote("url", _SEP_URL, sha256=_SEP_SHA),),
+        parse=_sep,
+        cap=8_000,
+        notes="Data passages for a task, each with a clean version and one with a harmless probe "
+        "question inserted (Zverev et al., ICLR 2025). Data CC-BY-4.0 per the README, code MIT. "
+        "The probes are harmless, so the inserted version's harmful label is 0. Checked "
+        "2026-11-10: no 12-word overlap with the garak red-team seeds.",
+    ),
+    Source(
+        id="injecagent",
+        title="InjecAgent base cases: tool responses with an attacker instruction",
+        homepage="https://github.com/uiuc-kang-lab/InjecAgent",
+        licence="MIT",
+        role="mixed",
+        files=(Remote("url", _INJECAGENT_URL, sha256=_INJECAGENT_SHA),),
+        parse=_injecagent,
+        trained_on_by=("PIGuard",),
+        cap=300,
+        notes="17 tool-response templates filled with 62 attacker instructions; the template "
+        "with the placeholder emptied is the clean twin. Templated, so capped low: at 1,000 "
+        "in the 2026-11-23 build its few template groups all fell in train.",
+    ),
+):
+    _add(_src)
+
+
+def plant(carrier: str, attack: str, rng: random.Random,
+          width: int = _DEV_WIDTH) -> tuple[str, str] | None:  # fmt: skip
+    """An attack planted in a harmless document, and the same window without it.
+
+    The recipe of TaskTracker, with our own licensed attacks and carriers: a window of the
+    carrier with room for the attack, the attack inserted at a sentence end inside it, and
+    the window alone as the clean twin, so the two differ only by the insert. None when
+    the attack leaves no room or the carrier is junk.
+    """
+    room = width - len(attack) - 2
+    if room < 200:
+        return None
+    c = carrier.strip()
+    clean = control_window(c, room, rng, "content_markdown") if len(c) > room else c
+    if junk(clean):
+        return None
+    return insert_phrase(clean, attack, rng), clean
+
+
+def planted_pairs(carriers: list[Item], attacks: list[Item], source: str,
+                  seed: str = "") -> Iterator[Item]:  # fmt: skip
+    """Twins from :func:`plant`: each carrier gets one attack, drawn with a fixed seed.
+
+    Not a source yet: the carrier documents (résumés, reports, notes) are still to be
+    chosen. The attacks must come from licensed training sources, never from garak.
+    """
+    rng = random.Random(f"{source}:{seed}")  # noqa: S311 - a sample, not a secret
+    for c in carriers:
+        a = rng.choice(attacks)
+        if not (hit := plant(c.text, a.text, random.Random(f"{source}:{seed}:{c.id}:{a.id}"))):  # noqa: S311
+            continue
+        bad, good = hit
+        meta = {"pair": f"{source}:{c.id}", "carrier": c.source, "attack": a.source}
+        yield make_item(bad, ATTACK, source, lang=c.lang, meta=_m("", **meta))
+        yield make_item(good, BENIGN, source, lang=c.lang, meta=_m("0", **meta))
 
 
 def training_sources(ids: list[str] | None = None) -> list[Source]:

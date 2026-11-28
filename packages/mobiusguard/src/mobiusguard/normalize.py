@@ -20,6 +20,10 @@ from dataclasses import dataclass
 # variation selectors and Unicode tag characters (used for "ASCII smuggling").
 _INVISIBLE = re.compile("[­᠎​-‏‪-‮⁠-⁤⁦-⁩﻿︀-️\U000e0000-\U000e007f]")
 
+# An invisible character standing alone between spaces, as when spaced-out letters hide one:
+# removing it with one space keeps the letter spacing ("m \u200d m" -> "m m").
+_INVISIBLE_GAP = re.compile(" " + _INVISIBLE.pattern + "+(?= )")
+
 # Cyrillic and Greek letters that look like Latin ones in most fonts.
 _CONFUSABLES = str.maketrans(
     "асеіјорѕхукмнтвАВСЕНІЈКМОРЅТХУαορυνιΑΒΕΖΗΙΚΜΝΟΡΤΥΧ",
@@ -44,7 +48,7 @@ class View:
 
 
 def strip_invisible(text: str) -> str:
-    return _INVISIBLE.sub("", text)
+    return _INVISIBLE.sub("", _INVISIBLE_GAP.sub("", text))
 
 
 def fold_confusables(text: str) -> str:
@@ -80,11 +84,14 @@ def unleet(text: str) -> str:
     )
 
 
-def normalize(text: str) -> str:
+def _unhidden(text: str) -> str:
+    """Every step but leetspeak, which would change the digits of a base64 run."""
     out = unicodedata.normalize("NFKC", strip_invisible(text))
-    out = fold_confusables(out)
-    out = join_spaced(out)
-    return unleet(out)
+    return join_spaced(fold_confusables(out))
+
+
+def normalize(text: str) -> str:
+    return unleet(_unhidden(text))
 
 
 def decoded_base64(text: str, *, min_printable: float = 0.9) -> list[str]:
@@ -104,7 +111,10 @@ def decoded_base64(text: str, *, min_printable: float = 0.9) -> list[str]:
             s = raw.decode("utf-8")
         except UnicodeDecodeError:
             continue
-        if len(s) >= 8 and sum(c.isprintable() or c in "\n\t" for c in s) / len(s) >= min_printable:
+        shown = strip_invisible(s)  # invisible characters hidden inside the encoded text
+        if len(shown) >= 8 and (
+            sum(c.isprintable() or c in "\n\t" for c in shown) / len(shown) >= min_printable
+        ):
             found.append(s)
     return found
 
@@ -115,7 +125,10 @@ def views(text: str) -> list[View]:
     norm = normalize(text)
     if norm != text:
         out.append(View("normalized", norm))
-    for s in decoded_base64(text):
+    unhidden = _unhidden(text)
+    # base64 runs, also those spaced out, given look-alike letters or invisible characters
+    found = decoded_base64(text) + (decoded_base64(unhidden) if unhidden != text else [])
+    for s in dict.fromkeys(found):
         out.append(View("base64", s))
         n = normalize(s)
         if n != s:

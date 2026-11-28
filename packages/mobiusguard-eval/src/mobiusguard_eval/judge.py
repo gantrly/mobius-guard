@@ -20,7 +20,7 @@ import time
 from collections import Counter, defaultdict
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -244,6 +244,22 @@ RULE_2026_11_06 = Rule(
 )
 
 
+# The rule of 2026-11-23: the 2026-11-06 rule, plus the Fortress v2 sources. SEP and
+# InjecAgent are twins whose attack label is the insert itself, like the constructed pairs
+# above, so they keep it. dev_secrets keeps its harmless label too: the judges dispute 2,490
+# of its 3,000 coding requests with a fake key inserted, and 1 of 2,000 of the same requests
+# without one (OpenCodeInstruct), so the key alone moves them. The other developer and agent
+# sources take the default rule.
+_PAIRS_V2 = _PAIRS | {"sep", "injecagent", "dev_secrets"}
+RULE_2026_11_23 = replace(
+    RULE_2026_11_06,
+    trust_attack=_PAIRS_V2,
+    harmful_split_keeps_source=_PAIRS_V2 | {"aegis2", "phtest"},
+    note=RULE_2026_11_06.note + "; 2026-11-23: SEP, InjecAgent and dev_secrets labels kept "
+    "(constructed), the other developer and agent sources by the default rule",
+)
+
+
 def read_labels(path: Path) -> dict[str, Mapping[str, Any]]:
     """A judge's labels by item ID; a re-labelled item keeps its last answer."""
     return {row["id"]: row for row in map(json.loads, path.open())}
@@ -316,7 +332,7 @@ def apply(
 
 
 def apply_build(
-    build: Path, judged: Path, out: Path, rule: Rule = RULE_2026_11_06
+    build: Path, judged: Path, out: Path, rule: Rule = RULE_2026_11_23
 ) -> dict[str, Any]:
     """Clean a training build with saved judge labels; write train/val and a summary."""
     labels = {m: read_labels(judged / f"labels.{m}.jsonl") for m in rule.judges}

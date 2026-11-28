@@ -46,6 +46,24 @@ in the ledger with its licence, and any source of the evaluation suite is refuse
   <img src="https://raw.githubusercontent.com/gantrly/mobius-guard/main/docs/assets/fortress-recall.png" alt="Recall at 1% false positives per attack family for Fortress-XS, PIGuard, ProtectAI v2 and keyword rules" width="760">
 </p>
 
+## Red-team a configuration
+
+Attack a Mobius Guard configuration with garak's prompt-injection probes, each in 26
+mutated forms and delivered both as a message and as a tool result, then see what got
+through and check that a fix does not block more harmless text:
+
+```sh
+mobiusguard-eval redteam run --seeds seeds.jsonl --config mobiusguard.toml --out runs/rt
+mobiusguard-eval redteam seal --seeds seeds.jsonl --out runs/holdout      # before tuning
+mobiusguard-eval redteam findings --out runs/rt --seeds seeds.jsonl \
+    --holdout runs/holdout/holdout.json --report runs/findings
+mobiusguard-eval redteam gate --suite runs/suite --base mobiusguard.toml --patched new.toml \
+    --report runs/gate
+```
+
+Runs resume after a crash and store no attack text. See the
+[red-team guide](https://github.com/gantrly/mobius-guard/blob/main/docs/red-team.md).
+
 ## What makes the numbers honest
 
 - **A provenance ledger.** Every dataset is pinned to a commit or a SHA-256, with its

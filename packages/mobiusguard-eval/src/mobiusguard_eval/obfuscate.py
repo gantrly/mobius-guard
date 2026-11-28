@@ -27,7 +27,7 @@ _LEET = {"a": "4", "e": "3", "i": "1", "o": "0", "s": "5", "t": "7", "A": "4", "
 _ZERO_WIDTH = ("\u200b", "\u200c", "\u200d", "\u2060")
 
 
-def _rng(item_id: str, name: str) -> random.Random:
+def item_rng(item_id: str, name: str) -> random.Random:
     seed = int.from_bytes(hashlib.sha256(f"{item_id}|{name}".encode()).digest()[:8], "big")
     return random.Random(seed)  # noqa: S311 - reproducible test data, not security
 
@@ -76,7 +76,7 @@ TRANSFORMS: dict[str, Callable[[str, random.Random], str]] = {
 
 def obfuscate(item: Item, name: str) -> Item:
     """An obfuscated copy of an attack. It keeps the source, split and cluster."""
-    text = TRANSFORMS[name](item.text, _rng(item.id, name))
+    text = TRANSFORMS[name](item.text, item_rng(item.id, name))
     return replace(
         item,
         id=f"{item.id}~{name}",
