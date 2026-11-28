@@ -25,8 +25,10 @@ or a fix never means starting over (`--force` redoes a step).
 
 ## Train and export a classifier
 
-The same harness built [Fortress-XS](https://huggingface.co/gantrly/fortress-xs), Mobius
-Guard's own classifier, and measured it against the published ones:
+The same harness built Mobius Guard's own classifiers,
+[Fortress-XS](https://huggingface.co/gantrly/fortress-xs) and
+[Fortress-Base](https://huggingface.co/gantrly/fortress-base), and measured them against the
+published ones:
 
 ```sh
 mobiusguard-eval train-data --suite runs/suite --out runs/train   # licensed sources, suite overlap removed
@@ -38,7 +40,10 @@ mobiusguard-eval score --suite runs/suite --detector local:runs/model/best --out
 ```
 
 Training needs a GPU (`[train]`); the judges need `[judge]` and are paid model calls.
-Export writes ONNX and INT8 and refuses an INT8 model that disagrees with PyTorch. Every
+Export writes ONNX and INT8 and refuses an INT8 model that disagrees with PyTorch;
+`--quantize int8-ffn2-float` keeps the layers that INT8 breaks in larger models in float32.
+`gate` passes or fails a candidate against a baseline on every held-out set, and
+`model-meta` writes the thresholds a released model ships with. Every
 step resumes after a crash. Each training source is
 in the ledger with its licence, and any source of the evaluation suite is refused.
 
