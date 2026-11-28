@@ -56,7 +56,8 @@
 | **Redacts mid-stream** | Secrets and personal data are replaced as the reply streams, even when split across chunks. The stream never stops. |
 | **Handles what models really write** | Tokens with characters added or dropped, keys in backticks, URLs without a host: still caught. |
 | **Honest numbers** | Recall at a fixed false-positive rate, on pinned datasets the models were not trained on, with the weak spots published. |
-| **Its own classifier** | [Fortress-XS](https://huggingface.co/gantrly/fortress-xs): prompt injection and harmful requests, 81 MB, 183 ms on a CPU at 512 tokens, Apache-2.0. [Try it in your browser](https://huggingface.co/spaces/gantrly/fortress-xs). For documents, email and developer traffic, the opt-in [Fortress-Base](https://huggingface.co/gantrly/fortress-base) catches far more hidden injections at 2.9× the CPU time. |
+| **Its own classifiers** | [Fortress-XS](https://huggingface.co/gantrly/fortress-xs), the default: prompt injection and harmful requests, 81 MB, 183 ms on a CPU at 512 tokens. [Try it in your browser](https://huggingface.co/spaces/gantrly/fortress-xs). [Fortress-Base](https://huggingface.co/gantrly/fortress-base), opt-in: 5× more injections caught inside documents, at 2.9× the CPU time. Both Apache-2.0. |
+| **Red-teamed** | A million mutated garak attacks against a configuration, a sealed holdout, and a gate that refuses a fix which blocks more harmless text ([guide](docs/red-team.md)). |
 | **Drop-in proxy** | OpenAI Chat Completions, OpenAI Responses and Anthropic Messages, streamed or not. Change one base URL. |
 
 ## How it works
@@ -146,12 +147,48 @@ unless you set `harmful = "block"`.
   [model card](https://huggingface.co/gantrly/fortress-xs) and the
   [results note](docs/results/2026-11-07-classifier-v0.2-retrain.md). You can try it in the
   [demo](https://huggingface.co/spaces/gantrly/fortress-xs): the model runs in your browser.
-- **Fortress-Base**, the larger opt-in model (`classifier = "fortress-base"`): on held-out
-  data it catches 68.5% of LLMail-Inject's injections in emails (Fortress-XS 47.4%) and
-  70.5% of BIPIA's injections inside documents (12.9%), and blocks 6.0% of real developer
-  messages (10.6%). 308 MB, 525 ms at 512 tokens on 4 CPU threads
-  ([model card](https://huggingface.co/gantrly/fortress-base),
-  [results](docs/results/2026-11-28-fortress-base-release.md)).
+
+### Fortress-Base, for documents, email and developer traffic
+
+A larger, opt-in model (DeBERTa-v3-base): `classifier = "fortress-base"`. It reads each
+text with its role in front, user or tool result, and each role has its own threshold.
+
+| At 1% false positives (%) | Fortress-XS | **Fortress-Base** |
+|---|---:|---:|
+| LLMail-Inject, injections in emails (10,613) | 47.4 | **68.5** |
+| BIPIA, injections inside documents (6,273) | 12.9 | **70.5** |
+| deepset (135) / SPML (6,265) | 40.0 / 34.1 | **51.1 / 39.5** |
+| Gandalf, direct injection (482) | 99.6 | **100.0** |
+| Blocked by mistake: real developer messages (2,301) | 10.6 | **6.0** |
+| Blocked by mistake: harmless text spaced out / in leetspeak (493 each) | 93.3 / 74.6 | **3.4 / 3.0** |
+| Blocked by mistake: ordinary messages (7,975) / held-out tool outputs (299) | 1.0 / **2.0** | **0.9** / 3.0 |
+| Harmful output, flagged by mistake: OR-Bench hard (672) | **47.0** | 50.6 |
+| CPU, 4 threads, 128 / 512 tokens; size | **35 / 183 ms; 81 MB** | 104 / 525 ms; 308 MB |
+
+- **How it was measured:** on the final halves of the test data (suite v0.3 and larger
+  held-out sets of LLMail-Inject, BIPIA and real WildChat developer messages), scored once
+  after the model was chosen. Fortress-XS runs as shipped. These sets differ from the table
+  above, so Fortress-XS's numbers differ too. Intervals are in the
+  [results note](docs/results/2026-11-28-fortress-base-release.md).
+- **It passed every check** of the release gate against Fortress-XS: 45 of 45.
+- **Its weak spots:** its harmful output flags about a third of harmless spaced-out or
+  leetspeak text (it only logs by default). It is one trained model, not the best of
+  several seeds. It costs 2.9× Fortress-XS's CPU time. All of this is in the
+  [model card](https://huggingface.co/gantrly/fortress-base).
+
+### Red-teaming
+
+`mobiusguard-eval redteam` attacks a configuration with garak's prompt-injection probes in
+26 mutated forms, each sent as a user message and as a tool result
+([guide](docs/red-team.md), [decision 0014](docs/decisions/0014-red-team-runner.md)).
+- **Against 0.2.0 with Fortress-XS:** 1,009,736 attempts, 27.1% got through.
+- **What changed:** the findings led to the classifier scoring every view of a text and to
+  three normalisation fixes, each checked by the gate on harmless text.
+- **Checked once on a sealed holdout** of 4,563 prompts that no fix saw: 25.4% got through
+  before, 20.6% after. Leetspeak alone got worse, 21.1% → 33.1%
+  ([results](docs/results/2026-11-10-classifier-views.md#on-the-holdout)).
+- **Not yet measured:** Fortress-Base under the red team, and the adaptive runner
+  (`redteam adapt`, PyRIT's PAIR) at full scale.
 
 ### The proxy and the redactor
 
@@ -168,7 +205,8 @@ unless you set `harmful = "block"`.
   ([2026-10-30](docs/results/2026-10-30-live-check.md)).
 - **Still hard for every detector:** indirect and adaptive attacks (LLMail-Inject, BIPIA).
   Fortress-XS raised LLMail-Inject from 12% to 44%; BIPIA-style injections are its
-  weakest family.
+  weakest family. Fortress-Base catches 68.5% of LLMail-Inject and 70.5% of BIPIA's
+  injections inside documents.
 
 ## Quickstart
 
@@ -180,7 +218,7 @@ mobiusguard serve --port 8787 --config mobiusguard.toml
 ```toml
 # mobiusguard.toml
 [policy]
-classifier = "fortress-xs"   # blocks attacks at the model's own threshold
+classifier = "fortress-xs"   # or "fortress-base": more accurate on documents, 2.9× the CPU
 harmful = "log"              # harmful requests: log (default), block or off
 ```
 
@@ -218,8 +256,10 @@ docker build -t mobiusguard . && docker run -p 127.0.0.1:8787:8787 mobiusguard
 
 [Quickstart](docs/quickstart.md) · [Configuration](docs/configuration.md) ·
 [Rules](docs/rules.md) · [Redaction](docs/redaction.md) · [Audit log](docs/audit-log.md) ·
-[Deploy](docs/deploy.md) · [Results](docs/results/) · [Decisions](docs/decisions/) ·
-[Development](docs/development.md)
+[Deploy](docs/deploy.md) · [Red-teaming](docs/red-team.md) ·
+[Architecture](docs/architecture.md) · [Threat model](docs/threat-model.md) ·
+[Training data](docs/training-data.md) · [Results](docs/results/) ·
+[Decisions](docs/decisions/) · [Development](docs/development.md)
 
 ## Roadmap
 
@@ -227,8 +267,9 @@ docker build -t mobiusguard . && docker run -p 127.0.0.1:8787:8787 mobiusguard
 timeline
     v0.1 · released : Streaming redactor : Evaluation harness : Proxy for three APIs
     v0.2 · released : Fortress-XS, our own CPU classifier
-    next : Long inputs scored in windows : Red-team findings as reviewed patches
-    v0.3 : Dashboard : Tool, RAG and MCP screening : LiteLLM and Presidio adapters
+    v0.3 · released : Fortress-Base, opt-in : Red-team and adaptive-attack runners : Role marks and every-view scoring
+    next : Red-team Fortress-Base : A faster distilled model, under study
+    v0.4 : Dashboard : Tool, RAG and MCP screening : LiteLLM and Presidio adapters
 ```
 
 More in [ROADMAP.md](docs/ROADMAP.md) and the [changelog](CHANGELOG.md).

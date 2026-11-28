@@ -175,8 +175,7 @@ default.** Use it as a signal, not a gate.
 
 ## Use it
 
-**In Mobius Guard** 0.3.0 or later (`pip install "mobiusguard[onnx]"`). 0.3.0 is not
-released yet; until then, use the model on its own as below.
+**In Mobius Guard** 0.3.0 or later (`pip install "mobiusguard[onnx]"`):
 
 ```toml
 [policy]
@@ -276,7 +275,7 @@ attack_tool −2.28). Set your own on your traffic if you can.
     disguise alone is not read as an attack. Look-alike letters are held out of training
     to measure how this carries over.
 - **Hardware:** NVIDIA L4, about 71 minutes per epoch. Code:
-  [mobiusguard-eval](https://github.com/gantrly/mobius-guard/tree/ffa9122/packages/mobiusguard-eval),
+  [mobiusguard-eval](https://github.com/gantrly/mobius-guard/tree/main/packages/mobiusguard-eval),
   commit dfe7b74.
 - **Selection:** three candidates (one or three epochs, two data recipes) were compared on
   the screening halves of the test data. The final halves were then scored once, for this
@@ -311,7 +310,7 @@ sources:
 - Constructed labels (SEP, InjecAgent, the fake-secret requests) were kept as built.
 
 The full ledger, with counts and what changed, is in
-[training-data.md](https://github.com/gantrly/mobius-guard/blob/ffa9122/docs/training-data.md).
+[training-data.md](https://github.com/gantrly/mobius-guard/blob/main/docs/training-data.md).
 
 | Source | Licence | Used for |
 |---|---|---|
@@ -359,9 +358,9 @@ between candidates, one scored once for this card.
   inside its documents, and real developer messages from WildChat held out of training.
 
 Their build, overlap filters and metrics are in
-[mobiusguard-eval](https://github.com/gantrly/mobius-guard/tree/ffa9122/packages/mobiusguard-eval),
+[mobiusguard-eval](https://github.com/gantrly/mobius-guard/tree/main/packages/mobiusguard-eval),
 and this release's results note is
-[here](https://github.com/gantrly/mobius-guard/blob/ffa9122/docs/results/2026-11-28-fortress-base-release.md).
+[here](https://github.com/gantrly/mobius-guard/blob/main/docs/results/2026-11-28-fortress-base-release.md).
 
 ## Limits
 

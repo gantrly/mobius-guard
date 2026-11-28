@@ -34,6 +34,16 @@ pinned: false
   <img src="https://huggingface.co/gantrly/fortress-xs/resolve/main/assets/fortress-speed.svg" alt="Fortress-XS: 66% average recall on 9 held-out attack families at 1% false positives, 183 ms on a CPU; PIGuard 44% and ProtectAI v2 29% at 1,151 ms" width="680">
 </p>
 
+### 🏯 Fortress-Base: for documents, email and developer traffic
+
+| Fortress-Base v1 | |
+|---|---|
+| **Model** | [gantrly/fortress-base](https://huggingface.co/gantrly/fortress-base): DeBERTa-v3-base, 308 MB INT8 ONNX, two outputs (attack, harmful), Apache-2.0 |
+| **Held-out results** | Against Fortress-XS on the same held-out sets: 68.5% of LLMail-Inject's injections in emails caught (47.4%), 70.5% of BIPIA's injections inside documents (12.9%), 6.0% of real developer messages blocked (10.6%) |
+| **Speed** | 104 ms at 128 tokens, 525 ms at 512 on 4 CPU threads: 2.9× Fortress-XS |
+| **Roles** | Reads each text with its role, user or tool result; each role has its own threshold |
+| **Use it** | Mobius Guard 0.3 or later: `classifier = "fortress-base"` |
+
 ### How we publish
 
 - **Held-out numbers only.**
@@ -43,6 +53,9 @@ pinned: false
 - **Licensed data only.** Every training source is listed with its licence and attribution.
 - **Pinned and reproducible.** Mobius Guard loads each model at a fixed commit, so an update
   never changes what an installed version does. The training and evaluation code is open.
+- **Red-teamed.** Mobius Guard is attacked with a million mutated garak prompts, and every
+  fix is checked on a sealed holdout and on harmless text
+  ([guide](https://github.com/gantrly/mobius-guard/blob/main/docs/red-team.md)).
 
 ### Links
 

@@ -12,8 +12,9 @@ client ──► /v1/chat/completions · /v1/responses · /v1/messages
         │ normalise   decode/strip what attackers use to hide text           │
         │             (zero-width, homoglyphs, spaced letters, base64, …)    │
         │ rules       8 named regex rules, high or medium severity           │
-        │ classifier  optional: Fortress-XS (attack + harmful), PIGuard, ... │
-        │             Fortress ships its thresholds; the others have none    │
+        │ classifier  optional: Fortress-XS or -Base (attack + harmful),     │
+        │             PIGuard, ...; Fortress ships its thresholds, per role  │
+        │             for Base (user, tool); the others have none            │
         │ policy      ALLOW / BLOCK with reasons; high rules block; attack   │
         │             scores over the threshold block, harmful ones log      │
         └────────────────────────────────────────────────────────────────────┘

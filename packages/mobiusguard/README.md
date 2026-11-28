@@ -14,7 +14,7 @@ and your SDK stay the same.
 </p>
 
 ```sh
-pip install "mobiusguard[onnx]"    # Python 3.11+; [onnx] adds the Fortress-XS classifier
+pip install "mobiusguard[onnx]"    # Python 3.11+; [onnx] adds the Fortress classifiers
 mobiusguard serve --port 8787      # forwards each caller's own API key
 ```
 
@@ -38,7 +38,8 @@ OpenAI, Anthropic, or a compatible server such as Ollama.
   - user messages and tool results are cleaned of hiding tricks: invisible characters,
     look-alike letters, spaced-out letters, leetspeak, base64;
   - they are checked against 8 named rules, and optionally a classifier: our own
-    [Fortress-XS](https://huggingface.co/gantrly/fortress-xs), or PIGuard or ProtectAI v2;
+    [Fortress-XS](https://huggingface.co/gantrly/fortress-xs) or
+    [Fortress-Base](https://huggingface.co/gantrly/fortress-base), or PIGuard or ProtectAI v2;
   - a clear hit is refused with HTTP 403 in the API's own error format, naming the rule.
     Fortress blocks attacks at its own threshold; its harmful-request output only logs
     unless you set it to block.
@@ -98,6 +99,30 @@ harmful requests but also flags 48% of harmless prompts that only sound harmful,
 logs by default. Full scorecard, training data and limits: the
 [model card](https://huggingface.co/gantrly/fortress-xs).
 
+## Fortress-Base, for documents, email and developer traffic
+
+[Fortress-Base](https://huggingface.co/gantrly/fortress-base) is the larger, opt-in model
+(DeBERTa-v3-base, 308 MB INT8 ONNX, Apache-2.0). It reads each text with its role in front,
+user or tool result, and each role has its own threshold.
+
+```toml
+[policy]
+classifier = "fortress-base"
+```
+
+| At 1% false positives (%) | Fortress-XS | **Fortress-Base** |
+|---|---:|---:|
+| LLMail-Inject, injections in emails (10,613) | 47.4 | **68.5** |
+| BIPIA, injections inside documents (6,273) | 12.9 | **70.5** |
+| Blocked by mistake: real developer messages (2,301) | 10.6 | **6.0** |
+| Blocked by mistake: harmless text spaced out / in leetspeak | 93.3 / 74.6 | **3.4 / 3.0** |
+| CPU, 4 threads, 128 / 512 tokens | **35 / 183 ms** | 104 / 525 ms |
+
+Measured on the final halves of the test data, scored once after the model was chosen, so
+Fortress-XS's numbers differ from the table above. It passed all 45 checks of the release
+gate against Fortress-XS. Limits are in its
+[model card](https://huggingface.co/gantrly/fortress-base).
+
 ## Measured, on data it never saw
 
 - **0 of 15,000 secrets leaked**, exact or garbled, streamed in random chunks.
@@ -118,12 +143,15 @@ Results and how they were measured:
 [docs/results](https://github.com/gantrly/mobius-guard/tree/main/docs/results). **The weak
 spots are published too:**
 - Fortress-XS catches 15% of BIPIA's plain-language indirect injections; PIGuard catches 54%.
-- Its harmful output flags 48% of harmless prompts that only sound harmful.
+  Fortress-Base catches 70.5% of BIPIA's injections placed inside documents.
+- Fortress-XS's harmful output flags 48% of harmless prompts that only sound harmful.
+  Fortress-Base's flags about a third of harmless spaced-out or leetspeak text.
 
 ## Extras
 
-- `pip install "mobiusguard[onnx]"`: the Fortress-XS classifier (onnxruntime and
-  tokenizers, no torch), then `classifier = "fortress-xs"` in the `[policy]` settings.
+- `pip install "mobiusguard[onnx]"`: the Fortress classifiers (onnxruntime and tokenizers,
+  no torch), then `classifier = "fortress-xs"` or `"fortress-base"` in the `[policy]`
+  settings.
 - `pip install "mobiusguard[classifier]"`: PIGuard or ProtectAI v2 as the optional
   classifier (torch; about a second per long prompt on a CPU).
 - `pip install "mobiusguard[otel]"`: OpenTelemetry spans.
