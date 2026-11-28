@@ -23,8 +23,8 @@ classifiers = [
 ]
 dependencies = [
     "huggingface-hub>=0.26",
-    "mobiusguard>=0.2.0,<0.3",
-    "mobiusguard-redact>=0.2.0,<0.3",
+    "mobiusguard>=0.3.0,<0.4",
+    "mobiusguard-redact>=0.3.0,<0.4",
     "numpy>=2.0",
     "pyarrow>=18",
 ]

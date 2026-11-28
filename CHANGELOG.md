@@ -6,6 +6,8 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
 
 ## Unreleased
 
+## 0.3.0 (2026-11-28)
+
 - **Fortress-Base** ([model card](https://huggingface.co/gantrly/fortress-base),
   [decision 0024](docs/decisions/0024-fortress-base.md)): a larger, opt-in classifier
   (DeBERTa-v3-base) next to Fortress-XS, for documents, email and developer traffic:
