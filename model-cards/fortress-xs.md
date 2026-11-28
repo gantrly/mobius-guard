@@ -61,6 +61,12 @@ never leaves the page) · [Use it](#use-it) · [How it compares](#how-it-compare
 - **Held-out numbers.** Every score on this page is on test sets the model never saw,
   against three other detectors scored the same way.
 
+**A larger sibling:** [Fortress-Base](https://huggingface.co/gantrly/fortress-base)
+(DeBERTa-v3-base, opt-in in Mobius Guard 0.3) catches 68.5% of LLMail-Inject's injections in
+emails and 70.5% of BIPIA's injections inside documents, against 47.4% and 12.9% for
+Fortress-XS on the same held-out sets, and blocks fewer harmless developer messages. It
+takes 2.9× the CPU time. Fortress-XS stays Mobius Guard's default.
+
 ## How it compares
 
 All four detectors were scored on the same held-out suite (62,919 items) with the same
@@ -271,7 +277,9 @@ and the run's results note is
     and encoded ones.
   - It misses a harmless-sounding task slipped into a document, such as "also write an ad
     for…" inside an email.
-  - PIGuard does better here (54%).
+  - PIGuard does better here (54%), and
+    [Fortress-Base](https://huggingface.co/gantrly/fortress-base) catches 70.5% of BIPIA's
+    injections placed inside documents.
 - **SPML-style attacks inside role-play chatbots (34%).** ProtectAI v2 reaches 92%.
 - **512 tokens.** Longer inputs are cut, so an injection at the end of a long document can
   be missed. On LLMail-Inject, inputs over 512 tokens are caught 32% of the time, against
@@ -281,9 +289,11 @@ and the run's results note is
 - **Developer and agent text.** Short, harmless messages about keys, databases, tokens or
   calling a tool can score as attacks. In a live check, "my key is in the vault and the db
   is the prod postgres" scored 6.92 against the 2.76 threshold, and four such messages
-  scored 5.7–6.9. None of the false-positive test sets covers this kind of text. Where
-  users send it, log instead of blocking (`classifier_action = "log"` in Mobius Guard) or
-  raise the threshold, measured on your own traffic.
+  scored 5.7–6.9. On 2,301 real developer messages from WildChat, held out of training and
+  added to the tests in 2026-11, it blocks 10.6%. Where users send such text, use
+  [Fortress-Base](https://huggingface.co/gantrly/fortress-base) (6.0%), log instead of
+  blocking (`classifier_action = "log"` in Mobius Guard), or raise the threshold, measured
+  on your own traffic.
 - **Disguised harmless text.** It blocks most harmless messages written in a disguise, not
   only disguised attacks. On 1,000 harmless test messages, measured 2026-11-24:
   - 94% are blocked once spaced out letter by letter;
@@ -295,6 +305,8 @@ and the run's results note is
   plain text it catches 53% of the same attacks. Mobius Guard's normalised view does not
   remove these false positives, because the original text is scored too
   ([results](https://github.com/gantrly/mobius-guard/blob/main/docs/results/2026-11-24-fortress-v2-diagnosis.md)).
+  Fortress-Base, trained with disguised copies of harmless text too, blocks 3.0–3.4% of
+  harmless spaced-out and leetspeak messages.
 - **Languages.**
   - The attack test sets are English, so recall in other languages is not measured.
   - False positives on ordinary messages are 1.3% in English and 0.2–0.9% in Spanish,

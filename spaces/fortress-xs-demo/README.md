@@ -32,3 +32,8 @@ uses, pinned to v1. The model downloads once and is cached.
 
 Thresholds are the model's own, each set so that 1% of ordinary user messages go over it.
 Inputs longer than 512 tokens are cut, as in the model.
+
+For documents, email and tool output, Mobius Guard 0.3 also offers the larger
+[Fortress-Base](https://huggingface.co/gantrly/fortress-base): it catches 70.5% of BIPIA's
+injections inside documents against Fortress-XS's 12.9%, at 2.9× the CPU time. It is not
+run in this demo.
