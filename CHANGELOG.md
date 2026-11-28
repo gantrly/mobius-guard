@@ -12,6 +12,9 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
   `classifier = "fortress-base"`, pinned at its Hugging Face commit. On held-out data it
   catches 68.5% of LLMail-Inject (Fortress-XS 47.4%) and 70.5% of BIPIA inside documents
   (12.9%), at 2.9× the CPU time (525 ms at 512 tokens). Fortress-XS stays the default.
+  The proxy reads each text with its role in front (`[user]` or `[tool]`) for a model whose
+  `fortress.json` asks for it ([decision 0020](docs/decisions/0020-role-marking.md)), and
+  takes the tool-result threshold from that file.
 - **Evaluation: distillation** ([decision 0022](docs/decisions/0022-distillation.md)):
   `teacher-scores` writes a teacher's logits for every training item and extra text, and
   `train --teacher-scores --alpha --temperature --extra-train` trains a student on labels
@@ -67,8 +70,9 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
   on 1,000 harmless messages: 94% are blocked once spaced out letter by letter, 79% in
   leetspeak and 17% with invisible characters. It caught spaced-out attacks by blocking
   everything spaced, not by reading them
-  ([results](docs/results/2026-11-24-fortress-v2-diagnosis.md)). A retrained model that
-  fixes this is being tested ([decision 0017](docs/decisions/0017-disguises-carry-no-label.md)).
+  ([results](docs/results/2026-11-24-fortress-v2-diagnosis.md)). Fortress-Base blocks
+  3–3.4% of the same kinds of text
+  ([decision 0017](docs/decisions/0017-disguises-carry-no-label.md)).
 - Harness, for training and gating Fortress models
   ([decision 0017](docs/decisions/0017-disguises-carry-no-label.md)):
   - `augment`: disguised training copies of attack and harmless items at the same rate,
