@@ -16,6 +16,15 @@ reduce_range, a CPU without VNNI (the rehearsal box's AMD EPYC 7R13) overflows i
 reduce_range is correct on every x86 CPU, so the shipped file is. Latency is the INT8
 model on the CPU, batch size 1, at 128 and 512 tokens, with the thread count, CPU and
 onnxruntime version stated.
+
+``quantize`` picks how (decision 0024):
+- ``int8``: every MatMul and Gather onnxruntime quantises (Fortress-XS).
+- ``int8-ffn2-float``: the graph is pre-processed first, and some MatMuls stay float32: those
+  without a constant weight (attention and relative position, activation by activation),
+  and each layer's second feed-forward MatMul, whose input is the GELU output. Dynamic INT8
+  rounds that input per tensor, and DeBERTa-v3-base has outlier activations there: with
+  ``int8`` its scores correlated 0.92 / 0.89 with PyTorch's, with this 0.999 / 0.998
+  (2026-11-27, 500 texts). The file is 308 MB instead of 223, and 22% slower.
 """
 
 from __future__ import annotations
@@ -38,6 +47,25 @@ FP32_TOLERANCE = 1e-3
 INT8_MIN_CORRELATION = 0.98
 INT8_MAX_AUC_DROP = 0.01
 OUTPUTS = ("attack", "harmful")
+QUANTIZE = ("int8", "int8-ffn2-float")
+
+
+def float_matmuls(model: Any, intermediate_size: int) -> list[str]:
+    """The MatMul nodes ``int8-ffn2-float`` keeps in float32: those whose second input is not
+    a weight (an initializer), and those whose weight is ``intermediate_size`` rows tall (the
+    second feed-forward MatMul of each layer)."""
+    names = [n.name for n in model.graph.node]
+    if "" in names or len(set(names)) != len(names):  # exclusion is by node name
+        raise ValueError("the graph has unnamed or repeated node names")
+    weights = {i.name: tuple(i.dims) for i in model.graph.initializer}
+    keep: list[str] = []
+    for n in model.graph.node:
+        if n.op_type != "MatMul":
+            continue
+        w = weights.get(n.input[1])
+        if w is None or (len(w) == 2 and w[0] == intermediate_size):
+            keep.append(n.name)
+    return keep
 
 
 def _pct(values: Sequence[float], q: float) -> float:
@@ -53,8 +81,11 @@ def export(
     n_parity: int = 500,
     threads: int = 4,
     iterations: int = 100,
+    quantize: str = "int8",
     log: Callable[[str], None] = print,
 ) -> dict[str, Any]:
+    if quantize not in QUANTIZE:
+        raise ValueError(f"quantize must be one of {QUANTIZE}")
     torch: Any = importlib.import_module("torch")
     tf: Any = importlib.import_module("transformers")
     ort: Any = importlib.import_module("onnxruntime")
@@ -94,8 +125,22 @@ def export(
     del graph.graph.value_info[:]
     onnx.save(graph, str(fp32))
     int8 = out / "model.int8.onnx"
-    quant.quantize_dynamic(str(fp32), str(int8), weight_type=quant.QuantType.QInt8,
-                           per_channel=True, reduce_range=True)  # fmt: skip
+    quant_info: dict[str, Any] = {"mode": quantize}
+    if quantize == "int8":
+        quant.quantize_dynamic(str(fp32), str(int8), weight_type=quant.QuantType.QInt8,
+                               per_channel=True, reduce_range=True)  # fmt: skip
+    else:
+        shape: Any = importlib.import_module("onnxruntime.quantization.shape_inference")
+        pre = out / "model.pre.onnx"
+        shape.quant_pre_process(str(fp32), str(pre), skip_symbolic_shape=True)
+        keep = float_matmuls(onnx.load(str(pre)), int(model.config.intermediate_size))
+        quant.quantize_dynamic(str(pre), str(int8), weight_type=quant.QuantType.QInt8,
+                               per_channel=True, reduce_range=True,
+                               op_types_to_quantize=["MatMul", "Gather"],
+                               nodes_to_exclude=keep)  # fmt: skip
+        pre.unlink()
+        quant_info["float32_matmuls"] = len(keep)
+        log(f"export: {len(keep)} MatMuls kept in float32")
     tok.save_pretrained(out)
 
     texts: list[str]
@@ -185,6 +230,7 @@ def export(
     result: dict[str, Any] = {
         "model_dir": str(model_dir),
         "files": {p.name: p.stat().st_size for p in (fp32, int8)},
+        "quantize": quant_info,
         "parity": parity,
         "latency_int8_batch1": latency,
         "machine": {

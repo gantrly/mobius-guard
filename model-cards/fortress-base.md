@@ -242,7 +242,7 @@ if you can.
 
 | File | What |
 |---|---|
-| `model.int8.onnx` | The model, dynamic INT8 (per-channel weights), ‹final› MB. What Mobius Guard runs |
+| `model.int8.onnx` | The model, dynamic INT8 (per-channel weights; the second feed-forward MatMuls in float32), ‹final› MB. What Mobius Guard runs |
 | `model.safetensors`, `config.json` | Full-precision weights for transformers |
 | `tokenizer.json`, `tokenizer_config.json` | The DeBERTa-v3 tokenizer |
 | `fortress.json` | Outputs, maximum length, role marking, thresholds per role and view, training-data hash |
@@ -269,7 +269,10 @@ if you can.
   the screening halves of the test data. The final halves were then scored once, for this
   card. One seed was trained (see *Limits*).
 - **Export:**
-  - ONNX, then dynamic INT8.
+  - ONNX, then dynamic INT8 with per-channel 7-bit weights. Each layer's second feed-forward
+    MatMul, and the MatMuls between activations (attention, relative position), stay
+    float32: rounding the GELU output to 8 bits broke this model's scores (correlation
+    0.92), and keeping it float32 costs 85 MB and about 20% more time.
   - Checked against PyTorch on ‹final› validation texts: correlation ‹final› (attack) and
     ‹final› (harmful).
   - Checked again through Mobius Guard's own loader on 300 user messages and 300

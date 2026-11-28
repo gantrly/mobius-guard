@@ -14,6 +14,10 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
   `teacher-scores` writes a teacher's logits for every training item and extra text, and
   `train --teacher-scores --alpha --temperature --extra-train` trains a student on labels
   and the teacher's soft targets.
+- **Evaluation: `export --quantize int8-ffn2-float`** keeps each layer's second feed-forward
+  MatMul and the activation-by-activation MatMuls in float32. Plain INT8 broke
+  DeBERTa-v3-base (correlation 0.92 with PyTorch); this agrees at 0.999. The default,
+  `int8`, is unchanged.
 - **Evaluation: `model-meta`** writes a released model's `fortress.json` from its score
   runs: thresholds per role and per view at 0.1%, 1% and 5% false positives, with the
   unreliable ones listed.

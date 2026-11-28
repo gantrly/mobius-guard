@@ -7,9 +7,23 @@
   and 0.89 (harmful), against the bar of 0.98; the float32 ONNX matches (largest difference
   1.6e-5). In a 24-text small run, keeping each layer's second feed-forward MatMul (its input
   is the GELU output) in float32 passes (0.9994 / 0.9985, 308 MB), as do 8-bit weight-only
-  quantisation and float32. A sweep of 8 variants on 500 texts, with latency, runs on the box
-  overnight. Shipping anything but the current INT8 needs an `export` option and the
-  maintainer's choice, recorded here.
+  quantisation and float32. A sweep of 8 variants on 500 texts, with latency, ran on the box
+  overnight:
+
+  | Variant | Agrees with PyTorch | Size | 4 CPU threads, 128 / 512 tokens |
+  |---|---|---:|---:|
+  | INT8, second feed-forward in float32 | yes (0.9992 / 0.9984) | 308 MB | 105 / 524 ms |
+  | INT8 on attention and embeddings only | yes (0.9998 / 0.9997) | 392 MB | 121 / 585 ms |
+  | float32 | yes (exact) | 740 MB | 135 / 632 ms |
+  | 8-bit weight-only (MatMulNBits) | yes (1.0) | 530 MB | 199–204 / 729–908 ms |
+  | INT8 as for Fortress-XS, and two variants of it | no (0.93 / 0.90) | 223 MB | 86 / 452 ms |
+
+  **Chosen (the maintainer, 2026-11-28): the smallest and fastest that agrees,** INT8 with
+  each layer's second feed-forward MatMul and the activation-by-activation MatMuls in
+  float32: `export --quantize int8-ffn2-float`. The file keeps its name, `model.int8.onnx`,
+  so the proxy loads it unchanged. Fortress-XS keeps `int8`.
+- **Release gate, 2026-11-27, once on the final halves: PASS, 45 of 45** (Russian included:
+  0.4% blocked, so only the one-seed exception remains).
 - **Builds on:** [0013](0013-releasing-fortress-v0.2.md) (Fortress-XS; "XS leaves room for a
   larger one"), [0020](0020-role-marking.md) (role marking),
   [0021](0021-capacity-and-measurement.md) (the teacher), [0022](0022-distillation.md)

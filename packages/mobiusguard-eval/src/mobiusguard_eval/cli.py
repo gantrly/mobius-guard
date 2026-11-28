@@ -12,7 +12,8 @@
                                      where the login is), without building anything
     train-data --suite S --out runs/train-v0.2 [--cap 20000]   build the training set
     train --data D --base B --seed N --out runs/model-B-sN [--limit N]   fine-tune one run
-    export --model DIR --out DIR [--val D/val.jsonl]   ONNX + INT8, parity, CPU latency
+    export --model DIR --out DIR [--val D/val.jsonl] [--quantize int8-ffn2-float]
+                                                        ONNX + INT8, parity, CPU latency
     judge --data D --out runs/judged            two LLM judges label a training build (paid)
     apply-judges --data D --judged J --out D2   clean a build with the judges' labels
 
@@ -280,10 +281,11 @@ def step_train(data: Path, out: Path, *, base: str, seed: int, epochs: int, lr: 
         log(f"train: best epoch {result['best_epoch']}, wrote {out / 'best'}")
 
 
-def step_export(model: Path, out: Path, *, val: Path | None, threads: int) -> None:
+def step_export(model: Path, out: Path, *, val: Path | None, threads: int,
+                quantize: str = "int8") -> None:  # fmt: skip
     from .export import export
 
-    result = export(model, out, val=val, threads=threads, log=log)
+    result = export(model, out, val=val, threads=threads, quantize=quantize, log=log)
     if not result["parity"]["fp32_ok"]:
         raise SystemExit("export: float32 ONNX does not match PyTorch")
     if not result["parity"]["int8_ok"]:
@@ -405,7 +407,7 @@ def _run(a: argparse.Namespace) -> int:
             raise SystemExit(1)
     elif cmd == "export":
         step_export(Path(a.model), Path(a.out), val=Path(a.val) if a.val else None,
-                    threads=a.threads)  # fmt: skip
+                    threads=a.threads, quantize=a.quantize)  # fmt: skip
     elif cmd == "train":
         step_train(Path(a.data), Path(a.out), base=a.base, seed=a.seed, epochs=a.epochs, lr=a.lr,
                    batch_size=a.batch_size, max_length=a.max_length, limit=a.limit,
@@ -653,6 +655,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out", required=True)
     p.add_argument("--val", help="val.jsonl of its training set, for the parity check")
     p.add_argument("--threads", type=int, default=4, help="CPU threads for the latency test")
+    p.add_argument("--quantize", choices=["int8", "int8-ffn2-float"], default="int8",
+                   help="int8: every MatMul (Fortress-XS); int8-ffn2-float: the second "
+                   "feed-forward and activation MatMuls stay float32 (Fortress-Base)")  # fmt: skip
 
     p = sub.add_parser("pipeline", help="every step in order, resuming what was saved")
     p.add_argument("--out", default="runs")
