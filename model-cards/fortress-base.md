@@ -50,14 +50,9 @@ datasets:
 ---
 
 <!--
-DRAFT (2026-11-27). Not for publishing until every ‹final› slot is filled.
-Fill from the box job mg-v4base (runs/v4/base/):
-- the numbers: final/gate (gate.md, gate.json), final/report, final/report-h, final/report-p1:
-  the release gate, run once on the final halves (decisions 0021, 0022, 0024). Screening-half
-  numbers must not appear on this card.
-- size, latency and parity: onnx/export.json; the runtime check: runtime.log;
-- the thresholds: onnx/fortress.json.
-Then the maintainer's OK on the card and the latency (decision 0024).
+Filled 2026-11-28 from the box job mg-v4base (runs/v4/base/, commit 2bb8b44): the release gate
+run once on the final halves; export.json, runtime.log, fortress.json. Awaiting the
+maintainer's OK (decision 0024); remove this comment when publishing.
 -->
 
 # Fortress-Base v1
@@ -65,7 +60,7 @@ Then the maintainer's OK on the card and the latency (decision 0024).
 **The larger sibling of [Fortress-XS](https://huggingface.co/gantrly/fortress-xs): a
 prompt-injection and harmful-request classifier that catches far more injections hidden in
 documents and email, and blocks less harmless text that only looks like an attack. It costs
-‹final›× the CPU time.**
+about 3× the CPU time.**
 
 It is an opt-in model for [Mobius Guard](https://github.com/gantrly/mobius-guard), an
 open-source LLM firewall, and it works on its own too. Fortress-XS stays the default.
@@ -79,8 +74,8 @@ open-source LLM firewall, and it works on its own too. Fortress-XS stays the def
   - **harmful**: a request for harmful content.
 - **It knows where a text came from.** Each text is read with its role in front, user or
   tool, and each role has its own threshold. A document cannot claim to be the user's turn.
-- **‹final› MB INT8 ONNX.** ‹final› ms at 128 tokens and ‹final› ms at 512 tokens on 4 CPU
-  threads. It needs no GPU and no torch.
+- **308 MB INT8 ONNX.** 104 ms at 128 tokens and 525 ms at 512 tokens on 4 CPU threads,
+  2.9× Fortress-XS on the same CPU. It needs no GPU and no torch.
 - **Apache-2.0**, trained only on data whose licence allows it. Every source is listed
   below.
 - **Held-out numbers.** Every score on this page is on test data the model never saw, and
@@ -91,16 +86,16 @@ open-source LLM firewall, and it works on its own too. Fortress-XS stays the def
 | | Fortress-XS v1 | Fortress-Base v1 |
 |---|---|---|
 | Base model | DeBERTa-v3-xsmall | DeBERTa-v3-base |
-| Size (INT8 ONNX) | 81 MB | ‹final› MB |
-| CPU, 4 threads, 128 / 512 tokens | 36 / 183 ms | ‹final› / ‹final› ms |
-| Injections in emails caught (LLMail-Inject) | ‹final›% | ‹final›% |
-| Injections inside documents caught (BIPIA) | ‹final›% | ‹final›% |
-| Real developer messages blocked | ‹final›% | ‹final›% |
-| Harmless spaced-out / leetspeak text blocked | ‹final› / ‹final›% | ‹final› / ‹final›% |
+| Size (INT8 ONNX) | 81 MB | 308 MB |
+| CPU, 4 threads, 128 / 512 tokens | 35 / 183 ms | 104 / 525 ms |
+| Injections in emails caught (LLMail-Inject) | 47.4% | **68.5%** |
+| Injections inside documents caught (BIPIA) | 12.9% | **70.5%** |
+| Real developer messages blocked | 10.6% | **6.0%** |
+| Harmless spaced-out / leetspeak text blocked | 93.3 / 74.6% | **3.4 / 3.0%** |
 
 **Choose Fortress-Base** when your model reads documents, email, web pages or tool output,
-or when your users are developers, and when you can spend about ‹final› ms per message on
-a CPU (or have a GPU).
+or when your users are developers, and when you can spend 0.1–0.5 s per message on a
+CPU (or have a GPU).
 
 **Choose Fortress-XS** when latency matters most, for chat-only traffic, or on small
 machines.
@@ -123,28 +118,49 @@ Intervals are 95%, resampled by cluster of near-duplicate texts.
 
 | Attack family (n) | Fortress-XS | **Fortress-Base** |
 |---|---:|---:|
-| LLMail-Inject, injections in emails, adaptive (‹final›) | ‹final› | ‹final› |
-| BIPIA, injections inside documents (‹final›) | ‹final› | ‹final› |
-| BIPIA, suite (‹final›) | ‹final› | ‹final› |
-| Gandalf, direct injection (‹final›) | ‹final› | ‹final› |
-| deepset (‹final›) | ‹final› | ‹final› |
-| jackhhao jailbreaks (‹final›) | ‹final› | ‹final› |
-| SPML, system-prompt chatbots (‹final›) | ‹final› | ‹final› |
-| Obfuscated: base64 / spaced / leetspeak / invisible / look-alike (‹final› each) | ‹final› | ‹final› |
+| LLMail-Inject, injections in emails, adaptive: full release (10,613) | 47.4 (42.4–52.4) | **68.5** (64.8–71.8) |
+| LLMail-Inject, suite sample (1,656) | 41.6 (35.1–47.9) | **67.6** (62.6–72.2) |
+| BIPIA, injections placed inside its documents (6,273) | 12.9 (8.0–18.0) | **70.5** (62.1–78.1) |
+| BIPIA, suite (59) | 16.9 (9.5–28.5) | **42.4** (30.6–55.1) |
+| Gandalf, direct injection (482) | 99.6 | **100.0** |
+| deepset (135) | 40.0 | **51.1** |
+| jackhhao jailbreaks (309) | 86.4 | **88.3** |
+| SPML, system-prompt chatbots (6,265) | 34.1 | **39.5** |
+| Obfuscated: base64 (494) | 100.0 | 100.0 |
+| Obfuscated: spaced letters (494) | **99.6** | 77.3 |
+| Obfuscated: leetspeak (494) | **92.1** | 77.7 |
+| Obfuscated: invisible characters (494) | 69.2 | **77.1** |
+| Obfuscated: look-alike letters (494) | 66.6 | **75.3** |
+
+Fortress-XS catches more spaced-out and leetspeak attacks because it blocks almost all
+spaced-out and leetspeak text, harmless or not (the next table). Fortress-Base catches them
+by reading them: 77% of disguised attacks, against 67% of the same attacks in plain text.
 
 **Harmless text blocked (%):**
 
 | Harmless set (n) | Fortress-XS | **Fortress-Base** |
 |---|---:|---:|
-| Ordinary messages, oasst1 test half (‹final›) | ‹final› | ‹final› |
-| Real developer messages, WildChat (‹final›) | ‹final› | ‹final› |
-| Harmless tool outputs, held out (‹final›) | ‹final› | ‹final› |
-| Clean BIPIA documents (‹final›) | ‹final› | ‹final› |
-| LLMail-Inject harmless emails (‹final›) | ‹final› | ‹final› |
-| Harmless text, spaced out / leetspeak / invisible / look-alike (‹final› each) | ‹final› | ‹final› |
-| Ordinary messages by language: English, Spanish, Russian, Chinese, German, French | ‹final› | ‹final› |
+| Ordinary messages, oasst1 test half (7,975) | 1.0 | 0.9 |
+| Real developer messages, WildChat (2,301) | 10.6 | **6.0** |
+| Harmless tool outputs, held out (299) | **2.0** | 3.0 |
+| Clean BIPIA documents (95) | 4.2 | **0.0** |
+| LLMail-Inject harmless emails (81) | 0.0 | 0.0 |
+| NotInject: harmless text with attack trigger words (171) | **6.4** | 8.2 |
+| Harmless text spaced out (493) | 93.3 | **3.4** |
+| Harmless text in leetspeak (493) | 74.6 | **3.0** |
+| Harmless text with invisible characters (493) | 13.6 | **3.2** |
+| Harmless text with look-alike letters (493) | 5.3 | **1.6** |
+| Ordinary messages: English (3,839) / Spanish (1,952) / Russian (737) | 1.4 / 1.1 / 0.3 | 1.3 / 0.8 / 0.4 |
+| Ordinary messages: Chinese (324) / German (291) / French (247) | 0.3 / 0.7 / 0.4 | 0.6 / 0.3 / 0.8 |
 
-**What the numbers say:** ‹final: two or three plain sentences, from the final halves.›
+**What the numbers say:**
+- Fortress-Base catches far more injections hidden in emails and documents: 68.5% of
+  LLMail-Inject against 47.4%, and 70.5% of BIPIA's injections inside documents against
+  12.9%. The intervals do not overlap.
+- It blocks about half as many real developer messages, and almost none of the harmless
+  text written in a disguise.
+- It passed every check of Mobius Guard's release gate against Fortress-XS (45 of 45).
+  Its weak spots are listed under *Limits*.
 
 ## The harmful output
 
@@ -152,11 +168,11 @@ Same rule: 1% of ordinary messages flagged.
 
 | | Fortress-XS | **Fortress-Base** |
 |---|---:|---:|
-| Recall: OR-Bench toxic (‹final›) | ‹final› | ‹final› |
-| Recall: XSTest unsafe (‹final›) | ‹final› | ‹final› |
-| Flags harmless prompts: XSTest safe (‹final›) | ‹final› | ‹final› |
-| Flags harmless prompts that only sound harmful: OR-Bench hard (‹final›) | ‹final› | ‹final› |
-| Flags harmless spaced-out / leetspeak text | ‹final› | ‹final› |
+| Recall: OR-Bench toxic (337) | 90.5 | **93.2** |
+| Recall: XSTest unsafe (121) | 82.6 | **88.4** |
+| Flags harmless prompts: XSTest safe (127) | 8.7 | 7.9 |
+| Flags harmless prompts that only sound harmful: OR-Bench hard (672) | **47.0** | 50.6 |
+| Flags harmless spaced-out / leetspeak text (493 each) | **0.0 / 0.4** | 37.3 / 29.0 |
 
 The harmful output still blocks many prompts that only *sound* harmful, and more harmless
 text in a disguise than Fortress-XS does (see *Limits*), so **Mobius Guard only logs it by
@@ -229,20 +245,21 @@ text the same way. The two logits are independent sigmoid outputs (`id2label`:
 
 **Thresholds.** The scores are log-odds. `fortress.json` gives each threshold at 0.1%, 1%
 and 5% false positives, each set on harmless text of its role:
-- `thresholds`: each text scored once, as it is. `attack` and `harmful` on ‹final›
-  ordinary user messages; `attack_tool` on ‹final› harmless documents.
+- `thresholds`: each text scored once, as it is. `attack` and `harmful` on 16,286
+  ordinary user messages; `attack_tool` on 1,682 harmless documents.
 - `views_thresholds`: for Mobius Guard's every-view scoring, where the attack score is the
   highest over the text's normalised views.
-- `thresholds_not_reliable` lists those set on too few texts (‹final›).
+- `thresholds_not_reliable` lists those set on too few texts: `attack_tool` at
+  0.1%, since 1,682 documents are too few for it.
 
-At 1%: attack ‹final›, attack_tool ‹final›, harmful ‹final›. Set your own on your traffic
-if you can.
+At 1%: attack −0.83, attack_tool −2.55, harmful −1.49 (with every view: attack −0.44,
+attack_tool −2.28). Set your own on your traffic if you can.
 
 ## Files
 
 | File | What |
 |---|---|
-| `model.int8.onnx` | The model, dynamic INT8 (per-channel weights; the second feed-forward MatMuls in float32), ‹final› MB. What Mobius Guard runs |
+| `model.int8.onnx` | The model, dynamic INT8 (per-channel weights; the second feed-forward MatMuls in float32), 308 MB. What Mobius Guard runs |
 | `model.safetensors`, `config.json` | Full-precision weights for transformers |
 | `tokenizer.json`, `tokenizer_config.json` | The DeBERTa-v3 tokenizer |
 | `fortress.json` | Outputs, maximum length, role marking, thresholds per role and view, training-data hash |
@@ -264,7 +281,7 @@ if you can.
     to measure how this carries over.
 - **Hardware:** NVIDIA L4, about 71 minutes per epoch. Code:
   [mobiusguard-eval](https://github.com/gantrly/mobius-guard/tree/main/packages/mobiusguard-eval),
-  commit ‹final›.
+  commit dfe7b74.
 - **Selection:** three candidates (one or three epochs, two data recipes) were compared on
   the screening halves of the test data. The final halves were then scored once, for this
   card. One seed was trained (see *Limits*).
@@ -273,10 +290,11 @@ if you can.
     MatMul, and the MatMuls between activations (attention, relative position), stay
     float32: rounding the GELU output to 8 bits broke this model's scores (correlation
     0.92), and keeping it float32 costs 85 MB and about 20% more time.
-  - Checked against PyTorch on ‹final› validation texts: correlation ‹final› (attack) and
-    ‹final› (harmful).
-  - Checked again through Mobius Guard's own loader on 300 user messages and 300
-    documents: ‹final› of 300 and ‹final› of 300 flagged the same way as PyTorch.
+  - Checked against PyTorch on 500 validation texts: correlation 0.9992 (attack) and
+    0.9984 (harmful), AUC unchanged.
+  - Checked again through Mobius Guard's own loader, with role marks, on 300 user messages
+    and 300 documents: 298 of 300 and 300 of 300 flagged the same way as PyTorch. The
+    median difference is 0.2 logits, the largest 5.2.
   - The test numbers above come from the PyTorch model.
 
 ### Training data
@@ -337,34 +355,41 @@ are the rows above.
 
 The test sources were never trained on. Each set was split in two halves: one to choose
 between candidates, one scored once for this card.
-- **Suite v0.3:** ‹final: the families, from the final report›.
+- **Suite v0.3:** attacks from Gandalf, deepset, jackhhao, SPML, BIPIA and LLMail-Inject,
+  and five disguises of them (base64, spaced letters, leetspeak, invisible characters,
+  look-alike letters); harmless text from oasst1, NotInject, XSTest, OR-Bench, LLMail-Inject,
+  deepset, jackhhao, SPML, the same five disguises, and held-out tool outputs.
 - **The larger held-out sets:** LLMail-Inject's full release, BIPIA's injections placed
   inside its documents, and real developer messages from WildChat held out of training.
 
 Their build, overlap filters and metrics are in
 [mobiusguard-eval](https://github.com/gantrly/mobius-guard/tree/main/packages/mobiusguard-eval),
-and this release's results note is ‹final: link›.
+and this release's results note is
+[here](https://github.com/gantrly/mobius-guard/blob/main/docs/results/2026-11-28-fortress-base-release.md).
 
 ## Limits
 
-- **Speed.** ‹final›× Fortress-XS's CPU time. At 512 tokens a message takes ‹final› ms on 4
-  threads.
+- **Speed.** 2.9× Fortress-XS's CPU time. At 512 tokens a message takes 525 ms on 4
+  threads; a long document scored in windows takes that per window.
+- **The INT8 file is close to PyTorch, not equal.** The numbers on this card are the PyTorch
+  model's. Through the INT8 file, 2 of 300 harmless user messages fell on the other side of
+  the threshold (one each way).
 - **One trained model.** Mobius Guard's release check passes a model only if every seed
   passes; Fortress-Base is one model, so that check could not run. The numbers are this
   model's own, but how much they would move with another seed is not measured.
-- **Russian.** On ordinary Russian messages it blocks ‹final› of ‹final› (Fortress-XS:
-  ‹final›), against the check's bound of ‹final›. All languages but English, pooled:
-  ‹final›%.
-- **The harmful output and disguised harmless text.** It flags ‹final›% of harmless
-  leetspeak and ‹final›% of harmless spaced-out text as *harmful* (Fortress-XS: ‹final›).
-  The attack output does not have this problem. Keep `harmful = "log"`, as Mobius Guard
-  does by default.
-- **The harmful output over-blocks** harmless prompts that sound harmful (‹final›% on
-  OR-Bench hard).
+- **Languages.** False positives on ordinary messages are 0.3–0.8% in Spanish, Russian,
+  Chinese, German and French (all but English, pooled: 0.6%), but the attack test sets are
+  English, so recall in other languages is not measured. On the half used to choose this
+  model it blocked 11 of 795 Russian messages, one over the gate's bound; on the final half,
+  3 of 737.
+- **The harmful output and disguised harmless text.** It flags 29.0% of harmless leetspeak
+  and 37.3% of harmless spaced-out text as *harmful* (Fortress-XS: 0.4% and 0.0%). The
+  attack output does not have this problem (3.0% and 3.4%). Keep `harmful = "log"`, as
+  Mobius Guard does by default.
+- **The harmful output over-blocks** harmless prompts that sound harmful: 50.6% on OR-Bench
+  hard (Fortress-XS: 47.0%), just inside the release gate's bound of 50.9%.
 - **512 tokens.** Longer inputs are cut, so Mobius Guard scores long text in overlapping
   windows. A caller of the model on its own should do the same.
-- **Languages.** The attack test sets are English, so recall in other languages is not
-  measured.
 - **Adaptive attackers.** No classifier is a complete defence. One that attackers can query
   will be learned around. Use it as one layer: input normalisation, rules, least privilege
   for tools, output checks.
