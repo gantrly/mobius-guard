@@ -49,11 +49,6 @@ datasets:
   - nvidia/OpenCodeInstruct
 ---
 
-<!--
-Filled 2026-11-28 from the box job mg-v4base (runs/v4/base/, commit 2bb8b44): the release gate
-run once on the final halves; export.json, runtime.log, fortress.json. Awaiting the
-maintainer's OK (decision 0024); remove this comment when publishing.
--->
 
 # Fortress-Base v1
 
@@ -180,7 +175,8 @@ default.** Use it as a signal, not a gate.
 
 ## Use it
 
-**In Mobius Guard** (`pip install "mobiusguard[onnx]"`):
+**In Mobius Guard** 0.3.0 or later (`pip install "mobiusguard[onnx]"`). 0.3.0 is not
+released yet; until then, use the model on its own as below.
 
 ```toml
 [policy]
@@ -280,7 +276,7 @@ attack_tool −2.28). Set your own on your traffic if you can.
     disguise alone is not read as an attack. Look-alike letters are held out of training
     to measure how this carries over.
 - **Hardware:** NVIDIA L4, about 71 minutes per epoch. Code:
-  [mobiusguard-eval](https://github.com/gantrly/mobius-guard/tree/main/packages/mobiusguard-eval),
+  [mobiusguard-eval](https://github.com/gantrly/mobius-guard/tree/ffa9122/packages/mobiusguard-eval),
   commit dfe7b74.
 - **Selection:** three candidates (one or three epochs, two data recipes) were compared on
   the screening halves of the test data. The final halves were then scored once, for this
@@ -315,7 +311,7 @@ sources:
 - Constructed labels (SEP, InjecAgent, the fake-secret requests) were kept as built.
 
 The full ledger, with counts and what changed, is in
-[training-data.md](https://github.com/gantrly/mobius-guard/blob/main/docs/training-data.md).
+[training-data.md](https://github.com/gantrly/mobius-guard/blob/ffa9122/docs/training-data.md).
 
 | Source | Licence | Used for |
 |---|---|---|
@@ -363,14 +359,14 @@ between candidates, one scored once for this card.
   inside its documents, and real developer messages from WildChat held out of training.
 
 Their build, overlap filters and metrics are in
-[mobiusguard-eval](https://github.com/gantrly/mobius-guard/tree/main/packages/mobiusguard-eval),
+[mobiusguard-eval](https://github.com/gantrly/mobius-guard/tree/ffa9122/packages/mobiusguard-eval),
 and this release's results note is
-[here](https://github.com/gantrly/mobius-guard/blob/main/docs/results/2026-11-28-fortress-base-release.md).
+[here](https://github.com/gantrly/mobius-guard/blob/ffa9122/docs/results/2026-11-28-fortress-base-release.md).
 
 ## Limits
 
 - **Speed.** 2.9× Fortress-XS's CPU time. At 512 tokens a message takes 525 ms on 4
-  threads; a long document scored in windows takes that per window.
+  threads; scored in windows, a long document takes that per window.
 - **The INT8 file is close to PyTorch, not equal.** The numbers on this card are the PyTorch
   model's. Through the INT8 file, 2 of 300 harmless user messages fell on the other side of
   the threshold (one each way).
@@ -388,8 +384,10 @@ and this release's results note is
   Mobius Guard does by default.
 - **The harmful output over-blocks** harmless prompts that sound harmful: 50.6% on OR-Bench
   hard (Fortress-XS: 47.0%), just inside the release gate's bound of 50.9%.
-- **512 tokens.** Longer inputs are cut, so Mobius Guard scores long text in overlapping
-  windows. A caller of the model on its own should do the same.
+- **512 tokens.** Longer inputs are cut, so an injection after the first 512 tokens is not
+  seen. Mobius Guard can score long text in overlapping windows (`classifier_long =
+  "windows"`), at one more model call per window; a caller of the model on its own can do
+  the same.
 - **Adaptive attackers.** No classifier is a complete defence. One that attackers can query
   will be learned around. Use it as one layer: input normalisation, rules, least privilege
   for tools, output checks.

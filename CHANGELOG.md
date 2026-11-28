@@ -6,10 +6,12 @@ All notable changes, per release. The three packages (`mobiusguard-redact`, `mob
 
 ## Unreleased
 
-- **Fortress-Base** ([decision 0024](docs/decisions/0024-fortress-base.md)), not yet
-  published: a larger, opt-in classifier (DeBERTa-v3-base) next to Fortress-XS, for
-  documents, email and developer traffic. The proxy knows `classifier = "fortress-base"`;
-  until it is published it loads only from a local directory. Fortress-XS stays the default.
+- **Fortress-Base** ([model card](https://huggingface.co/gantrly/fortress-base),
+  [decision 0024](docs/decisions/0024-fortress-base.md)): a larger, opt-in classifier
+  (DeBERTa-v3-base) next to Fortress-XS, for documents, email and developer traffic:
+  `classifier = "fortress-base"`, pinned at its Hugging Face commit. On held-out data it
+  catches 68.5% of LLMail-Inject (Fortress-XS 47.4%) and 70.5% of BIPIA inside documents
+  (12.9%), at 2.9× the CPU time (525 ms at 512 tokens). Fortress-XS stays the default.
 - **Evaluation: distillation** ([decision 0022](docs/decisions/0022-distillation.md)):
   `teacher-scores` writes a teacher's logits for every training item and extra text, and
   `train --teacher-scores --alpha --temperature --extra-train` trains a student on labels

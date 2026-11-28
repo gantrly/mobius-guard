@@ -217,7 +217,7 @@ ONNX_MODELS = {
     "fortress-base": OnnxModel(
         name="fortress-base",
         repo="gantrly/fortress-base",
-        revision="",  # not published yet: set to its Hugging Face commit at release
+        revision="e33cc8f7d6ed70a4473f2b5eb3b98ee1c6d32826",  # v1
         licence="Apache-2.0",
     ),
 }

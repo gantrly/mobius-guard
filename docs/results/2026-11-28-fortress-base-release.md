@@ -84,5 +84,5 @@ are all harmless, so their scores spread less (standard deviation 2.2 logits); t
 difference per text is the same size. The card's numbers are the PyTorch model's, as for
 Fortress-XS.
 
-**Next:** the maintainer's OK on the [model card](../../model-cards/fortress-base.md), then
-the upload to `gantrly/fortress-base`, the revision pinned in `classifier.py`, and the docs.
+**Published 2026-11-28** with the maintainer's OK: [`gantrly/fortress-base`](https://huggingface.co/gantrly/fortress-base),
+model files at commit `e33cc8f7d6ed70a4473f2b5eb3b98ee1c6d32826`, which the proxy pins.

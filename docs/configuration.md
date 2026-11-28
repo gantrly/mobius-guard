@@ -15,7 +15,7 @@ api_key_env = ""
 
 [policy]
 rules = "block"                  # block | log | off
-classifier = ""                  # "" | "fortress-xs" (needs mobiusguard[onnx])
+classifier = ""                  # "" | "fortress-xs" | "fortress-base" (need mobiusguard[onnx])
                                  #    | "piguard" | "protectai-v2" (need mobiusguard[classifier])
 classifier_dir = ""              # a local copy of Fortress's files; "" = download the pinned one
 classifier_action = "block"      # block | log: what an attack score over the threshold does
@@ -150,6 +150,31 @@ attack output would block before you let it.
   Mobius Guard pins.
 - **Long inputs:** Fortress reads the first 512 tokens of each checked text. An injection
   after that is not seen.
+
+### Fortress-Base (opt-in, more accurate)
+
+The larger sibling ([model card](https://huggingface.co/gantrly/fortress-base),
+[decision 0024](decisions/0024-fortress-base.md)): DeBERTa-v3-base, 308 MB, INT8 ONNX,
+about 104 ms at 128 tokens and 525 ms at 512 on 4 CPU threads, 2.9× Fortress-XS.
+
+```toml
+[policy]
+classifier = "fortress-base"
+```
+
+Choose it when your model reads documents, email, web pages or tool output, or when your
+users are developers. On held-out data, at the same 1% of ordinary messages flagged:
+
+| | Fortress-XS | Fortress-Base |
+|---|---:|---:|
+| LLMail-Inject, injections in emails, caught | 47.4% | 68.5% |
+| BIPIA, injections inside documents, caught | 12.9% | 70.5% |
+| Real developer messages blocked | 10.6% | 6.0% |
+| Harmless spaced-out / leetspeak text blocked | 93.3 / 74.6% | 3.4 / 3.0% |
+
+It reads each text with its role in front (`[user]` or `[tool]`), and tool results have
+their own threshold, set on harmless documents; the proxy does both. Its harmful output flags about a third of harmless spaced-out or
+leetspeak text, so keep `harmful = "log"`, the default.
 
 ### PIGuard and ProtectAI v2
 

@@ -4,6 +4,7 @@ ONNX loader (on a tiny made-up model, not the real one)."""
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable, Sequence
 from dataclasses import replace
 from pathlib import Path
@@ -377,17 +378,14 @@ def test_fortress_json_can_ship_a_tool_threshold_and_the_marker_flag(tmp_path: P
     assert (g.attack_threshold, g.tool_threshold, g.role_marker) == (5.0, 2.5, True)
 
 
-def test_fortress_base_loads_from_a_directory_until_it_is_published(tmp_path: Path) -> None:
-    """Decision 0024: the larger model, role-marked, with its own thresholds."""
+def test_fortress_base_is_pinned_and_reads_its_role_thresholds(tmp_path: Path) -> None:
+    """Decision 0024: the larger model, pinned by Hugging Face commit, role-marked, with its
+    own thresholds."""
     from mobiusguard.classifier import ONNX_MODELS
 
     spec = ONNX_MODELS["fortress-base"]
     assert (spec.repo, spec.views_attack) == ("gantrly/fortress-base", None)
-    if not spec.revision:
-        with pytest.raises(ValueError, match="classifier_dir"):
-            Guard(Config(policy=Policy(classifier="fortress-base")))
-    else:
-        assert len(spec.revision) == 40
+    assert re.fullmatch(r"[0-9a-f]{40}", spec.revision)
     _tiny_model(tmp_path)
     meta = json.loads((tmp_path / "fortress.json").read_text())
     meta["thresholds"]["attack_tool"] = {"0.01": 1.5}

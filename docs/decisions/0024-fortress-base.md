@@ -1,7 +1,9 @@
 # 0024: Publish the teacher as Fortress-Base, a separate, opt-in model
 
-- **Status:** accepted, 2026-11-27 (the maintainer). Not yet published: the release waits for
-  the maintainer's OK on the model card and the measured CPU latency.
+- **Status:** accepted, 2026-11-27 (the maintainer). **Published 2026-11-28** with the
+  maintainer's OK: [`gantrly/fortress-base`](https://huggingface.co/gantrly/fortress-base),
+  pinned in the proxy at commit `e33cc8f7d6ed70a4473f2b5eb3b98ee1c6d32826`
+  ([release check](../results/2026-11-28-fortress-base-release.md)).
 - **Export, 2026-11-27:** the release export's dynamic INT8 (per-channel, `reduce_range`, every
   MatMul and Gather) does not agree with PyTorch for this model: correlation 0.92 (attack)
   and 0.89 (harmful), against the bar of 0.98; the float32 ONNX matches (largest difference

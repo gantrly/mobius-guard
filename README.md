@@ -56,7 +56,7 @@
 | **Redacts mid-stream** | Secrets and personal data are replaced as the reply streams, even when split across chunks. The stream never stops. |
 | **Handles what models really write** | Tokens with characters added or dropped, keys in backticks, URLs without a host: still caught. |
 | **Honest numbers** | Recall at a fixed false-positive rate, on pinned datasets the models were not trained on, with the weak spots published. |
-| **Its own classifier** | [Fortress-XS](https://huggingface.co/gantrly/fortress-xs): prompt injection and harmful requests, 81 MB, 183 ms on a CPU at 512 tokens, Apache-2.0. [Try it in your browser](https://huggingface.co/spaces/gantrly/fortress-xs). |
+| **Its own classifier** | [Fortress-XS](https://huggingface.co/gantrly/fortress-xs): prompt injection and harmful requests, 81 MB, 183 ms on a CPU at 512 tokens, Apache-2.0. [Try it in your browser](https://huggingface.co/spaces/gantrly/fortress-xs). For documents, email and developer traffic, the opt-in [Fortress-Base](https://huggingface.co/gantrly/fortress-base) catches far more hidden injections at 2.9× the CPU time. |
 | **Drop-in proxy** | OpenAI Chat Completions, OpenAI Responses and Anthropic Messages, streamed or not. Change one base URL. |
 
 ## How it works
@@ -146,6 +146,12 @@ unless you set `harmful = "block"`.
   [model card](https://huggingface.co/gantrly/fortress-xs) and the
   [results note](docs/results/2026-11-07-classifier-v0.2-retrain.md). You can try it in the
   [demo](https://huggingface.co/spaces/gantrly/fortress-xs): the model runs in your browser.
+- **Fortress-Base**, the larger opt-in model (`classifier = "fortress-base"`): on held-out
+  data it catches 68.5% of LLMail-Inject's injections in emails (Fortress-XS 47.4%) and
+  70.5% of BIPIA's injections inside documents (12.9%), and blocks 6.0% of real developer
+  messages (10.6%). 308 MB, 525 ms at 512 tokens on 4 CPU threads
+  ([model card](https://huggingface.co/gantrly/fortress-base),
+  [results](docs/results/2026-11-28-fortress-base-release.md)).
 
 ### The proxy and the redactor
 
