@@ -12,7 +12,7 @@ through. What a model would then do is out of scope.
 ## What you need
 
 - `pip install "mobiusguard-eval[pyrit]"` for PyRIT's prompt converters (optional), and
-  `mobiusguard[onnx]` if the configuration uses Fortress-XS.
+  `mobiusguard[onnx]` if the configuration uses Fortress-XS or Fortress-Base.
 - [garak](https://github.com/NVIDIA/garak) 0.17.1 **in its own environment**. garak pins
   transformers below 5.20, which the harness's training extras cannot use:
 

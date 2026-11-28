@@ -20,7 +20,8 @@ Written before the code and updated as each part was built; this version matches
 - **Content the model reads** (documents, web pages, tool output) that carries injected
   instructions. v0.1 checks tool results sent back to the model (indirect injection through
   tools) as well as user messages; screening documents and web pages before they reach the
-  app is planned for v0.3.
+  app is planned for v0.4. Fortress-Base (0.3) reads tool results as tool results, with a
+  threshold set on harmless documents.
 
 ## What Mobius Guard does not do
 

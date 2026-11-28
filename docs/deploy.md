@@ -25,8 +25,8 @@ Arguments after the image name go to `mobiusguard serve`. The working directory 
 `/data`, so the default audit log is `/data/mobiusguard-audit.jsonl`. The container has a
 health check on `/healthz`.
 
-To include Fortress-XS, our classifier (adds onnxruntime and tokenizers, about 60 MB, plus
-the 81 MB model):
+To include a Fortress classifier (adds onnxruntime and tokenizers, about 60 MB, plus the
+model: 81 MB for Fortress-XS, 308 MB for Fortress-Base):
 
 ```sh
 docker build -t mobiusguard:fortress --build-arg EXTRAS=onnx .
@@ -84,8 +84,8 @@ would let anyone who can reach the proxy use the key.
 - **Cost.** On one CPU core, the request rules take under a millisecond per prompt, and
   the redactor about 0.15 ms per 4-character chunk of the reply at the median (about 150 ms
   over a 1,000-token reply, spread across the stream). Fortress-XS adds 36 ms at 128
-  tokens and 183 ms at 512 on 4 CPU threads. PIGuard or ProtectAI v2 add about a second per
-  long prompt.
+  tokens and 183 ms at 512 on 4 CPU threads; Fortress-Base adds 104 ms and 525 ms. PIGuard
+  or ProtectAI v2 add about a second per long prompt.
 - **Failure.** If a detector fails, the request is refused (`on_error = "block"`). If the
   upstream cannot be reached, the client gets 502 in the API's error format.
 
